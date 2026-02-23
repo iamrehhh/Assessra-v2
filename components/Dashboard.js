@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Navbar from './Navbar';
-import SubjectsView from './views/SubjectsView';
+import HomeView from './views/HomeView';
 import PapersView from './views/PapersView';
 import LeaderboardView from './views/LeaderboardView';
 import FormulaeView from './views/FormulaeView';
@@ -64,7 +64,7 @@ export default function Dashboard() {
     const renderContent = () => {
         switch (view) {
             case 'home':
-                return <SubjectsView setView={setView} setSelectedSubject={setSelectedSubject} />;
+                return <HomeView setView={setView} setSelectedSubject={setSelectedSubject} />;
             case 'papers':
                 return <PapersView subject={selectedSubject} setView={setView} />;
             case 'leaderboard':
@@ -82,7 +82,7 @@ export default function Dashboard() {
             case 'profile':
                 return <ProfileView userProfile={userProfile} onProfileUpdate={setUserProfile} />;
             default:
-                return <SubjectsView setView={setView} setSelectedSubject={setSelectedSubject} />;
+                return <HomeView setView={setView} setSelectedSubject={setSelectedSubject} />;
         }
     };
 
