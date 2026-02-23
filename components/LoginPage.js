@@ -24,7 +24,7 @@ export default function LoginPage() {
                 textAlign: 'center',
             }}>
                 <img
-                    src="/logo.png"
+                    src="/logo.jpg"
                     alt="Assessra Logo"
                     style={{ width: '180px', marginBottom: '25px' }}
                 />
