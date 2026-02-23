@@ -39,6 +39,8 @@ export default function Dashboard() {
 
         if (session?.user) {
             fetchProfile();
+        } else {
+            setIsLoading(false);
         }
     }, [session]);
 

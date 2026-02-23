@@ -66,7 +66,7 @@ export async function POST(req) {
             { returnDocument: 'after', upsert: true }
         );
 
-        return NextResponse.json({ success: true, user: result.value || result });
+        return NextResponse.json({ success: true, user: result });
     } catch (error) {
         console.error('API /api/user POST Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

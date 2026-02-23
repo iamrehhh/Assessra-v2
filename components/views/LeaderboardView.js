@@ -15,7 +15,7 @@ const subjectLabels = {
 
 export default function LeaderboardView() {
     const { data: session } = useSession();
-    const currentUser = session?.user?.name;
+    const currentUser = session?.user?.email;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

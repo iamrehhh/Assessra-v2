@@ -2,13 +2,21 @@
 // Saves a paper attempt score to MongoDB
 
 import { getScoresCollection } from '@/lib/mongodb';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request) {
     try {
-        const body = await request.json();
-        const { username, paperId, paperTitle, subject, questionNumber, score, maxMarks } = body;
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user || !session.user.email) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        if (!username || !paperId || score === undefined || !maxMarks) {
+        const body = await request.json();
+        const { paperId, paperTitle, subject, questionNumber, score, maxMarks } = body;
+        const username = session.user.email; // Force use of authenticated email
+
+        if (!paperId || score === undefined || !maxMarks) {
             return Response.json({ error: 'Missing required fields.' }, { status: 400 });
         }
 
