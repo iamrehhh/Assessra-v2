@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 
 const subjectLabels = {
     'business-p3': '💼 Business P3',
@@ -30,7 +30,8 @@ function ScoreBadge({ score, max }) {
 }
 
 export default function ScorecardView() {
-    const { user } = useAuth();
+    const { data: session } = useSession();
+    const user = session?.user?.name;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

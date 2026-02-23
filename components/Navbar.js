@@ -1,115 +1,55 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
-import { useState } from 'react';
-import SubjectsPanel from './SubjectsPanel';
+
+const navItems = [
+    { id: 'papers', label: 'Past Papers', icon: '📄' },
+    { id: 'scorecard', label: 'Scorecard', icon: '📊' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
+    { id: 'formulae', label: 'Formulae', icon: '📐' },
+    { id: 'definitions', label: 'Definitions', icon: '📚' },
+    { id: 'vocab', label: 'Vocabulary', icon: '📝' },
+    { id: 'idioms', label: 'Idioms', icon: '💬' },
+    { id: 'tips', label: 'Tips & Hacks', icon: '💡' },
+];
 
 export default function Navbar({ currentView, onNavigate }) {
-    const { logout } = useAuth();
-    const [subjectsOpen, setSubjectsOpen] = useState(false);
+    const { data: session } = useSession();
 
     return (
-        <>
-            <header className="app-header">
-                <div className="header-left">
-                    <Image
-                        src="/logo.jpg"
-                        alt="Assessra"
-                        width={70}
-                        height={70}
-                        className="app-logo"
-                        onClick={() => onNavigate('home')}
-                    />
+        <nav className="sidebar">
+            <div className="sidebar-header" onClick={() => onNavigate('home')} style={{ cursor: 'pointer' }}>
+                <Image src="/logo.png" alt="Assessra Logo" width={140} height={40} className="logo" />
+                <div className="version-badge">v2.0</div>
+            </div>
+
+            <div className="nav-menu">
+                {navItems.map((item) => (
+                    <button
+                        key={item.id}
+                        className={`nav-btn ${currentView === item.id ? 'active' : ''}`}
+                        onClick={() => onNavigate(item.id)}
+                    >
+                        <span className="nav-icon">{item.icon}</span>
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="user-profile">
+                <div className="avatar">
+                    {session?.user?.image ? (
+                        <Image src={session.user.image} alt={session.user.name} width={36} height={36} style={{ borderRadius: '50%' }} />
+                    ) : (
+                        '👤'
+                    )}
                 </div>
-
-                <nav className="nav">
-                    {/* Subjects Panel Trigger */}
-                    <button
-                        className={`nav-btn ${currentView === 'papers' ? 'active' : ''}`}
-                        onClick={() => setSubjectsOpen(true)}
-                    >
-                        Subjects
-                    </button>
-
-                    {/* Formulae Dropdown */}
-                    <div className="nav-item-wrapper">
-                        <button
-                            className={`nav-btn ${currentView === 'formulae' ? 'active' : ''}`}
-                            onClick={() => onNavigate('formulae')}
-                        >
-                            Formulae ▾
-                        </button>
-                        <div className="dropdown-menu">
-                            <div className="dropdown-item" onClick={() => onNavigate('formulae', 'business')}>Business</div>
-                            <div className="dropdown-item" onClick={() => onNavigate('formulae', 'economics')}>Economics</div>
-                        </div>
-                    </div>
-
-                    {/* Definitions Dropdown */}
-                    <div className="nav-item-wrapper">
-                        <button
-                            className={`nav-btn ${currentView === 'definitions' ? 'active' : ''}`}
-                            onClick={() => onNavigate('definitions')}
-                        >
-                            Definitions ▾
-                        </button>
-                        <div className="dropdown-menu">
-                            <div className="dropdown-item" onClick={() => onNavigate('definitions', 'business')}>Business</div>
-                            <div className="dropdown-item" onClick={() => onNavigate('definitions', 'economics')}>Economics</div>
-                        </div>
-                    </div>
-
-                    {/* Scorecard */}
-                    <button
-                        className={`nav-btn ${currentView === 'scorecard' ? 'active' : ''}`}
-                        onClick={() => onNavigate('scorecard')}
-                    >
-                        Scorecard
-                    </button>
-
-                    {/* Others Dropdown */}
-                    <div className="nav-item-wrapper">
-                        <button className="nav-btn">Others ▾</button>
-                        <div className="dropdown-menu">
-                            <div className="dropdown-item" onClick={() => onNavigate('vocab')}>Vocab</div>
-                            <div className="dropdown-item" onClick={() => onNavigate('idioms')}>Idioms</div>
-                        </div>
-                    </div>
-
-                    {/* Leaderboard */}
-                    <button
-                        className={`nav-btn ${currentView === 'leaderboard' ? 'active' : ''}`}
-                        onClick={() => onNavigate('leaderboard')}
-                    >
-                        🏆 Leaderboard
-                    </button>
-
-                    {/* Tips */}
-                    <button
-                        className="nav-btn"
-                        style={{ fontSize: '1.5rem', padding: '5px 12px' }}
-                        onClick={() => onNavigate('tips')}
-                    >
-                        💡
-                    </button>
-
-                    {/* Logout */}
-                    <button className="nav-btn" onClick={logout}>
-                        Logout
-                    </button>
-                </nav>
-            </header>
-
-            {/* Subjects Side Panel */}
-            <SubjectsPanel
-                isOpen={subjectsOpen}
-                onClose={() => setSubjectsOpen(false)}
-                onSelect={(subject, paper) => {
-                    setSubjectsOpen(false);
-                    onNavigate('papers', subject, paper);
-                }}
-            />
-        </>
+                <div className="user-info">
+                    <div className="user-name">{session?.user?.name || 'Student'}</div>
+                    <button className="logout-btn" onClick={() => signOut()}>Logout</button>
+                </div>
+            </div>
+        </nav>
     );
 }

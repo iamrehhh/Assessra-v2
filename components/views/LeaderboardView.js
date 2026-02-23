@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 
 const medals = ['🥇', '🥈', '🥉'];
 
@@ -14,7 +14,8 @@ const subjectLabels = {
 };
 
 export default function LeaderboardView() {
-    const { user: currentUser } = useAuth();
+    const { data: session } = useSession();
+    const currentUser = session?.user?.name;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

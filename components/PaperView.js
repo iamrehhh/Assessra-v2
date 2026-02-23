@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 
 export default function PaperView({ paperId, paperData, onBack }) {
     const paper = paperData[paperId];
-    const { user } = useAuth();
+    const { data: session } = useSession();
     const [submitted, setSubmitted] = useState({});
     const [answers, setAnswers] = useState({});
     const [loading, setLoading] = useState({});
@@ -41,12 +41,12 @@ export default function PaperView({ paperId, paperData, onBack }) {
             setResults((prev) => ({ ...prev, [q.n]: data }));
             setSubmitted((prev) => ({ ...prev, [q.n]: true }));
             // Silently save score to MongoDB
-            if (data.score !== undefined && user) {
+            if (data.score !== undefined && session?.user?.name) {
                 const subjectGuess = paperId.includes('econ') ? 'economics-p4' : paperId.includes('_4') ? 'business-p4' : 'business-p3';
                 fetch('/api/scores/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, paperId, paperTitle: paper.title, subject: subjectGuess, questionNumber: q.n, score: data.score, maxMarks: q.m }),
+                    body: JSON.stringify({ username: session.user.name, paperId, paperTitle: paper.title, subject: subjectGuess, questionNumber: q.n, score: data.score, maxMarks: q.m }),
                 }).catch(() => { });
             }
         } catch {

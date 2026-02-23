@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 
 export default function MCQView({ paperId, paperData, onBack }) {
     const paper = paperData[paperId];
-    const { user } = useAuth();
+    const { data: session } = useSession();
     const [answers, setAnswers] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(null);

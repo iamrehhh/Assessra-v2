@@ -1,9 +1,10 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 
 export default function HomeView({ onNavigate }) {
-    const { user } = useAuth();
+    const { data: session } = useSession();
+    const user = session?.user?.name || 'Student';
     const firstName = user ? user.split('.')[0] : 'Student';
 
     return (

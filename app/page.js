@@ -1,13 +1,13 @@
 'use client';
 
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
 
-function AppContent() {
-  const { user, loading } = useAuth();
+export default function Home() {
+  const { data: session, status } = useSession();
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="loading-overlay">
         <div className="spinner" />
@@ -16,17 +16,9 @@ function AppContent() {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return <LoginPage />;
   }
 
   return <Dashboard />;
-}
-
-export default function Home() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
 }
