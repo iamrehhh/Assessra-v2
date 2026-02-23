@@ -1,10 +1,7 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
-import clientPromise from '@/lib/mongodb';
 
 export const authOptions = {
-    adapter: MongoDBAdapter(clientPromise),
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
@@ -18,7 +15,7 @@ export const authOptions = {
         async session({ session, token }) {
             if (session?.user) {
                 session.user.id = token.sub;
-                session.user.username = session.user.name; // Keep compatibility with existing code that uses session.user.username
+                session.user.username = session.user.name;
             }
             return session;
         },
