@@ -9,6 +9,8 @@ import LeaderboardView from './views/LeaderboardView';
 import FormulaeView from './views/FormulaeView';
 import DefinitionsView from './views/DefinitionsView';
 import TipsView from './views/TipsView';
+import VocabView from './views/VocabView';
+import IdiomsView from './views/IdiomsView';
 
 export default function Dashboard() {
     const [view, setView] = useState('home');
@@ -42,9 +44,9 @@ export default function Dashboard() {
             case 'definitions':
                 return <DefinitionsView />;
             case 'vocab':
-                return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>📝 Vocabulary coming soon...</div>;
+                return <VocabView />;
             case 'idioms':
-                return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>💬 Idioms coming soon...</div>;
+                return <IdiomsView />;
             case 'tips':
                 return <TipsView />;
             default:
