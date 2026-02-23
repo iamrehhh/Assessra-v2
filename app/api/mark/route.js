@@ -3,10 +3,6 @@
 
 import OpenAI from 'openai';
 
-const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 // ─── Build system prompt based on paper type ────────────────────────────────
 
 function buildSystemPrompt(pdf, marks) {
@@ -171,6 +167,10 @@ export async function POST(request) {
         if (!process.env.OPENAI_API_KEY) {
             return Response.json({ error: 'OPENAI_API_KEY is not configured on the server.' }, { status: 503 });
         }
+
+        const client = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
 
         const marksInt = parseInt(marks, 10) || 12;
         const systemPrompt = buildSystemPrompt(pdf, marksInt);
