@@ -32,6 +32,34 @@ export async function GET() {
             },
             { $sort: { totalScore: -1 } },
             { $limit: 20 },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "email",
+                    as: "userInfo"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$userInfo",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    totalScore: 1,
+                    totalMax: 1,
+                    totalAttempts: 1,
+                    subjects: 1,
+                    lastActivity: 1,
+                    percentage: 1,
+                    nickname: "$userInfo.nickname",
+                    image: "$userInfo.image",
+                    level: "$userInfo.level"
+                }
+            }
         ]).toArray();
 
         return Response.json({ leaderboard });

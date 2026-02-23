@@ -1,9 +1,11 @@
-'use client';
+import { signOut } from 'next-auth/react';
 
-import { signOut, useSession } from 'next-auth/react';
-
-export default function Navbar({ currentView, onNavigate }) {
-    const { data: session } = useSession();
+export default function Navbar({ setView, userProfile }) {
+    // Get initials fallback
+    const getInitials = (nameStr) => {
+        if (!nameStr) return '?';
+        return nameStr.charAt(0).toUpperCase();
+    };
 
     return (
         <div className="app-header">
@@ -12,57 +14,30 @@ export default function Navbar({ currentView, onNavigate }) {
                     src="/logo.jpg"
                     alt="Assessra"
                     className="app-logo"
-                    onClick={() => onNavigate('home')}
+                    onClick={() => setView('home')}
+                    style={{ cursor: 'pointer' }}
                 />
             </div>
-
             <div className="nav">
-                <button
-                    className={`nav-btn ${currentView === 'papers' ? 'active' : ''}`}
-                    onClick={() => onNavigate('papers')}
-                >
-                    Subjects
+                <button className="nav-btn" onClick={() => setView('home')}>Subjects</button>
+                <button className="nav-btn" onClick={() => setView('leaderboard')}>Leaderboard</button>
+                <button className="nav-btn" onClick={() => setView('formulae')}>Formulae</button>
+                <button className="nav-btn" onClick={() => setView('definitions')}>Definitions</button>
+                <button className="nav-btn" onClick={() => setView('tips')}>Tips & Hacks</button>
+                <button className="nav-btn" onClick={() => setView('vocab')}>Vocab</button>
+                <button className="nav-btn" onClick={() => setView('idioms')}>Idioms</button>
+                <button className="nav-btn" onClick={() => setView('profile')} style={{ padding: '0 15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                        width: '30px', height: '30px', borderRadius: '50%',
+                        background: userProfile?.image ? `url(${userProfile.image}) center/cover` : 'var(--lime-primary)',
+                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px',
+                        border: '2px solid white'
+                    }}>
+                        {!userProfile?.image && getInitials(userProfile?.nickname || userProfile?.name)}
+                    </div>
+                    Profile
                 </button>
-
-                <button
-                    className={`nav-btn ${currentView === 'formulae' ? 'active' : ''}`}
-                    onClick={() => onNavigate('formulae')}
-                >
-                    Formulae
-                </button>
-
-                <button
-                    className={`nav-btn ${currentView === 'definitions' ? 'active' : ''}`}
-                    onClick={() => onNavigate('definitions')}
-                >
-                    Definitions
-                </button>
-
-                <button
-                    className={`nav-btn ${currentView === 'scorecard' ? 'active' : ''}`}
-                    onClick={() => onNavigate('scorecard')}
-                >
-                    Scorecard
-                </button>
-
-                <button
-                    className={`nav-btn ${currentView === 'leaderboard' ? 'active' : ''}`}
-                    onClick={() => onNavigate('leaderboard')}
-                >
-                    🏆 Leaderboard
-                </button>
-
-                <button
-                    className={`nav-btn ${currentView === 'tips' ? 'active' : ''}`}
-                    onClick={() => onNavigate('tips')}
-                    style={{ fontSize: '1.5rem', padding: '5px 15px' }}
-                >
-                    💡
-                </button>
-
-                <button className="nav-btn" onClick={() => signOut()}>
-                    Logout
-                </button>
+                <button className="nav-btn" onClick={() => signOut()}>Logout</button>
             </div>
         </div>
     );
