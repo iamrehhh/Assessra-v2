@@ -1,8 +1,24 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+const errorMessages = {
+    OAuthSignin: 'Could not start Google sign-in. Check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel.',
+    OAuthCallback: 'Google sign-in callback failed. Check your redirect URI in Google Console.',
+    OAuthCreateAccount: 'Could not create account in database. Check MONGODB_URI.',
+    Callback: 'Authentication callback error.',
+    Default: 'Sign-in failed. Please try again.',
+    Configuration: 'Server configuration error — missing environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or NEXTAUTH_SECRET).',
+    AccessDenied: 'Access denied.',
+};
+
+function LoginContent() {
+    const searchParams = useSearchParams();
+    const errorType = searchParams.get('error');
+    const errorMsg = errorType ? (errorMessages[errorType] || errorMessages.Default) : null;
+
     return (
         <div style={{
             minHeight: '100vh',
@@ -44,6 +60,23 @@ export default function LoginPage() {
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {errorMsg && (
+                    <div style={{
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '12px',
+                        padding: '14px 18px',
+                        marginBottom: '24px',
+                        color: '#dc2626',
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
+                        lineHeight: 1.5,
+                    }}>
+                        ⚠️ {errorMsg}
+                    </div>
+                )}
+
                 {/* Google Sign-In Button */}
                 <button
                     onClick={() => signIn('google')}
@@ -83,5 +116,17 @@ export default function LoginPage() {
                 </button>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f0fdf4' }}>
+                <div>Loading...</div>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }
