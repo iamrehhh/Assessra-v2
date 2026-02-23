@@ -53,8 +53,23 @@ export default function Dashboard() {
         );
     }
 
+    if (!userProfile) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', textAlign: 'center' }}>
+                <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>Failed to load profile</h2>
+                <p style={{ color: '#666', marginBottom: '20px' }}>There was an error communicating with the server.</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    style={{ padding: '10px 20px', background: 'var(--lime-primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
     // Block access if not onboarded
-    if (userProfile && !userProfile.isOnboarded) {
+    if (!userProfile.isOnboarded) {
         return <OnboardingView
             userEmail={session?.user?.email}
             onComplete={(updatedProfile) => setUserProfile(updatedProfile)}
