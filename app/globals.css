@@ -22,7 +22,8 @@
   scroll-behavior: smooth;
 }
 
-html, body {
+html,
+body {
   height: 100%;
 }
 
@@ -35,17 +36,37 @@ body {
 }
 
 /* === SCROLLBAR === */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
 
 /* === TYPOGRAPHY === */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: var(--font-playfair);
 }
-h1 { font-weight: 700; }
-h2 { font-weight: 600; }
+
+h1 {
+  font-weight: 700;
+}
+
+h2 {
+  font-weight: 600;
+}
 
 /* === CONTAINER === */
 .container {
@@ -57,8 +78,10 @@ h2 { font-weight: 600; }
 /* === LOGIN PAGE === */
 .login-screen {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -174,7 +197,9 @@ h2 { font-weight: 600; }
   transition: transform 0.2s;
 }
 
-.app-logo:hover { transform: scale(1.05); }
+.app-logo:hover {
+  transform: scale(1.05);
+}
 
 .nav {
   display: flex;
@@ -315,8 +340,10 @@ h2 { font-weight: 600; }
 /* === PANELS (SIDEBAR) === */
 .panel-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.4);
   z-index: 2999;
   opacity: 0;
@@ -344,7 +371,9 @@ h2 { font-weight: 600; }
   overflow-y: auto;
 }
 
-.side-panel.active { right: 0; }
+.side-panel.active {
+  right: 0;
+}
 
 .panel-header {
   padding: 25px;
@@ -420,20 +449,27 @@ h2 { font-weight: 600; }
   border-radius: 12px;
   font-weight: 600;
   font-size: 0.9rem;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   animation: slideInToast 0.3s ease;
 }
 
 @keyframes slideInToast {
-  from { opacity: 0; transform: translateX(40px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* === LOADING OVERLAY === */
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(6px);
   z-index: 9000;
   display: flex;
@@ -453,7 +489,9 @@ h2 { font-weight: 600; }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -471,4 +509,138 @@ h2 { font-weight: 600; }
   border-radius: 20px;
   font-weight: 800;
   font-size: 0.9rem;
+}
+
+/* === FORMULA / DEFINITIONS / TIPS PAGES === */
+.formula-section {
+  margin-bottom: 40px;
+}
+
+.chapter-title,
+.topic-title {
+  font-family: var(--font-playfair);
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--lime-primary);
+  padding-bottom: 5px;
+  display: inline-block;
+}
+
+.formula-grid,
+.def-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.formula-card,
+.def-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.formula-card:hover,
+.def-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--lime-primary);
+}
+
+.formula-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--lime-primary);
+}
+
+.def-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #3b82f6;
+}
+
+.f-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.f-body {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #2c3e50;
+  line-height: 1.4;
+}
+
+.d-term {
+  font-size: 1.1rem;
+  color: #1e293b;
+  font-family: var(--font-playfair);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.d-desc {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #475569;
+  line-height: 1.6;
+}
+
+/* === TIP CARDS === */
+.tip-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tip-card:hover {
+  transform: translateY(-3px);
+  border-color: #FFD700;
+}
+
+.tip-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #FFD700;
+}
+
+.t-topic {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #d4ac0d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.t-content {
+  font-size: 0.95rem;
+  color: #444;
+  line-height: 1.6;
 }

@@ -8,6 +8,7 @@ import ScorecardView from './views/ScorecardView';
 import LeaderboardView from './views/LeaderboardView';
 import FormulaeView from './views/FormulaeView';
 import DefinitionsView from './views/DefinitionsView';
+import TipsView from './views/TipsView';
 
 export default function Dashboard() {
     const [view, setView] = useState('home');
@@ -45,7 +46,7 @@ export default function Dashboard() {
             case 'idioms':
                 return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>💬 Idioms coming soon...</div>;
             case 'tips':
-                return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>💡 Tips coming soon...</div>;
+                return <TipsView />;
             default:
                 return <HomeView onNavigate={handleNavigate} />;
         }
