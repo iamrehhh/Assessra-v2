@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PaperView({ paperId, paperData, onBack }) {
     const paper = paperData[paperId];
+    const { user } = useAuth();
     const [submitted, setSubmitted] = useState({});
     const [answers, setAnswers] = useState({});
     const [loading, setLoading] = useState({});
@@ -38,6 +40,15 @@ export default function PaperView({ paperId, paperData, onBack }) {
             const data = await res.json();
             setResults((prev) => ({ ...prev, [q.n]: data }));
             setSubmitted((prev) => ({ ...prev, [q.n]: true }));
+            // Silently save score to MongoDB
+            if (data.score !== undefined && user) {
+                const subjectGuess = paperId.includes('econ') ? 'economics-p4' : paperId.includes('_4') ? 'business-p4' : 'business-p3';
+                fetch('/api/scores/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, paperId, paperTitle: paper.title, subject: subjectGuess, questionNumber: q.n, score: data.score, maxMarks: q.m }),
+                }).catch(() => { });
+            }
         } catch {
             setResults((prev) => ({ ...prev, [q.n]: { error: 'Failed to connect to server.' } }));
         } finally {

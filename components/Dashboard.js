@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Navbar from './Navbar';
 import HomeView from './views/HomeView';
 import PapersView from './views/PapersView';
+import ScorecardView from './views/ScorecardView';
+import LeaderboardView from './views/LeaderboardView';
 
 export default function Dashboard() {
     const [view, setView] = useState('home');
@@ -28,14 +30,14 @@ export default function Dashboard() {
                         onBack={() => setView('home')}
                     />
                 );
+            case 'scorecard':
+                return <ScorecardView />;
+            case 'leaderboard':
+                return <LeaderboardView />;
             case 'formulae':
                 return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>📐 Formulae coming soon...</div>;
             case 'definitions':
                 return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>📚 Definitions coming soon...</div>;
-            case 'scorecard':
-                return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>📊 Scorecard coming soon...</div>;
-            case 'leaderboard':
-                return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>🏆 Leaderboard coming soon...</div>;
             case 'vocab':
                 return <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>📝 Vocabulary coming soon...</div>;
             case 'idioms':

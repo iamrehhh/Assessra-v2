@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function MCQView({ paperId, paperData, onBack }) {
     const paper = paperData[paperId];
+    const { user } = useAuth();
     const [answers, setAnswers] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(null);
@@ -11,17 +13,10 @@ export default function MCQView({ paperId, paperData, onBack }) {
     const timerRef = useRef(null);
 
     useEffect(() => {
-        if (submitted) {
-            clearInterval(timerRef.current);
-            return;
-        }
+        if (submitted) { clearInterval(timerRef.current); return; }
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timerRef.current);
-                    handleSubmit(true);
-                    return 0;
-                }
+                if (prev <= 1) { clearInterval(timerRef.current); handleSubmit(true); return 0; }
                 return prev - 1;
             });
         }, 1000);
@@ -45,11 +40,25 @@ export default function MCQView({ paperId, paperData, onBack }) {
         if (!auto && !window.confirm('Are you ready to submit your answers for grading?')) return;
         clearInterval(timerRef.current);
         let correct = 0;
-        paper.answers.forEach((ans, i) => {
-            if (answers[i] === ans) correct++;
-        });
+        paper.answers.forEach((ans, i) => { if (answers[i] === ans) correct++; });
         setScore(correct);
         setSubmitted(true);
+        // Silently save to MongoDB
+        if (user) {
+            fetch('/api/scores/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: user,
+                    paperId,
+                    paperTitle: `Economics MCQ — ${paperId}`,
+                    subject: 'economics-p3',
+                    questionNumber: 'all',
+                    score: correct,
+                    maxMarks: paper.answers.length,
+                }),
+            }).catch(() => { });
+        }
     }
 
     const h = Math.floor(timeLeft / 3600);
