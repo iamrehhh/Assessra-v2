@@ -195,7 +195,7 @@ export default function ProfileView({ userProfile, onProfileUpdate }) {
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '8px', color: '#444', fontWeight: 600 }}>Academic Level</label>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#444', fontWeight: 600 }}>Appearing For</label>
                             <select
                                 value={level}
                                 onChange={(e) => setLevel(e.target.value)}

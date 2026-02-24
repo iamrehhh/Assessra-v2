@@ -15,7 +15,7 @@ export default function OnboardingView({ onComplete, userEmail }) {
             return;
         }
         if (!level) {
-            setError('Please select your academic level.');
+            setError('Please select what you are appearing for.');
             return;
         }
 
@@ -67,7 +67,7 @@ export default function OnboardingView({ onComplete, userEmail }) {
                 <div style={{ fontSize: '4rem', marginBottom: '20px' }}>👋</div>
                 <h1 style={{ color: 'var(--lime-dark)', fontSize: '2rem', marginBottom: '10px', fontWeight: 800 }}>Welcome to Assessra!</h1>
                 <p style={{ color: '#666', fontSize: '1.1rem', marginBottom: '30px', lineHeight: 1.5 }}>
-                    Let's get you set up. Please choose a nickname for the leaderboard and select your academic level.
+                    Let's get you set up. Please choose a nickname for the leaderboard and select what you are appearing for.
                 </p>
 
                 {error && (
@@ -102,13 +102,13 @@ export default function OnboardingView({ onComplete, userEmail }) {
                     </div>
 
                     <div style={{ marginBottom: '30px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#444', fontWeight: 600 }}>Academic Level</label>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#444', fontWeight: 600 }}>Appearing For</label>
                         <select
                             value={level}
                             onChange={(e) => setLevel(e.target.value)}
                             style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '1rem', boxSizing: 'border-box', cursor: 'pointer', backgroundColor: 'white' }}
                         >
-                            <option value="" disabled>Select your level...</option>
+                            <option value="" disabled>Select what you are appearing for...</option>
                             <option value="IGCSE">IGCSE</option>
                             <option value="AS Level">AS Level</option>
                             <option value="A Level">A Level</option>
