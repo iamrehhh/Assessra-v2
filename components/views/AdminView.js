@@ -129,7 +129,7 @@ export default function AdminView() {
         badge: { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: 'white', padding: '4px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' },
         tabs: { display: 'flex', gap: '4px', background: '#f1f5f9', borderRadius: '12px', padding: '4px', marginBottom: '24px', width: 'fit-content' },
         tab: (active) => ({ padding: '10px 24px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s', background: active ? 'white' : 'transparent', color: active ? '#1e293b' : '#64748b', boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }),
-        searchBar: { width: '100%', padding: '12px 18px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '0.95rem', marginBottom: '20px', outline: 'none', transition: 'border 0.2s', background: '#fafafa' },
+        searchBar: { width: '100%', padding: '12px 18px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '0.95rem', marginBottom: '20px', outline: 'none', transition: 'border 0.2s', background: '#fafafa', color: '#1e293b' },
         table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0', background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' },
         th: { padding: '14px 18px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid #f1f5f9', background: '#fafbfc' },
         td: { padding: '14px 18px', fontSize: '0.9rem', color: '#334155', borderBottom: '1px solid #f1f5f9' },
@@ -181,11 +181,11 @@ export default function AdminView() {
                         value={notificationMessage}
                         onChange={e => setNotificationMessage(e.target.value)}
                         placeholder="Enter notification message..."
-                        style={{ flex: 1, minWidth: '250px', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0', outline: 'none', transition: 'border 0.2s', fontSize: '0.95rem' }}
+                        style={{ flex: 1, minWidth: '250px', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0', outline: 'none', transition: 'border 0.2s', fontSize: '0.95rem', color: '#1e293b', backgroundColor: 'white' }}
                         onFocus={e => e.target.style.borderColor = 'var(--lime-primary)'}
                         onBlur={e => e.target.style.borderColor = '#e2e8f0'}
                     />
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0', color: '#1e293b' }}>
                         <input
                             type="checkbox"
                             checked={notificationActive}
