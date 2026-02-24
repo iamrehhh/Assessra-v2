@@ -188,7 +188,7 @@ export default function ProfileView({ userProfile, onProfileUpdate }) {
                                 value={nickname}
                                 onChange={(e) => setNickname(e.target.value)}
                                 maxLength={20}
-                                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '1rem', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+                                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '1rem', color: '#111827', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
                                 onFocus={(e) => e.target.style.borderColor = 'var(--lime-primary)'}
                                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                             />
@@ -199,7 +199,7 @@ export default function ProfileView({ userProfile, onProfileUpdate }) {
                             <select
                                 value={level}
                                 onChange={(e) => setLevel(e.target.value)}
-                                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '1rem', boxSizing: 'border-box', cursor: 'pointer', backgroundColor: 'white' }}
+                                style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '2px solid #e5e7eb', fontSize: '1rem', color: '#111827', boxSizing: 'border-box', cursor: 'pointer', backgroundColor: 'white' }}
                             >
                                 <option value="IGCSE">IGCSE</option>
                                 <option value="AS Level">AS Level</option>

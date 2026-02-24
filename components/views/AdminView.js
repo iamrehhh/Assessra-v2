@@ -10,10 +10,36 @@ export default function AdminView() {
     const [actionLoading, setActionLoading] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Notification State
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [notificationActive, setNotificationActive] = useState(false);
+
     useEffect(() => {
         if (tab === 'users') fetchUsers();
         else fetchScores();
+        fetchNotification();
     }, [tab]);
+
+    const fetchNotification = async () => {
+        try {
+            const res = await fetch('/api/notification');
+            const data = await res.json();
+            setNotificationMessage(data.message || '');
+            setNotificationActive(data.active || false);
+        } catch (err) { console.error('Failed to fetch notification', err); }
+    };
+
+    const saveNotification = async () => {
+        try {
+            const res = await fetch('/api/admin/notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: notificationMessage, active: notificationActive })
+            });
+            if (res.ok) alert('Notification updated successfully!');
+            else alert('Failed to update notification.');
+        } catch (err) { alert('Network error.'); }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -138,6 +164,44 @@ export default function AdminView() {
                 <div style={styles.statCard}>
                     <p style={styles.statLabel}>Active Scorers</p>
                     <p style={styles.statNumber}>{Object.keys(scoresByUser).length}</p>
+                </div>
+            </div>
+
+            {/* Notification Control */}
+            <div style={{ ...styles.statCard, marginBottom: '24px', padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                        <p style={{ ...styles.statLabel, marginBottom: '4px' }}>Global Notification</p>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0 }}>Broadcast a message to all users on the dashboard.</p>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                        type="text"
+                        value={notificationMessage}
+                        onChange={e => setNotificationMessage(e.target.value)}
+                        placeholder="Enter notification message..."
+                        style={{ flex: 1, minWidth: '250px', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0', outline: 'none', transition: 'border 0.2s', fontSize: '0.95rem' }}
+                        onFocus={e => e.target.style.borderColor = 'var(--lime-primary)'}
+                        onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+                        <input
+                            type="checkbox"
+                            checked={notificationActive}
+                            onChange={e => setNotificationActive(e.target.checked)}
+                            style={{ width: '18px', height: '18px', accentColor: 'var(--lime-primary)', cursor: 'pointer' }}
+                        />
+                        Active Status
+                    </label>
+                    <button
+                        style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--lime-primary)', color: 'white', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
+                        onClick={saveNotification}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                        Publish Update
+                    </button>
                 </div>
             </div>
 

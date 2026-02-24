@@ -1,8 +1,29 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 
-export default function TopHeader({ setView, userProfile, streak = 0 }) {
+export default function TopHeader({ setView, userProfile, streak = 0, setIsMobileOpen }) {
+    const [notification, setNotification] = useState({ active: false, message: '' });
+
+    useEffect(() => {
+        const fetchNotification = async () => {
+            try {
+                const res = await fetch('/api/notification');
+                if (res.ok) {
+                    const data = await res.json();
+                    setNotification(data);
+                }
+            } catch (err) { console.error('Notification error', err); }
+        };
+        fetchNotification();
+    }, []);
+
+    const showNotification = () => {
+        if (notification.message) alert(notification.message);
+        else alert('No new notifications today.');
+    };
+
     // Get initials fallback
     const getInitials = (nameStr) => {
         if (!nameStr) return '?';
@@ -11,13 +32,18 @@ export default function TopHeader({ setView, userProfile, streak = 0 }) {
 
     return (
         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 shrink-0">
-            <div className="flex items-center bg-white/5 rounded-xl px-4 py-2 w-96 border border-white/10">
-                <span className="material-symbols-outlined text-slate-400 text-xl mr-2">search</span>
-                <input
-                    className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-500 text-slate-200 outline-none"
-                    placeholder="Search for papers, formulas, or concepts..."
-                    type="text"
-                />
+            <div className="flex items-center gap-4">
+                <button onClick={() => setIsMobileOpen(true)} className="lg:hidden text-slate-400 hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-2xl">menu</span>
+                </button>
+                <div className="hidden md:flex items-center bg-white/5 rounded-xl px-4 py-2 w-96 border border-white/10">
+                    <span className="material-symbols-outlined text-slate-400 text-xl mr-2">search</span>
+                    <input
+                        className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-500 text-slate-200 outline-none"
+                        placeholder="Search for papers, formulas, or concepts..."
+                        type="text"
+                    />
+                </div>
             </div>
 
             <div className="flex items-center gap-6">
@@ -26,9 +52,11 @@ export default function TopHeader({ setView, userProfile, streak = 0 }) {
                     <span className="text-sm font-bold text-slate-200">{streak} Day Streak</span>
                 </div>
 
-                <button className="relative text-slate-400 hover:text-white transition-colors">
+                <button onClick={showNotification} className="relative text-slate-400 hover:text-white transition-colors" title="Notifications">
                     <span className="material-symbols-outlined">notifications</span>
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full border-2 border-background-dark"></span>
+                    {notification.active && (
+                        <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full border-2 border-background-dark shadow-sm shadow-primary/50"></span>
+                    )}
                 </button>
 
                 <div className="flex items-center gap-3 pl-4 border-l border-white/10 cursor-pointer group" onClick={() => setView('profile')}>

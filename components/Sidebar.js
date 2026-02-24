@@ -2,7 +2,7 @@
 
 const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
 
-export default function Sidebar({ view, setView, userEmail, currentGoal = 5, completedGoal = 4 }) {
+export default function Sidebar({ view, setView, userEmail, currentGoal = 5, completedGoal = 4, isMobileOpen, setIsMobileOpen }) {
     const isAdmin = ADMIN_EMAILS.includes(userEmail);
 
     const goalPercent = Math.min(100, Math.round((completedGoal / currentGoal) * 100)) || 0;
@@ -10,19 +10,22 @@ export default function Sidebar({ view, setView, userEmail, currentGoal = 5, com
     const navItems = [
         { id: 'home', icon: 'grid_view', label: 'Overview' },
         { id: 'papers', icon: 'book', label: 'Subjects' },
-        { id: 'formulae', icon: 'function', label: 'Formulae' },
-        { id: 'definitions', icon: 'menu_book', label: 'Definitions' },
         { id: 'scorecard', icon: 'bar_chart', label: 'Scorecard' },
         { id: 'leaderboard', icon: 'leaderboard', label: 'Leaderboard' },
     ];
 
     return (
-        <aside className="w-64 border-r border-white/5 flex flex-col bg-background-dark shrink-0">
-            <div className="p-6 flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="material-symbols-outlined text-background-dark font-bold">bolt</span>
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/5 flex flex-col bg-background-dark shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
+                    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img src="/logo.jpg" alt="Assessra Logo" className="w-full h-full object-cover" />
+                    </div>
+                    <h1 className="text-xl font-black tracking-tighter uppercase italic text-slate-100 m-0 leading-none">Assessra</h1>
                 </div>
-                <h1 className="text-xl font-black tracking-tighter uppercase italic text-slate-100 m-0 leading-none">Assessra</h1>
+                <button onClick={() => setIsMobileOpen(false)} className="lg:hidden text-slate-400 hover:text-white transition-colors">
+                    <span className="material-symbols-outlined">close</span>
+                </button>
             </div>
 
             <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">

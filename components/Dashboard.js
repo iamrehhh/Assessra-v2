@@ -23,6 +23,7 @@ export default function Dashboard() {
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     // Fetch user profile on mount
     useEffect(() => {
@@ -112,9 +113,9 @@ export default function Dashboard() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-background-dark text-slate-100 font-display">
-            <Sidebar view={view} setView={setView} userEmail={session?.user?.email} />
+            <Sidebar view={view} setView={setView} userEmail={session?.user?.email} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
             <main className="flex-1 flex flex-col w-full h-full overflow-y-auto">
-                <TopHeader setView={setView} userProfile={userProfile} />
+                <TopHeader setView={setView} userProfile={userProfile} setIsMobileOpen={setIsMobileOpen} />
                 <div className="p-4 md:p-8 space-y-8 pb-20">
                     {renderContent()}
                 </div>
