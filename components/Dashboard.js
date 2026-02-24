@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import Navbar from './Navbar';
+import Sidebar from './Sidebar';
+import TopHeader from './TopHeader';
 import HomeView from './views/HomeView';
 import PapersView from './views/PapersView';
 import LeaderboardView from './views/LeaderboardView';
 import FormulaeView from './views/FormulaeView';
 import DefinitionsView from './views/DefinitionsView';
+import ScorecardView from './views/ScorecardView';
 import TipsView from './views/TipsView';
 import VocabView from './views/VocabView';
 import IdiomsView from './views/IdiomsView';
@@ -91,6 +93,8 @@ export default function Dashboard() {
                 return <FormulaeView />;
             case 'definitions':
                 return <DefinitionsView />;
+            case 'scorecard':
+                return <ScorecardView />;
             case 'vocab':
                 return <VocabView />;
             case 'idioms':
@@ -107,11 +111,14 @@ export default function Dashboard() {
     };
 
     return (
-        <div id="app-layer">
-            <Navbar setView={setView} userProfile={userProfile} userEmail={session?.user?.email} />
-            <div style={{ padding: '20px' }}>
-                {renderContent()}
-            </div>
+        <div className="flex h-screen overflow-hidden bg-background-dark text-slate-100 font-display">
+            <Sidebar view={view} setView={setView} userEmail={session?.user?.email} />
+            <main className="flex-1 flex flex-col w-full h-full overflow-y-auto">
+                <TopHeader setView={setView} userProfile={userProfile} />
+                <div className="p-4 md:p-8 space-y-8 pb-20">
+                    {renderContent()}
+                </div>
+            </main>
         </div>
     );
 }
