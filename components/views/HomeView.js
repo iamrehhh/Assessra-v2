@@ -10,6 +10,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
         rank: '-',
         avgScore: 0,
         totalScore: 0,
+        todayScore: 0,
         leaderboardTop3: [],
         completedModules: 0,
     });
@@ -29,14 +30,34 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 const lbData = await lbRes.json();
 
                 let totalS = 0;
+                let todayS = 0;
                 let totalMax = 0;
                 let completed = 0;
 
-                if (scoresData.scores && scoresData.scores.length > 0) {
+                const todayString = new Date().toLocaleDateString();
+
+                if (scoresData.attempts && scoresData.attempts.length > 0) {
+                    completed = scoresData.attempts.length;
+                    scoresData.attempts.forEach(s => {
+                        totalS += s.score;
+                        totalMax += s.maxMarks;
+
+                        const attemptDate = new Date(s.submittedAt).toLocaleDateString();
+                        if (attemptDate === todayString) {
+                            todayS += s.score;
+                        }
+                    });
+                } else if (scoresData.scores && scoresData.scores.length > 0) {
+                    // Fallback in case of old API return format
                     completed = scoresData.scores.length;
                     scoresData.scores.forEach(s => {
                         totalS += s.score;
                         totalMax += s.maxMarks;
+
+                        const attemptDate = new Date(s.submittedAt || s.submitted_at).toLocaleDateString();
+                        if (attemptDate === todayString) {
+                            todayS += s.score;
+                        }
                     });
                 }
 
@@ -54,6 +75,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     rank: currentRank,
                     avgScore: avg,
                     totalScore: totalS,
+                    todayScore: todayS,
                     leaderboardTop3: lbData.leaderboard ? lbData.leaderboard.slice(0, 3) : [],
                     completedModules: completed
                 });
@@ -154,7 +176,27 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     </div>
 
                     {/* Progress Section */}
-                    <div className="flex-grow">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+
+                        {/* Daily Progress Widget */}
+                        <div className="glass p-6 rounded-3xl space-y-4 flex flex-col justify-center border border-white/5">
+                            <div className="flex justify-between items-center">
+                                <h4 className="font-bold text-slate-100">Daily Progress</h4>
+                                <span className="text-xs font-bold text-primary">{Math.min(100, Math.round((stats.todayScore / 50) * 100))}% of Goal</span>
+                            </div>
+                            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                                <div
+                                    className="bg-primary h-full shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all duration-1000"
+                                    style={{ width: `${Math.min(100, (stats.todayScore / 50) * 100)}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-400 font-medium">
+                                <span>{stats.todayScore} Points Done</span>
+                                <span>Goal: 50</span>
+                            </div>
+                        </div>
+
+                        {/* Total Expertise Widget */}
                         <div className="glass p-6 rounded-3xl flex items-center justify-between gap-5 border border-white/5 h-full">
                             <div className="flex items-center gap-5">
                                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">

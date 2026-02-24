@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 
-export default function TopHeader({ setView, userProfile, streak = 0, setIsMobileOpen }) {
+export default function TopHeader({ setView, userProfile, setIsMobileOpen }) {
+    const { data: session } = useSession();
+    const [streak, setStreak] = useState(0);
     const [notification, setNotification] = useState({ active: false, message: '' });
     const [showPanel, setShowPanel] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
@@ -22,8 +25,57 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
                 }
             } catch (err) { console.error('Notification error', err); }
         };
+
+        const fetchStreak = async () => {
+            if (!session?.user?.email) return;
+            try {
+                const res = await fetch(`/api/scores/user?username=${encodeURIComponent(session.user.email)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.attempts || data.scores) {
+                    const records = data.attempts || data.scores;
+
+                    // Group scores by local date string
+                    const scoresByDate = {};
+                    records.forEach(r => {
+                        const dateStr = new Date(r.submittedAt || r.submitted_at).toLocaleDateString();
+                        scoresByDate[dateStr] = (scoresByDate[dateStr] || 0) + r.score;
+                    });
+
+                    let calculatedStreak = 0;
+                    let checkDate = new Date();
+                    const todayStr = checkDate.toLocaleDateString();
+
+                    // If today's score >= 50, streak starts here
+                    const todayScore = scoresByDate[todayStr] || 0;
+                    if (todayScore >= 50) {
+                        calculatedStreak++;
+                    }
+
+                    // Look backward day by day starting from yesterday
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    while (true) {
+                        const prevDateStr = checkDate.toLocaleDateString();
+                        const dailyScore = scoresByDate[prevDateStr] || 0;
+                        if (dailyScore >= 50) {
+                            calculatedStreak++;
+                            checkDate.setDate(checkDate.getDate() - 1); // Move to the day before
+                        } else {
+                            break; // Streak broken
+                        }
+                    }
+
+                    setStreak(calculatedStreak);
+                }
+            } catch (err) {
+                console.error("Failed to fetch streak data:", err);
+            }
+        };
+
         fetchNotification();
-    }, []);
+        if (session) fetchStreak();
+    }, [session]);
 
     const handleOpenPanel = () => {
         setShowPanel(!showPanel);

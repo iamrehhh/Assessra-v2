@@ -81,15 +81,6 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
                 )}
             </nav>
 
-            <div className="p-4 border-t border-white/5 mt-auto">
-                <div className="glass-primary rounded-xl p-4">
-                    <p className="text-xs font-bold text-slate-300 mb-1">Papers Completed</p>
-                    <p className="text-xs text-slate-400 mb-2">{completedPapers}/{paperGoal} Papers Done</p>
-                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-primary h-full transition-all duration-1000" style={{ width: `${goalPercent}%` }}></div>
-                    </div>
-                </div>
-            </div>
         </aside>
     );
 }
