@@ -242,52 +242,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 </div>
             </div>
 
-            {/* Subjects Quick Links */}
-            <div className="space-y-5 pt-4">
-                <div className="flex justify-between items-center">
-                    <h4 className="text-xl font-bold text-slate-100">Learning Path</h4>
-                    <button onClick={() => setView('papers')} className="text-sm text-slate-400 hover:text-white transition-colors">See all →</button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <SubjectCard
-                        icon="business_center"
-                        title="Business"
-                        desc="P3 & P4"
-                        onClick={() => navigateToPaper('business')}
-                    />
-                    <SubjectCard
-                        icon="trending_up"
-                        title="Economics"
-                        desc="P3 & P4"
-                        onClick={() => navigateToPaper('economics')}
-                    />
-                    <SubjectCard
-                        icon="calculate"
-                        title="Mathematics"
-                        desc="Paper 3"
-                        onClick={() => navigateToPaper('math')}
-                    />
-                    <SubjectCard
-                        icon="public"
-                        title="General Paper"
-                        desc="P1 & P2"
-                        onClick={() => navigateToPaper('general')}
-                    />
-                    <SubjectCard
-                        icon="function"
-                        title="Formulae"
-                        desc="Reference"
-                        onClick={() => setView('formulae')}
-                    />
-                    <SubjectCard
-                        icon="dictionary"
-                        title="Definitions"
-                        desc="Vocabulary"
-                        onClick={() => setView('definitions')}
-                    />
-                </div>
-            </div>
+            {/* Subjects Quick Links Removed per user request */}
         </div>
     );
 }

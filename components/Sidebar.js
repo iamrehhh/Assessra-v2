@@ -17,7 +17,7 @@ export default function Sidebar({ view, setView, userEmail, currentGoal = 5, com
     ];
 
     return (
-        <aside className="w-64 border-r border-white/5 flex flex-col bg-background-dark hidden lg:flex shrink-0">
+        <aside className="w-64 border-r border-white/5 flex flex-col bg-background-dark shrink-0">
             <div className="p-6 flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                     <span className="material-symbols-outlined text-background-dark font-bold">bolt</span>
