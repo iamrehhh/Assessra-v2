@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function AdminView() {
     const [tab, setTab] = useState('users');
@@ -29,6 +29,21 @@ export default function AdminView() {
         } catch (err) { console.error('Failed to fetch notification', err); }
     };
 
+    // Modal State
+    const [modal, setModal] = useState({ open: false, type: 'alert', title: '', message: '', onConfirm: null });
+
+    const showAlert = useCallback((title, message) => {
+        setModal({ open: true, type: 'alert', title, message, onConfirm: null });
+    }, []);
+
+    const showConfirm = useCallback((title, message, onConfirm) => {
+        setModal({ open: true, type: 'confirm', title, message, onConfirm });
+    }, []);
+
+    const closeModal = useCallback(() => {
+        setModal(prev => ({ ...prev, open: false }));
+    }, []);
+
     const saveNotification = async () => {
         try {
             const res = await fetch('/api/admin/notification', {
@@ -36,9 +51,9 @@ export default function AdminView() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: notificationMessage, active: notificationActive })
             });
-            if (res.ok) alert('Notification updated successfully!');
-            else alert('Failed to update notification.');
-        } catch (err) { alert('Network error.'); }
+            if (res.ok) showAlert('Success', 'Notification updated successfully!');
+            else showAlert('Error', 'Failed to update notification.');
+        } catch (err) { showAlert('Error', 'Network error.'); }
     };
 
     const fetchUsers = async () => {
@@ -62,34 +77,38 @@ export default function AdminView() {
     };
 
     const deleteUser = async (id, email) => {
-        if (!confirm(`Permanently delete user "${email}" and all their scores?`)) return;
-        setActionLoading(id);
-        try {
-            const res = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                setUsers(prev => prev.filter(u => u.id !== id));
-                setScores(prev => prev.filter(s => s.username !== email));
-            } else {
-                const d = await res.json();
-                alert(d.error || 'Failed to delete user.');
-            }
-        } catch { alert('Network error.'); }
-        setActionLoading(null);
+        showConfirm('Delete User', `Permanently delete user "${email}" and all their scores?`, async () => {
+            closeModal();
+            setActionLoading(id);
+            try {
+                const res = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setUsers(prev => prev.filter(u => u.id !== id));
+                    setScores(prev => prev.filter(s => s.username !== email));
+                } else {
+                    const d = await res.json();
+                    showAlert('Error', d.error || 'Failed to delete user.');
+                }
+            } catch { showAlert('Error', 'Network error.'); }
+            setActionLoading(null);
+        });
     };
 
     const resetScores = async (email) => {
-        if (!confirm(`Reset ALL scores for "${email}"? This cannot be undone.`)) return;
-        setActionLoading(email);
-        try {
-            const res = await fetch(`/api/admin/scores?username=${encodeURIComponent(email)}`, { method: 'DELETE' });
-            if (res.ok) {
-                setScores(prev => prev.filter(s => s.username !== email));
-            } else {
-                const d = await res.json();
-                alert(d.error || 'Failed to reset scores.');
-            }
-        } catch { alert('Network error.'); }
-        setActionLoading(null);
+        showConfirm('Reset Scores', `Reset ALL scores for "${email}"? This cannot be undone.`, async () => {
+            closeModal();
+            setActionLoading(email);
+            try {
+                const res = await fetch(`/api/admin/scores?username=${encodeURIComponent(email)}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setScores(prev => prev.filter(s => s.username !== email));
+                } else {
+                    const d = await res.json();
+                    showAlert('Error', d.error || 'Failed to reset scores.');
+                }
+            } catch { showAlert('Error', 'Network error.'); }
+            setActionLoading(null);
+        });
     };
 
     const filteredUsers = users.filter(u =>
@@ -141,6 +160,19 @@ export default function AdminView() {
         statNumber: { fontSize: '1.8rem', fontWeight: 800, color: '#1e293b', margin: 0 },
         statLabel: { fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' },
         emptyState: { textAlign: 'center', padding: '60px 20px', color: '#94a3b8' },
+
+        // Modal Styles
+        modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
+        modalContent: { background: '#1e293b', width: '90%', maxWidth: '420px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)', paddingBottom: '4px' },
+        modalHeader: { padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+        modalTitle: { margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' },
+        modalClose: { background: 'none', border: 'none', color: '#64748b', fontSize: '1.2rem', cursor: 'pointer', padding: '4px', transition: 'color 0.2s' },
+        modalBody: { padding: '24px' },
+        modalText: { margin: 0, color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.5' },
+        modalFooter: { padding: '16px 24px', display: 'flex', gap: '12px', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.1)' },
+        modalCancel: { padding: '10px 20px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#cbd5e1', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' },
+        modalDanger: { padding: '10px 20px', borderRadius: '10px', border: 'none', background: '#e11d48', color: 'white', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(225,29,72,0.3)' },
+        modalPrimary: { padding: '10px 20px', borderRadius: '10px', border: 'none', background: 'var(--lime-primary)', color: 'white', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }
     };
 
     return (
@@ -367,6 +399,37 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
+            )}
+
+            {/* Dark Modal */}
+            {modal.open && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent}>
+                        <div style={styles.modalHeader}>
+                            <h3 style={styles.modalTitle}>{modal.title}</h3>
+                            <button style={styles.modalClose} onClick={closeModal}>✕</button>
+                        </div>
+                        <div style={styles.modalBody}>
+                            <p style={styles.modalText}>{modal.message}</p>
+                        </div>
+                        <div style={styles.modalFooter}>
+                            {modal.type === 'confirm' && (
+                                <button style={styles.modalCancel} onClick={closeModal}>
+                                    Cancel
+                                </button>
+                            )}
+                            <button
+                                style={modal.type === 'confirm' ? styles.modalDanger : styles.modalPrimary}
+                                onClick={() => {
+                                    if (modal.onConfirm) modal.onConfirm();
+                                    else closeModal();
+                                }}
+                            >
+                                {modal.type === 'confirm' ? 'Confirm' : 'OK'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

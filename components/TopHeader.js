@@ -6,6 +6,7 @@ import { signOut } from 'next-auth/react';
 export default function TopHeader({ setView, userProfile, streak = 0, setIsMobileOpen }) {
     const [notification, setNotification] = useState({ active: false, message: '' });
     const [showPanel, setShowPanel] = useState(false);
+    const [hasUnread, setHasUnread] = useState(false);
     const panelRef = useRef(null);
 
     useEffect(() => {
@@ -15,11 +16,23 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
                 if (res.ok) {
                     const data = await res.json();
                     setNotification(data);
+                    // Check if user already saw this exact message
+                    const seenMsg = localStorage.getItem('assessra_seen_notification');
+                    setHasUnread(data.active && data.message && data.message !== seenMsg);
                 }
             } catch (err) { console.error('Notification error', err); }
         };
         fetchNotification();
     }, []);
+
+    const handleOpenPanel = () => {
+        setShowPanel(!showPanel);
+        if (!showPanel && notification.active && notification.message) {
+            // Mark as read
+            setHasUnread(false);
+            localStorage.setItem('assessra_seen_notification', notification.message);
+        }
+    };
 
     // Close panel when clicking outside
     useEffect(() => {
@@ -61,9 +74,9 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
 
                 {/* Notification Bell + Dropdown */}
                 <div className="relative" ref={panelRef}>
-                    <button onClick={() => setShowPanel(!showPanel)} className="relative text-slate-400 hover:text-white transition-colors" title="Notifications">
+                    <button onClick={handleOpenPanel} className="relative text-slate-400 hover:text-white transition-colors" title="Notifications">
                         <span className="material-symbols-outlined">notifications</span>
-                        {notification.active && (
+                        {hasUnread && (
                             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background-dark shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
                         )}
                     </button>
