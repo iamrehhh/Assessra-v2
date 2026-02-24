@@ -6,11 +6,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import supabase from '@/lib/supabase';
 
-const ADMIN_EMAIL = 'abdulrehanoffical@gmail.com';
+const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
 
 async function verifyAdmin() {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email || session.user.email !== ADMIN_EMAIL) {
+    if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
         return null;
     }
     return session;

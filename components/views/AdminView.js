@@ -213,7 +213,7 @@ export default function AdminView() {
                                             {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                         </td>
                                         <td style={styles.td}>
-                                            {user.email !== 'abdulrehanoffical@gmail.com' ? (
+                                            {!['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'].includes(user.email) ? (
                                                 <button
                                                     style={{ ...styles.dangerBtn, opacity: actionLoading === user.id ? 0.5 : 1 }}
                                                     disabled={actionLoading === user.id}
