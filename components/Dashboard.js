@@ -13,6 +13,7 @@ import VocabView from './views/VocabView';
 import IdiomsView from './views/IdiomsView';
 import OnboardingView from './views/OnboardingView';
 import ProfileView from './views/ProfileView';
+import AdminView from './views/AdminView';
 
 export default function Dashboard() {
     const { data: session } = useSession();
@@ -98,6 +99,8 @@ export default function Dashboard() {
                 return <TipsView />;
             case 'profile':
                 return <ProfileView userProfile={userProfile} onProfileUpdate={setUserProfile} />;
+            case 'admin':
+                return <AdminView />;
             default:
                 return <HomeView setView={setView} setSelectedSubject={setSelectedSubject} />;
         }
@@ -105,7 +108,7 @@ export default function Dashboard() {
 
     return (
         <div id="app-layer">
-            <Navbar setView={setView} userProfile={userProfile} />
+            <Navbar setView={setView} userProfile={userProfile} userEmail={session?.user?.email} />
             <div style={{ padding: '20px' }}>
                 {renderContent()}
             </div>

@@ -1,6 +1,8 @@
 import { signOut } from 'next-auth/react';
 
-export default function Navbar({ setView, userProfile }) {
+const ADMIN_EMAIL = 'abdulrehanoffical@gmail.com';
+
+export default function Navbar({ setView, userProfile, userEmail }) {
     // Get initials fallback
     const getInitials = (nameStr) => {
         if (!nameStr) return '?';
@@ -26,6 +28,11 @@ export default function Navbar({ setView, userProfile }) {
                 <button className="nav-btn" onClick={() => setView('tips')}>Tips & Hacks</button>
                 <button className="nav-btn" onClick={() => setView('vocab')}>Vocab</button>
                 <button className="nav-btn" onClick={() => setView('idioms')}>Idioms</button>
+                {userEmail === ADMIN_EMAIL && (
+                    <button className="nav-btn" onClick={() => setView('admin')} style={{ color: '#dc2626', fontWeight: 700 }}>
+                        🛡️ Admin
+                    </button>
+                )}
                 <button className="nav-btn" onClick={() => setView('profile')} style={{ padding: '0 15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
                         width: '30px', height: '30px', borderRadius: '50%',
