@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 
 export default function TopHeader({ setView, userProfile, streak = 0, setIsMobileOpen }) {
     const [notification, setNotification] = useState({ active: false, message: '' });
+    const [showPanel, setShowPanel] = useState(false);
+    const panelRef = useRef(null);
 
     useEffect(() => {
         const fetchNotification = async () => {
@@ -19,12 +21,17 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
         fetchNotification();
     }, []);
 
-    const showNotification = () => {
-        if (notification.message) alert(notification.message);
-        else alert('No new notifications today.');
-    };
+    // Close panel when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (panelRef.current && !panelRef.current.contains(e.target)) {
+                setShowPanel(false);
+            }
+        };
+        if (showPanel) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showPanel]);
 
-    // Get initials fallback
     const getInitials = (nameStr) => {
         if (!nameStr) return '?';
         return nameStr.charAt(0).toUpperCase();
@@ -52,12 +59,65 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
                     <span className="text-sm font-bold text-slate-200">{streak} Day Streak</span>
                 </div>
 
-                <button onClick={showNotification} className="relative text-slate-400 hover:text-white transition-colors" title="Notifications">
-                    <span className="material-symbols-outlined">notifications</span>
-                    {notification.active && (
-                        <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full border-2 border-background-dark shadow-sm shadow-primary/50"></span>
+                {/* Notification Bell + Dropdown */}
+                <div className="relative" ref={panelRef}>
+                    <button onClick={() => setShowPanel(!showPanel)} className="relative text-slate-400 hover:text-white transition-colors" title="Notifications">
+                        <span className="material-symbols-outlined">notifications</span>
+                        {notification.active && (
+                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background-dark shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
+                        )}
+                    </button>
+
+                    {/* Dropdown Panel */}
+                    {showPanel && (
+                        <div
+                            className="absolute right-0 mt-3 w-80 rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-black/40"
+                            style={{
+                                background: 'rgba(23, 23, 23, 0.85)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                animation: 'fadeSlideDown 0.25s ease-out forwards',
+                            }}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                                <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-lg">notifications_active</span>
+                                    <h3 className="text-sm font-bold text-slate-100 tracking-wide uppercase">Notifications</h3>
+                                </div>
+                                <button onClick={() => setShowPanel(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined text-lg">close</span>
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-5">
+                                {notification.active && notification.message ? (
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                                            <span className="material-symbols-outlined text-primary text-lg">campaign</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-slate-200 leading-relaxed">{notification.message}</p>
+                                            <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                                                From Admin Team
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
+                                            <span className="material-symbols-outlined text-slate-500 text-2xl">notifications_off</span>
+                                        </div>
+                                        <p className="text-sm text-slate-400 font-medium">No new notifications</p>
+                                        <p className="text-xs text-slate-600 mt-1">You&#39;re all caught up!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
-                </button>
+                </div>
 
                 <div className="flex items-center gap-3 pl-4 border-l border-white/10 cursor-pointer group" onClick={() => setView('profile')}>
                     <div className="text-right hidden sm:block">
@@ -77,7 +137,6 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
                     )}
                 </div>
 
-                {/* Logout button just as an icon for compactness, or hide in dropdown later. For now an icon is good. */}
                 <button
                     onClick={() => signOut()}
                     className="text-slate-400 hover:text-red-400 transition-colors ml-2"
@@ -86,6 +145,14 @@ export default function TopHeader({ setView, userProfile, streak = 0, setIsMobil
                     <span className="material-symbols-outlined">logout</span>
                 </button>
             </div>
+
+            {/* Animation keyframes */}
+            <style jsx>{`
+                @keyframes fadeSlideDown {
+                    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}</style>
         </header>
     );
 }
