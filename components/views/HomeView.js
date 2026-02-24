@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 
 export default function HomeView({ setView, setSelectedSubject }) {
     const { data: session } = useSession();
+    const [quote, setQuote] = useState("Keep up the momentum! You're making great progress.");
     const [stats, setStats] = useState({
         rank: '-',
         avgScore: 0,
@@ -62,8 +63,21 @@ export default function HomeView({ setView, setSelectedSubject }) {
             }
         };
 
+        const fetchQuote = async () => {
+            try {
+                const res = await fetch('/api/quote');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.quote) setQuote(data.quote);
+                }
+            } catch (err) {
+                console.error('Failed to load quote:', err);
+            }
+        };
+
         if (session?.user) {
             fetchDashboardData();
+            fetchQuote();
         }
     }, [session]);
 
@@ -80,7 +94,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     <h2 className="text-4xl font-black tracking-tight mb-2 text-slate-100">
                         Welcome back, <span className="text-primary italic">{firstName}</span>
                     </h2>
-                    <p className="text-slate-400">Keep up the momentum! You're making great progress.</p>
+                    <p className="text-slate-400 italic">"{quote}"</p>
                 </div>
 
                 <div className="flex gap-3 shrink-0">
@@ -140,31 +154,16 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     </div>
 
                     {/* Progress Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
-                        <div className="glass p-6 rounded-3xl space-y-4 flex flex-col justify-center border border-white/5">
-                            <div className="flex justify-between items-center">
-                                <h4 className="font-bold text-slate-100">Papers Completed</h4>
-                                <span className="text-xs font-bold text-primary">{Math.min(100, Math.round((stats.completedModules / 10) * 100))}% of Goal</span>
-                            </div>
-                            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-                                <div
-                                    className="bg-primary h-full shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all duration-1000"
-                                    style={{ width: `${Math.max(5, Math.min(100, (stats.completedModules / 10) * 100))}%` }}
-                                ></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-slate-400 font-medium">
-                                <span>{stats.completedModules} Papers Done</span>
-                                <span>Goal: 10</span>
-                            </div>
-                        </div>
-
-                        <div className="glass p-6 rounded-3xl flex items-center gap-5 border border-white/5">
-                            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                                <span className="material-symbols-outlined text-primary text-3xl fill-1" style={{ fontVariationSettings: "'FILL' 1" }}>military_tech</span>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Expertise</p>
-                                <p className="text-2xl font-black text-slate-100">{stats.totalScore} <span className="text-sm font-medium text-slate-400">XP</span></p>
+                    <div className="flex-grow">
+                        <div className="glass p-6 rounded-3xl flex items-center justify-between gap-5 border border-white/5 h-full">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                    <span className="material-symbols-outlined text-primary text-3xl fill-1" style={{ fontVariationSettings: "'FILL' 1" }}>military_tech</span>
+                                </div>
+                                <div>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Expertise</p>
+                                    <p className="text-2xl font-black text-slate-100">{stats.totalScore} <span className="text-sm font-medium text-slate-400">XP</span></p>
+                                </div>
                             </div>
                         </div>
                     </div>

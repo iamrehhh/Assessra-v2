@@ -2,10 +2,31 @@
 
 const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
 
-export default function Sidebar({ view, setView, userEmail, currentGoal = 5, completedGoal = 4, isMobileOpen, setIsMobileOpen }) {
+import { useState, useEffect } from 'react';
+
+export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsMobileOpen }) {
     const isAdmin = ADMIN_EMAILS.includes(userEmail);
 
-    const goalPercent = Math.min(100, Math.round((completedGoal / currentGoal) * 100)) || 0;
+    const [completedPapers, setCompletedPapers] = useState(0);
+    const paperGoal = 10;
+    const goalPercent = Math.min(100, Math.round((completedPapers / paperGoal) * 100)) || 0;
+
+    useEffect(() => {
+        const fetchScores = async () => {
+            try {
+                if (!userEmail) return;
+                const scoresRes = await fetch('/api/scores/user');
+                const scoresData = await scoresRes.json();
+
+                if (scoresData.scores && scoresData.scores.length > 0) {
+                    setCompletedPapers(scoresData.scores.length);
+                }
+            } catch (err) {
+                console.error('Failed to fetch user scores for sidebar:', err);
+            }
+        };
+        fetchScores();
+    }, [userEmail]);
 
     const navItems = [
         { id: 'home', icon: 'grid_view', label: 'Overview' },
@@ -62,10 +83,10 @@ export default function Sidebar({ view, setView, userEmail, currentGoal = 5, com
 
             <div className="p-4 border-t border-white/5 mt-auto">
                 <div className="glass-primary rounded-xl p-4">
-                    <p className="text-xs font-bold text-slate-300 mb-1">Daily Goal Progress</p>
-                    <p className="text-xs text-slate-400 mb-2">{completedGoal}/{currentGoal} Modules Complete</p>
+                    <p className="text-xs font-bold text-slate-300 mb-1">Papers Completed</p>
+                    <p className="text-xs text-slate-400 mb-2">{completedPapers}/{paperGoal} Papers Done</p>
                     <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-primary h-full" style={{ width: `${goalPercent}%` }}></div>
+                        <div className="bg-primary h-full transition-all duration-1000" style={{ width: `${goalPercent}%` }}></div>
                     </div>
                 </div>
             </div>

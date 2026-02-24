@@ -16,8 +16,20 @@ export async function GET() {
             return NextResponse.json({ active: false, message: '' }, { status: 200 });
         }
 
+        // 48-hour expiry logic
+        const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+        let isActive = data?.active || false;
+
+        if (isActive && data?.updated_at) {
+            const updatedAt = new Date(data.updated_at).getTime();
+            const now = Date.now();
+            if (now - updatedAt >= FORTY_EIGHT_HOURS_MS) {
+                isActive = false;
+            }
+        }
+
         return NextResponse.json({
-            active: data?.active || false,
+            active: isActive,
             message: data?.message || ''
         }, { status: 200 });
     } catch (e) {
