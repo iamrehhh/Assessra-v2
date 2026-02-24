@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import clientPromise from '@/lib/mongodb';
+import supabase from '@/lib/supabase';
 
 export async function POST(req) {
     try {
@@ -20,32 +20,35 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
         }
 
-        const client = await clientPromise;
-        const db = client.db('assessra');
-
         // Check if email already exists
-        const existingUser = await db.collection('users').findOne({ email: email.toLowerCase() });
-        if (existingUser) {
+        const { data: existing } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', email.toLowerCase().trim())
+            .single();
+
+        if (existing) {
             return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 409 });
         }
 
         // Hash password and store user
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        const newUser = {
+        const { error } = await supabase.from('users').insert({
             name: name.trim(),
             email: email.toLowerCase().trim(),
             password: hashedPassword,
             image: '',
             nickname: '',
             level: '',
-            isOnboarded: false,
+            is_onboarded: false,
             provider: 'credentials',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
+        });
 
-        await db.collection('users').insertOne(newUser);
+        if (error) {
+            console.error('Supabase insert error:', error);
+            return NextResponse.json({ error: 'Failed to create account.' }, { status: 500 });
+        }
 
         return NextResponse.json({ success: true, message: 'Account created successfully.' });
     } catch (error) {

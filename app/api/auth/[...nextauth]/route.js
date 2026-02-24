@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import clientPromise from '@/lib/mongodb';
+import supabase from '@/lib/supabase';
 
 export const authOptions = {
     providers: [
@@ -21,21 +21,20 @@ export const authOptions = {
                 if (!email || !password) return null;
 
                 try {
-                    const client = await clientPromise;
-                    const db = client.db('assessra');
+                    const { data: user, error } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('email', email.toLowerCase().trim())
+                        .not('password', 'is', null)
+                        .single();
 
-                    const user = await db.collection('users').findOne({
-                        email: email.toLowerCase().trim(),
-                        password: { $exists: true }, // only match credential users
-                    });
-
-                    if (!user) return null;
+                    if (error || !user) return null;
 
                     const isValid = await bcrypt.compare(password, user.password);
                     if (!isValid) return null;
 
                     return {
-                        id: user._id.toString(),
+                        id: user.id,
                         name: user.name,
                         email: user.email,
                         image: user.image || '',

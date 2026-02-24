@@ -1,66 +1,75 @@
 // GET /api/leaderboard
 // Returns top 20 users ranked by total score
 
-import { getScoresCollection } from '@/lib/mongodb';
+import supabase from '@/lib/supabase';
 
 export async function GET() {
     try {
-        const collection = await getScoresCollection();
+        // Fetch all scores
+        const { data: scores, error } = await supabase
+            .from('scores')
+            .select('username, score, max_marks, subject, submitted_at');
 
-        // Aggregate total score per user
-        const leaderboard = await collection.aggregate([
-            {
-                $group: {
-                    _id: '$username',
-                    totalScore: { $sum: '$score' },
-                    totalMax: { $sum: '$maxMarks' },
-                    totalAttempts: { $sum: 1 },
-                    subjects: { $addToSet: '$subject' },
-                    lastActivity: { $max: '$submittedAt' },
-                },
-            },
-            {
-                $addFields: {
-                    percentage: {
-                        $cond: [
-                            { $gt: ['$totalMax', 0] },
-                            { $round: [{ $multiply: [{ $divide: ['$totalScore', '$totalMax'] }, 100] }, 0] },
-                            0,
-                        ],
-                    },
-                },
-            },
-            { $sort: { totalScore: -1 } },
-            { $limit: 20 },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "email",
-                    as: "userInfo"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$userInfo",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    totalScore: 1,
-                    totalMax: 1,
-                    totalAttempts: 1,
-                    subjects: 1,
-                    lastActivity: 1,
-                    percentage: 1,
-                    nickname: "$userInfo.nickname",
-                    image: "$userInfo.image",
-                    level: "$userInfo.level"
+        if (error) {
+            console.error('Leaderboard scores error:', error);
+            return Response.json({ error: 'Failed to fetch leaderboard.' }, { status: 500 });
+        }
+
+        // Aggregate per user in JS (replaces MongoDB aggregation pipeline)
+        const userMap = {};
+        for (const s of (scores || [])) {
+            if (!userMap[s.username]) {
+                userMap[s.username] = {
+                    _id: s.username,
+                    totalScore: 0,
+                    totalMax: 0,
+                    totalAttempts: 0,
+                    subjects: new Set(),
+                    lastActivity: null,
+                };
+            }
+            const u = userMap[s.username];
+            u.totalScore += s.score;
+            u.totalMax += s.max_marks;
+            u.totalAttempts += 1;
+            u.subjects.add(s.subject);
+            if (!u.lastActivity || new Date(s.submitted_at) > new Date(u.lastActivity)) {
+                u.lastActivity = s.submitted_at;
+            }
+        }
+
+        let leaderboard = Object.values(userMap).map(u => ({
+            ...u,
+            subjects: Array.from(u.subjects),
+            percentage: u.totalMax > 0 ? Math.round((u.totalScore / u.totalMax) * 100) : 0,
+        }));
+
+        // Sort by totalScore descending, take top 20
+        leaderboard.sort((a, b) => b.totalScore - a.totalScore);
+        leaderboard = leaderboard.slice(0, 20);
+
+        // Enrich with user profile data (nickname, image, level)
+        const emails = leaderboard.map(u => u._id);
+        if (emails.length > 0) {
+            const { data: users } = await supabase
+                .from('users')
+                .select('email, nickname, image, level')
+                .in('email', emails);
+
+            const userLookup = {};
+            for (const u of (users || [])) {
+                userLookup[u.email] = u;
+            }
+
+            for (const entry of leaderboard) {
+                const profile = userLookup[entry._id];
+                if (profile) {
+                    entry.nickname = profile.nickname;
+                    entry.image = profile.image;
+                    entry.level = profile.level;
                 }
             }
-        ]).toArray();
+        }
 
         return Response.json({ leaderboard });
     } catch (err) {

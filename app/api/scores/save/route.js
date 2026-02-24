@@ -1,7 +1,7 @@
 // POST /api/scores/save
-// Saves a paper attempt score to MongoDB
+// Saves a paper attempt score to Supabase
 
-import { getScoresCollection } from '@/lib/mongodb';
+import supabase from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
@@ -20,19 +20,21 @@ export async function POST(request) {
             return Response.json({ error: 'Missing required fields.' }, { status: 400 });
         }
 
-        const collection = await getScoresCollection();
-
-        await collection.insertOne({
+        const { error } = await supabase.from('scores').insert({
             username,
-            paperId,
-            paperTitle: paperTitle || paperId,
+            paper_id: paperId,
+            paper_title: paperTitle || paperId,
             subject: subject || 'unknown',
-            questionNumber: questionNumber || 'all',
+            question_number: questionNumber || 'all',
             score: Number(score),
-            maxMarks: Number(maxMarks),
+            max_marks: Number(maxMarks),
             percentage: Math.round((score / maxMarks) * 100),
-            submittedAt: new Date(),
         });
+
+        if (error) {
+            console.error('Score insert error:', error);
+            return Response.json({ error: 'Failed to save score.' }, { status: 500 });
+        }
 
         return Response.json({ success: true });
     } catch (err) {
