@@ -10,7 +10,7 @@ const SUBJECTS = [
     'Business', 'History', 'English', 'Maths', 'General Paper'
 ];
 const LEVELS = ['IGCSE', 'A Level'];
-const DOC_TYPES = ['Past Paper', 'Mark Scheme', 'Textbook'];
+const DOC_TYPES = ['Past Paper', 'Mark Scheme', 'Insert', 'Textbook'];
 
 export default function PaperUpload() {
     // Form state
@@ -50,7 +50,7 @@ export default function PaperUpload() {
         if (files.length === 0) return;
         setUploading(true);
 
-        const typeValue = docType === 'Textbook' ? 'textbook' : docType === 'Mark Scheme' ? 'markscheme' : 'paper';
+        const typeValue = docType === 'Textbook' ? 'textbook' : docType === 'Mark Scheme' ? 'markscheme' : docType === 'Insert' ? 'insert' : 'paper';
         const subjectValue = subject.toLowerCase().replace(' ', '_');
         const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
         const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
