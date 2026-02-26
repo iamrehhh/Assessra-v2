@@ -73,8 +73,15 @@ export default function PaperUpload() {
                     },
                     body: formData,
                 });
-
-                const data = await res.json();
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseError) {
+                    if (res.status === 413) {
+                        throw new Error('File is too large (Payload Too Large). Max size is ~50MB.');
+                    }
+                    throw new Error(`Server returned a non-JSON response (${res.status}). Ensure the file fits within size limits.`);
+                }
 
                 if (res.ok) {
                     const replacedMsg = data.replaced ? ' (replaced previous version)' : '';

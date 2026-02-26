@@ -5,9 +5,11 @@ const nextConfig = {
       { protocol: 'https', hostname: 'assessra.onrender.com' },
     ],
   },
-  // Allow ESLint warnings during migration phase
-  eslint: {
-    ignoreDuringBuilds: true,
+  // Allow large textbook uploads (Next.js limits FormData to 4MB by default)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
   },
 };
 
