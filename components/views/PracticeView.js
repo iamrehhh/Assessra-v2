@@ -43,6 +43,9 @@ export default function PracticeView() {
     const [mcqSubmitted, setMcqSubmitted] = useState(false);   // has answered current question
     const [mcqAnswers, setMcqAnswers] = useState([]);          // [{selected, correct, isCorrect}]
 
+    // Diagram budget tracking: max 2 diagram questions per subject per session
+    const [diagramCount, setDiagramCount] = useState({});
+
     // ── Generate a question ──────────────────────────────────────────
     const handleGenerate = async () => {
         if (!topic.trim()) { setGenError('Please enter a topic.'); return; }
@@ -63,6 +66,7 @@ export default function PracticeView() {
                     marks,
                     difficulty: difficulty.toLowerCase(),
                     questionType: questionType.toLowerCase().replace(' ', '_'),
+                    diagramBudgetRemaining: 2 - (diagramCount[subject] || 0),
                 }),
             });
 
@@ -76,11 +80,25 @@ export default function PracticeView() {
                 setMcqSelected(null);
                 setMcqSubmitted(false);
                 setMcqAnswers([]);
+                // Track diagrams generated in this MCQ batch
+                if (data.diagramsGenerated > 0) {
+                    setDiagramCount(prev => ({
+                        ...prev,
+                        [subject]: (prev[subject] || 0) + data.diagramsGenerated
+                    }));
+                }
                 setStep('mcq_quiz');
             } else {
                 setQuestionData(data);
                 setAnswer('');
                 setResults(null);
+                // Track diagram if one was generated
+                if (data.hasDiagram) {
+                    setDiagramCount(prev => ({
+                        ...prev,
+                        [subject]: (prev[subject] || 0) + 1
+                    }));
+                }
                 setStep('question');
             }
         } catch (err) {
@@ -235,6 +253,11 @@ export default function PracticeView() {
                     <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
                         MCQ
                     </span>
+                    {current?.diagramUrl && (
+                        <span className="bg-violet-500/10 text-violet-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-violet-500/20">
+                            📊 Diagram
+                        </span>
+                    )}
                 </div>
 
                 {/* Question Card */}
@@ -242,6 +265,17 @@ export default function PracticeView() {
                     <h3 className="text-lg font-bold text-slate-100 leading-relaxed">
                         {current?.question || 'Loading...'}
                     </h3>
+
+                    {/* Diagram image if present */}
+                    {current?.diagramUrl && (
+                        <div className="rounded-xl overflow-hidden border border-white/10 bg-white">
+                            <img
+                                src={current.diagramUrl}
+                                alt="Question diagram"
+                                className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                            />
+                        </div>
+                    )}
 
                     {/* Options A, B, C, D */}
                     <div className="space-y-3">
@@ -268,9 +302,9 @@ export default function PracticeView() {
                                     className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${optionStyle} ${!mcqSubmitted ? 'cursor-pointer' : 'cursor-default'}`}
                                 >
                                     <span className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0 border ${mcqSubmitted && letter === current.correct ? 'bg-green-500/20 border-green-500/50 text-green-300' :
-                                            mcqSubmitted && letter === mcqSelected && letter !== current.correct ? 'bg-red-500/20 border-red-500/50 text-red-300' :
-                                                mcqSelected === letter && !mcqSubmitted ? 'bg-primary/20 border-primary/50 text-primary' :
-                                                    'bg-white/5 border-white/10 text-slate-400'
+                                        mcqSubmitted && letter === mcqSelected && letter !== current.correct ? 'bg-red-500/20 border-red-500/50 text-red-300' :
+                                            mcqSelected === letter && !mcqSubmitted ? 'bg-primary/20 border-primary/50 text-primary' :
+                                                'bg-white/5 border-white/10 text-slate-400'
                                         }`}>
                                         {mcqSubmitted && letter === current.correct ? '✓' :
                                             mcqSubmitted && letter === mcqSelected && letter !== current.correct ? '✕' :
@@ -288,8 +322,8 @@ export default function PracticeView() {
                             onClick={handleMcqSubmit}
                             disabled={!mcqSelected}
                             className={`w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${mcqSelected
-                                    ? 'bg-primary hover:bg-primary/90 text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                    : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
+                                ? 'bg-primary hover:bg-primary/90 text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
                                 }`}>
                             <span className="material-symbols-outlined text-base">check_circle</span>
                             Submit Answer
@@ -298,8 +332,8 @@ export default function PracticeView() {
                         <div className="space-y-4">
                             {/* Correct / Wrong banner */}
                             <div className={`rounded-xl p-4 border ${mcqSelected === current.correct
-                                    ? 'bg-green-500/10 border-green-500/20'
-                                    : 'bg-red-500/10 border-red-500/20'
+                                ? 'bg-green-500/10 border-green-500/20'
+                                : 'bg-red-500/10 border-red-500/20'
                                 }`}>
                                 <div className="flex items-center gap-3 mb-2">
                                     <span className={`text-2xl ${mcqSelected === current.correct ? '' : ''}`}>
@@ -353,7 +387,7 @@ export default function PracticeView() {
                             <h2 className="text-2xl font-black text-slate-100">Quiz Complete!</h2>
                             <div className="flex items-center gap-3 justify-center sm:justify-start">
                                 <span className={`text-4xl font-black ${(correctCount / totalCount * 100) >= 70 ? 'text-green-400' :
-                                        (correctCount / totalCount * 100) >= 40 ? 'text-amber-400' : 'text-red-400'
+                                    (correctCount / totalCount * 100) >= 40 ? 'text-amber-400' : 'text-red-400'
                                     }`}>
                                     {Math.round(correctCount / totalCount * 100)}%
                                 </span>
@@ -552,11 +586,26 @@ export default function PracticeView() {
                             }`}>
                             {difficulty}
                         </span>
+                        {questionData?.hasDiagram && (
+                            <span className="bg-violet-500/10 text-violet-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-violet-500/20">
+                                📊 Diagram
+                            </span>
+                        )}
                     </div>
 
                     {/* Question text */}
                     <div>
                         <h3 className="text-lg font-bold text-slate-100 mb-3">Question</h3>
+                        {/* Diagram image if present */}
+                        {questionData?.diagramUrl && (
+                            <div className="rounded-xl overflow-hidden border border-white/10 bg-white mb-4">
+                                <img
+                                    src={questionData.diagramUrl}
+                                    alt="Question diagram"
+                                    className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                                />
+                            </div>
+                        )}
                         <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-[15px]">
                             {questionData?.question || 'No question generated.'}
                         </div>

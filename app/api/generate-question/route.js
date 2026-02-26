@@ -4,11 +4,13 @@
 import { NextResponse } from 'next/server';
 import { retrieveRelevantContent } from '@/lib/rag';
 import { callLLM } from '@/lib/llm';
+import { generateDiagram } from '@/lib/diagram';
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { subject, level, topic, marks, difficulty, questionType } = body;
+        const { subject, level, topic, marks, difficulty, questionType, diagramBudgetRemaining } = body;
+        const diagramBudget = typeof diagramBudgetRemaining === 'number' ? diagramBudgetRemaining : 2;
 
         // ── Validate required fields ────────────────────────────────────
         if (!subject || !level || !topic) {
@@ -42,6 +44,12 @@ export async function POST(request) {
         if (qType === 'multiple_choice') {
             const numQuestions = marksInt;
 
+            // Determine how many MCQs can have diagrams (max 2, limited by budget)
+            const mcqDiagramSlots = Math.min(2, diagramBudget);
+            const diagramInstruction = mcqDiagramSlots > 0
+                ? `\n- For UP TO ${mcqDiagramSlots} questions where a diagram would naturally enhance understanding (e.g. graphs, charts, geometric figures, circuit diagrams, biological diagrams), include a "diagramDescription" field with a detailed description of the diagram needed. Only include this for questions that genuinely benefit from a visual. For questions that don't need a diagram, omit the "diagramDescription" field entirely.`
+                : '';
+
             const mcqPrompt = `Here are real Cambridge ${level} ${subject} past paper questions on the topic of ${topic} for reference:
 
 ${context}
@@ -56,7 +64,7 @@ RULES:
 - Exactly one option is correct per question
 - Distractors must be plausible but wrong
 - Cover different aspects of the topic across questions
-- Do NOT copy any question from the references
+- Do NOT copy any question from the references${diagramInstruction}
 
 Respond ONLY with valid JSON (no markdown, no code fences). Use this exact format:
 [
@@ -64,7 +72,8 @@ Respond ONLY with valid JSON (no markdown, no code fences). Use this exact forma
     "question": "question stem text",
     "options": { "A": "option A text", "B": "option B text", "C": "option C text", "D": "option D text" },
     "correct": "B",
-    "explanation": "Why B is correct and why each other option is wrong"
+    "explanation": "Why B is correct and why each other option is wrong",
+    "diagramDescription": "(OPTIONAL) detailed description of a diagram if this question benefits from one"
   }
 ]`;
 
@@ -83,6 +92,22 @@ Respond ONLY with valid JSON (no markdown, no code fences). Use this exact forma
                 throw new Error('LLM did not return a valid array of MCQ questions.');
             }
 
+            // Generate diagrams for MCQs that have descriptions (respect budget)
+            let diagramsGenerated = 0;
+            for (const q of mcqQuestions) {
+                if (q.diagramDescription && diagramsGenerated < mcqDiagramSlots) {
+                    try {
+                        q.diagramUrl = await generateDiagram(q.diagramDescription);
+                        diagramsGenerated++;
+                    } catch (diagramErr) {
+                        console.warn('MCQ diagram generation failed, skipping:', diagramErr.message);
+                        delete q.diagramDescription;
+                    }
+                } else {
+                    delete q.diagramDescription;
+                }
+            }
+
             return NextResponse.json({
                 mcqMode: true,
                 mcqQuestions,
@@ -91,12 +116,18 @@ Respond ONLY with valid JSON (no markdown, no code fences). Use this exact forma
                 topic,
                 totalQuestions: mcqQuestions.length,
                 difficulty: diff,
+                diagramsGenerated,
             });
         }
 
         // ══════════════════════════════════════════════════════════════════
         // NON-MCQ: Structured, Essay, Data Response
         // ══════════════════════════════════════════════════════════════════
+        const canHaveDiagram = diagramBudget > 0;
+        const diagramSection = canHaveDiagram
+            ? `\n\nDIAGRAM_DESCRIPTION:\n[OPTIONAL — If this question would naturally benefit from a diagram (e.g. supply/demand curves, geometric figures, graphs, circuit diagrams, biological diagrams, data charts), provide a detailed description of the diagram here. If the question does not need a visual, write "NONE" here. Do NOT force a diagram if the question is purely text-based.]`
+            : '';
+
         let formatInstructions = '';
         if (qType === 'data_response') {
             formatInstructions = `
@@ -120,7 +151,7 @@ MARKING SCHEME:
 [Detailed per sub-question with acceptable answers]
 
 EXAMINER NOTES:
-[Common mistakes and what distinguishes high scoring answers]`;
+[Common mistakes and what distinguishes high scoring answers]${diagramSection}`;
         } else {
             formatInstructions = `
 FORMAT RULES (${qType === 'essay' ? 'Essay' : 'Structured'}):
@@ -140,7 +171,7 @@ MARKING SCHEME:
 [Detailed marking scheme showing all acceptable answers]
 
 EXAMINER NOTES:
-[Common mistakes candidates make on this topic]`;
+[Common mistakes candidates make on this topic]${diagramSection}`;
         }
 
         const prompt = `Here are real Cambridge ${level} ${subject} past paper questions and marking schemes on the topic of ${topic} for reference:
@@ -175,13 +206,28 @@ Do not copy any question directly from the past papers provided. Generate an ori
         const question = parseSection(raw, 'QUESTION', ['MARK ALLOCATION']);
         const markAllocation = parseSection(raw, 'MARK ALLOCATION', ['MARKING SCHEME']);
         const markingScheme = parseSection(raw, 'MARKING SCHEME', ['EXAMINER NOTES']);
-        const examinerNotes = parseSection(raw, 'EXAMINER NOTES', []);
+        const examinerNotes = parseSection(raw, 'EXAMINER NOTES', ['DIAGRAM_DESCRIPTION']);
+        const diagramDesc = parseSection(raw, 'DIAGRAM_DESCRIPTION', []);
+
+        // Generate diagram if a meaningful description was provided and budget allows
+        let diagramUrl = null;
+        let hasDiagram = false;
+        if (canHaveDiagram && diagramDesc && diagramDesc.toUpperCase() !== 'NONE' && diagramDesc.length > 10) {
+            try {
+                diagramUrl = await generateDiagram(diagramDesc);
+                hasDiagram = true;
+            } catch (diagramErr) {
+                console.warn('Diagram generation failed, continuing without:', diagramErr.message);
+            }
+        }
 
         return NextResponse.json({
             question,
             markAllocation,
             markingScheme,
             examinerNotes,
+            diagramUrl,
+            hasDiagram,
             subject,
             level,
             topic,
