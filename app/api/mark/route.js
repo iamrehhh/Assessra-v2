@@ -43,7 +43,14 @@ Cross-reference the student's answer with the rubric to award Knowledge (AO1), A
     if (isEconomicsP4) {
         return `You are an experienced Cambridge International A Level Economics examiner marking Paper 4 (9708). 
 Apply the marking criteria precisely and consistently. Always award whole marks only. 
-Mark positively — reward what is correct, never deduct for errors or omissions.`;
+Mark positively — reward what is correct, never deduct for errors or omissions.
+
+CRITICAL FOR CALCULATION OR DATA RESPONSE QUESTIONS:
+If the question involves any numerical calculation (e.g., Elasticity (PED/XED/YED), Opportunity Cost, GDP, Growth Rates, Inflation, Profit/Revenue):
+1. You MUST extract the relevant data from the case study/extract text provided and calculate it yourself first.
+2. Apply the correct Cambridge formula.
+3. Compare the student's answer to the CORRECT calculated answer.
+4. Award marks based on whether the student's calculation matches the correct answer.`;
     }
 
     if (isGeneralPaper) {
@@ -209,7 +216,20 @@ ADDITIONAL CONTEXT:
 ${systemPrompt}
 `;
 
-        const raw = await callLLM(userPrompt, subject, 16384);
+        // ─── Dynamic Model Routing for Economics Calculations ────────────────
+        let modelToUse = null; // null defaults to standard gpt-4o-mini / claude-haiku
+        if (subject === 'economics') {
+            const lowerQ = (question || '').toLowerCase();
+            const calcKeywords = ['calculate', 'ped', 'xed', 'yed', 'elasticity', 'opportunity cost', 'gdp', 'profit', 'revenue', '%', 'percentage'];
+            const isCalcQuestion = calcKeywords.some(kw => lowerQ.includes(kw));
+            if (isCalcQuestion) {
+                // Route to a more capable reasoning model for math accuracy
+                modelToUse = 'gpt-4o'; // or 'o1-mini' depending on configured keys
+                console.log(`[Mark API] Detected Economics calculation question. Routing to: ${modelToUse}`);
+            }
+        }
+
+        const raw = await callLLM(userPrompt, subject, 16384, null, modelToUse);
 
         let score = marksInt; // Fallback
         const scoreMatch = raw.match(/MARKS AWARDED:\s*(\d+(\.\d+)?)/i);

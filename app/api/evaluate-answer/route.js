@@ -79,8 +79,20 @@ MODEL ANSWER:
 EXAMINER TIP:
 - One specific actionable tip for this student`;
 
+        // ─── Dynamic Model Routing for Economics Calculations ────────────────
+        let modelToUse = null;
+        if (subject === 'economics') {
+            const lowerQ = (question || '').toLowerCase();
+            const calcKeywords = ['calculate', 'ped', 'xed', 'yed', 'elasticity', 'opportunity cost', 'gdp', 'profit', 'revenue', '%', 'percentage'];
+            const isCalcQuestion = calcKeywords.some(kw => lowerQ.includes(kw));
+            if (isCalcQuestion) {
+                modelToUse = 'gpt-4o'; // Route to stronger reasoning model
+                console.log(`[Evaluate Answer API] Detected Economics calculation question. Routing to: ${modelToUse}`);
+            }
+        }
+
         // ── Call the LLM ────────────────────────────────────────────────
-        const raw = await callLLM(prompt, subject, 4000);
+        const raw = await callLLM(prompt, subject, 4000, null, modelToUse);
 
         // ── Parse the structured response ───────────────────────────────
         let marksAwarded = 0;

@@ -77,7 +77,21 @@ Respond ONLY with valid JSON (no markdown, no code fences). Use this exact forma
   }
 ]`;
 
-            const raw = await callLLM(mcqPrompt, subject, 6000);
+            // ─── Dynamic Model Routing for Economics MCQ Calculations ─────────
+            let mcqModelToUse = null;
+            let finalMcqPrompt = mcqPrompt;
+            if (subject === 'economics') {
+                const lowerTopic = (topic || '').toLowerCase();
+                const calcKeywords = ['calculate', 'ped', 'xed', 'yed', 'elasticity', 'opportunity cost', 'gdp', 'profit', 'revenue', '%', 'percentage', 'quantitative'];
+                const isCalcTopic = calcKeywords.some(kw => lowerTopic.includes(kw));
+                if (isCalcTopic) {
+                    mcqModelToUse = 'gpt-4o';
+                    finalMcqPrompt += `\n\nCRITICAL INSTRUCTION FOR CALCULATIONS: Since this topic involves calculation, you MUST explicitly write out your step-by-step mathematical working (including formula and substitution) within the "explanation" field for the correct answer to ensure absolute mathematical accuracy.`;
+                    console.log(`[Generate Question API - MCQ] Detected Economics calculation topic. Routing to: ${mcqModelToUse}`);
+                }
+            }
+
+            const raw = await callLLM(finalMcqPrompt, subject, 6000, null, mcqModelToUse);
 
             // Parse JSON from LLM response
             let mcqQuestions;
@@ -192,7 +206,21 @@ ${formatInstructions}
 
 Do not copy any question directly from the past papers provided. Generate an original question inspired by the style and format only.`;
 
-        const raw = await callLLM(prompt, subject, 4000);
+        // ─── Dynamic Model Routing & Prompting for Economics Calculations ─────
+        let modelToUse = null;
+        let finalPrompt = prompt;
+        if (subject === 'economics') {
+            const lowerTopic = (topic || '').toLowerCase();
+            const calcKeywords = ['calculate', 'ped', 'xed', 'yed', 'elasticity', 'opportunity cost', 'gdp', 'profit', 'revenue', '%', 'percentage', 'quantitative'];
+            const isCalcTopic = calcKeywords.some(kw => lowerTopic.includes(kw));
+            if (isCalcTopic) {
+                modelToUse = 'gpt-4o'; // Use stronger reasoning model
+                finalPrompt += `\n\nCRITICAL INSTRUCTION FOR CALCULATIONS: Since this topic involves calculation, you MUST explicitly write out your step-by-step mathematical working (including formula, substitution, and final answer) within the EXAMINER NOTES section to ensure absolute mathematical accuracy in the MARKING SCHEME.`;
+                console.log(`[Generate Question API] Detected Economics calculation topic. Routing to: ${modelToUse}`);
+            }
+        }
+
+        const raw = await callLLM(finalPrompt, subject, 4000, null, modelToUse);
 
         const parseSection = (text, sectionName, nextSections) => {
             const pattern = new RegExp(
