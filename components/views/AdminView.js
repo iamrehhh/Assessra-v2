@@ -7,6 +7,7 @@ export default function AdminView() {
     const [tab, setTab] = useState('users');
     const [users, setUsers] = useState([]);
     const [scores, setScores] = useState([]);
+    const [practiceLogs, setPracticeLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +18,8 @@ export default function AdminView() {
 
     useEffect(() => {
         if (tab === 'users') fetchUsers();
-        else fetchScores();
+        else if (tab === 'scores') fetchScores();
+        else if (tab === 'practice') fetchPracticeLogs();
         fetchNotification();
     }, [tab]);
 
@@ -32,6 +34,8 @@ export default function AdminView() {
 
     // Modal State
     const [modal, setModal] = useState({ open: false, type: 'alert', title: '', message: '', onConfirm: null });
+    const [practiceModalOpen, setPracticeModalOpen] = useState(false);
+    const [selectedUserLogs, setSelectedUserLogs] = useState(null);
 
     const showAlert = useCallback((title, message) => {
         setModal({ open: true, type: 'alert', title, message, onConfirm: null });
@@ -74,6 +78,16 @@ export default function AdminView() {
             const data = await res.json();
             setScores(data.scores || []);
         } catch { setScores([]); }
+        setLoading(false);
+    };
+
+    const fetchPracticeLogs = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/practice');
+            const data = await res.json();
+            setPracticeLogs(data.logs || []);
+        } catch { setPracticeLogs([]); }
         setLoading(false);
     };
 
@@ -142,6 +156,38 @@ export default function AdminView() {
         (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Aggregate practice logs by user
+    const practiceByUser = {};
+    for (const log of practiceLogs) {
+        if (!practiceByUser[log.user_email]) {
+            practiceByUser[log.user_email] = {
+                email: log.user_email,
+                name: log.user_name,
+                totalSessions: 0,
+                subjects: new Set(),
+                types: { multiple_choice: 0, structured: 0, essay: 0, data_response: 0 },
+                lastActive: log.created_at,
+                logs: []
+            };
+        }
+        const u = practiceByUser[log.user_email];
+        u.totalSessions += 1;
+        u.subjects.add(log.subject);
+        if (log.question_type) u.types[log.question_type] = (u.types[log.question_type] || 0) + 1;
+        if (new Date(log.created_at) > new Date(u.lastActive)) u.lastActive = log.created_at;
+        u.logs.push(log);
+    }
+    let practiceAggregated = Object.values(practiceByUser).map(u => ({
+        ...u,
+        subjects: Array.from(u.subjects),
+        logs: u.logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    })).sort((a, b) => b.totalSessions - a.totalSessions);
+
+    const filteredPractice = practiceAggregated.filter(u =>
+        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     const styles = {
         container: { maxWidth: '1100px', margin: '0 auto' },
         header: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' },
@@ -195,8 +241,8 @@ export default function AdminView() {
                     <p style={styles.statNumber}>{scores.length}</p>
                 </div>
                 <div style={styles.statCard}>
-                    <p style={styles.statLabel}>Active Scorers</p>
-                    <p style={styles.statNumber}>{Object.keys(scoresByUser).length}</p>
+                    <p style={styles.statLabel}>AI Practice Sessions</p>
+                    <p style={styles.statNumber}>{practiceLogs.length}</p>
                 </div>
             </div>
 
@@ -245,6 +291,9 @@ export default function AdminView() {
                 </button>
                 <button style={styles.tab(tab === 'scores')} onClick={() => { setTab('scores'); setSearchTerm(''); }}>
                     📊 Scores
+                </button>
+                <button style={styles.tab(tab === 'practice')} onClick={() => { setTab('practice'); setSearchTerm(''); }}>
+                    🧠 AI Practice
                 </button>
                 <button style={styles.tab(tab === 'upload')} onClick={() => { setTab('upload'); setSearchTerm(''); }}>
                     📄 Upload Papers
@@ -405,6 +454,74 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
+            )}
+
+            {/* Practice Drill-down Modal */}
+            {practiceModalOpen && selectedUserLogs && (
+                <div style={styles.modalOverlay} onClick={() => setPracticeModalOpen(false)}>
+                    <div style={{ ...styles.modalContent, maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <div>
+                                <h3 style={styles.modalTitle}>Practice Sessions: {selectedUserLogs.name || selectedUserLogs.email}</h3>
+                                <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0 0 0' }}>{selectedUserLogs.totalSessions} total sessions</p>
+                            </div>
+                            <button style={styles.modalClose} onClick={() => setPracticeModalOpen(false)}>✕</button>
+                        </div>
+                        <div style={{ padding: '0', overflowY: 'auto', flex: 1, background: '#f8fafc' }}>
+                            <table style={{ ...styles.table, borderRadius: 0, boxShadow: 'none' }}>
+                                <thead style={{ position: 'sticky', top: 0, background: '#fafbfc', zIndex: 10 }}>
+                                    <tr>
+                                        <th style={styles.th}>Date</th>
+                                        <th style={styles.th}>Subject/Level</th>
+                                        <th style={styles.th}>Topic</th>
+                                        <th style={styles.th}>Format</th>
+                                        <th style={styles.th}>Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedUserLogs.logs.map(log => (
+                                        <tr key={log.id}>
+                                            <td style={{ ...styles.td, fontSize: '0.8rem', color: '#64748b' }}>
+                                                {new Date(log.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br />
+                                                {new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td style={styles.td}>
+                                                <div style={{ fontWeight: 600, color: '#334155' }}>{log.subject}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>{log.level}</div>
+                                            </td>
+                                            <td style={{ ...styles.td, maxWidth: '200px' }}>
+                                                <div style={{ fontWeight: 500, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {log.topic}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                                                    {log.has_diagram && <span style={{ color: '#8b5cf6', fontWeight: 600 }}>📊 Included diagram</span>}
+                                                </div>
+                                            </td>
+                                            <td style={styles.td}>
+                                                <span style={styles.pill(log.question_type === 'multiple_choice' ? 'orange' : 'gray')}>
+                                                    {log.question_type.replace('_', ' ')}
+                                                </span>
+                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px', textTransform: 'capitalize' }}>
+                                                    {log.difficulty}
+                                                </div>
+                                            </td>
+                                            <td style={styles.td}>
+                                                {log.score !== null ? (
+                                                    <div>
+                                                        <span style={{ fontWeight: 700, color: '#1e293b' }}>{log.score}</span>
+                                                        <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}> / {log.marks}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontStyle: 'italic' }}>Unevaluated</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Dark Modal */}

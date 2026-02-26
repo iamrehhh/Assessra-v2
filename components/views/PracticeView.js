@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SUBJECTS = [
     'Economics', 'Business', 'Maths', 'Biology', 'Chemistry',
@@ -88,6 +88,20 @@ export default function PracticeView() {
                     }));
                 }
                 setStep('mcq_quiz');
+
+                // Fire-and-forget log for starting an MCQ quiz
+                fetch('/api/practice-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: subjectValue,
+                        level: levelValue,
+                        topic: topic.trim(),
+                        questionType: 'multiple_choice',
+                        difficulty: difficulty.toLowerCase(),
+                        marks, // This is the number of questions for MCQ
+                    })
+                }).catch(() => { });
             } else {
                 setQuestionData(data);
                 setAnswer('');
@@ -162,6 +176,22 @@ export default function PracticeView() {
 
             setResults(data);
             setStep('results');
+
+            // Fire-and-forget log for a completed non-MCQ evaluation
+            fetch('/api/practice-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: subjectValue,
+                    level: levelValue,
+                    topic: questionData?.topic || topic.trim(),
+                    questionType: questionData?.questionType || questionType.toLowerCase().replace(' ', '_'),
+                    difficulty: difficulty.toLowerCase(),
+                    marks,
+                    score: data.marksAwarded,
+                    hasDiagram: !!questionData?.hasDiagram
+                })
+            }).catch(() => { });
         } catch (err) {
             setEvalError(err.message);
         } finally {
@@ -376,6 +406,27 @@ export default function PracticeView() {
     if (step === 'mcq_summary') {
         const correctCount = mcqAnswers.filter(a => a.isCorrect).length;
         const totalCount = mcqAnswers.length;
+
+        // Log the final score for MCQ when summary loads
+        // We only want to log this once per quiz completion
+        useEffect(() => {
+            const subjectValue = subject.toLowerCase().replace(' ', '_');
+            const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
+
+            fetch('/api/practice-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: subjectValue,
+                    level: levelValue,
+                    topic: topic.trim(),
+                    questionType: 'multiple_choice',
+                    difficulty: difficulty.toLowerCase(),
+                    marks: totalCount,
+                    score: correctCount
+                })
+            }).catch(() => { });
+        }, []); // Empty dependency array ensures it runs exactly once when component mounts
 
         return (
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
