@@ -16,6 +16,7 @@ import IdiomsView from './views/IdiomsView';
 import OnboardingView from './views/OnboardingView';
 import ProfileView from './views/ProfileView';
 import AdminView from './views/AdminView';
+import PracticeView from './views/PracticeView';
 
 export default function Dashboard() {
     const { data: session } = useSession();
@@ -94,6 +95,8 @@ export default function Dashboard() {
                 return <FormulaeView />;
             case 'definitions':
                 return <DefinitionsView />;
+            case 'practice':
+                return <PracticeView />;
             case 'scorecard':
                 return <ScorecardView />;
             case 'vocab':

@@ -280,6 +280,24 @@ export default function HomeView({ setView, setSelectedSubject }) {
                         </div>
                     </div>
 
+                    {/* AI Practice Quick Launch */}
+                    <div className="glass p-6 rounded-3xl border border-white/5 group hover:border-primary/30 transition-all cursor-pointer" onClick={() => setView('practice')}>
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 group-hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-slate-100">AI Practice Mode</h4>
+                                <p className="text-xs text-slate-400">Generate custom questions on any topic</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setView('practice')}
+                            className="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors border border-primary/20">
+                            <span className="material-symbols-outlined text-base">arrow_forward</span>
+                            Try Now
+                        </button>
+                    </div>
+
                 </div>
             </div>
 
