@@ -3,8 +3,6 @@
 // Admin-only: requires ADMIN_SECRET header.
 
 import { NextResponse } from 'next/server';
-import { writeFile, unlink } from 'fs/promises';
-import path from 'path';
 import { ingestPDF } from '@/lib/rag';
 
 export async function POST(request) {
@@ -41,12 +39,9 @@ export async function POST(request) {
             );
         }
 
-        // ── Save to /tmp (Vercel compatible) ────────────────────────────
+        // ── Convert to buffer and ingest directly ───────────────────────
         const buffer = Buffer.from(await file.arrayBuffer());
-        const tempPath = path.join('/tmp', `ingest_${Date.now()}_${file.name}`);
-        await writeFile(tempPath, buffer);
 
-        // ── Ingest into vector store ────────────────────────────────────
         const metadata = {
             subject,
             level,
@@ -55,14 +50,7 @@ export async function POST(request) {
             filename: file.name,
         };
 
-        const chunks = await ingestPDF(tempPath, metadata);
-
-        // ── Clean up temp file ──────────────────────────────────────────
-        try {
-            await unlink(tempPath);
-        } catch (_) {
-            // Non-critical: temp file cleanup failed
-        }
+        const chunks = await ingestPDF(buffer, metadata);
 
         return NextResponse.json({
             success: true,

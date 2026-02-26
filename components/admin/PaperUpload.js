@@ -90,7 +90,7 @@ export default function PaperUpload() {
                         ...prev,
                         [file.name]: {
                             status: 'error',
-                            message: data.error || 'Upload failed',
+                            message: data.detail || data.error || 'Upload failed',
                             chunks: 0,
                         }
                     }));
