@@ -1,5 +1,5 @@
 // app/api/generate-question/route.js
-// POST endpoint to generate a new Cambridge-style exam question using RAG context.
+// POST endpoint to generate Cambridge-style exam questions using RAG context.
 
 import { NextResponse } from 'next/server';
 import { retrieveRelevantContent } from '@/lib/rag';
@@ -36,38 +36,69 @@ export async function POST(request) {
             context = 'No past paper context available.';
         }
 
-        // ── Build question-type-specific instructions ─────────────────
-        let formatInstructions = '';
+        // ══════════════════════════════════════════════════════════════════
+        // MCQ MODE: marks = number of questions, returns JSON array
+        // ══════════════════════════════════════════════════════════════════
         if (qType === 'multiple_choice') {
-            formatInstructions = `
-FORMAT RULES (Multiple Choice):
-- Write a clear question stem
-- Provide exactly 4 options labelled A, B, C, D
-- Exactly one option must be correct
-- Distractors must be plausible but clearly wrong
-- Do NOT reveal the answer in the question stem
-- Each question is worth 1 mark
+            const numQuestions = marksInt;
 
-Your response must follow this exact structure:
+            const mcqPrompt = `Here are real Cambridge ${level} ${subject} past paper questions on the topic of ${topic} for reference:
 
-QUESTION:
-[Question stem]
+${context}
 
-A. [Option A]
-B. [Option B]
-C. [Option C]
-D. [Option D]
+---
 
-MARK ALLOCATION:
-1 mark for correct answer
+Based on Cambridge ${level} ${subject} exam style, generate exactly ${numQuestions} unique multiple choice questions on the topic: ${topic}
+Difficulty: ${diff}
 
-MARKING SCHEME:
-Correct answer: [Letter]
-[Explanation of why this is correct and why each distractor is wrong]
+RULES:
+- Each question must have exactly 4 options (A, B, C, D)
+- Exactly one option is correct per question
+- Distractors must be plausible but wrong
+- Cover different aspects of the topic across questions
+- Do NOT copy any question from the references
 
-EXAMINER NOTES:
-[Common misconceptions that lead to wrong answers]`;
-        } else if (qType === 'data_response') {
+Respond ONLY with valid JSON (no markdown, no code fences). Use this exact format:
+[
+  {
+    "question": "question stem text",
+    "options": { "A": "option A text", "B": "option B text", "C": "option C text", "D": "option D text" },
+    "correct": "B",
+    "explanation": "Why B is correct and why each other option is wrong"
+  }
+]`;
+
+            const raw = await callLLM(mcqPrompt, subject, 6000);
+
+            // Parse JSON from LLM response
+            let mcqQuestions;
+            try {
+                const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+                mcqQuestions = JSON.parse(cleaned);
+            } catch (parseErr) {
+                throw new Error('Failed to parse MCQ response as JSON: ' + parseErr.message);
+            }
+
+            if (!Array.isArray(mcqQuestions) || mcqQuestions.length === 0) {
+                throw new Error('LLM did not return a valid array of MCQ questions.');
+            }
+
+            return NextResponse.json({
+                mcqMode: true,
+                mcqQuestions,
+                subject,
+                level,
+                topic,
+                totalQuestions: mcqQuestions.length,
+                difficulty: diff,
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // NON-MCQ: Structured, Essay, Data Response
+        // ══════════════════════════════════════════════════════════════════
+        let formatInstructions = '';
+        if (qType === 'data_response') {
             formatInstructions = `
 FORMAT RULES (Data Response):
 - First provide a short data stimulus (table, extract, or scenario with numbers/data)
@@ -112,7 +143,6 @@ EXAMINER NOTES:
 [Common mistakes candidates make on this topic]`;
         }
 
-        // ── Build the generation prompt ─────────────────────────────────
         const prompt = `Here are real Cambridge ${level} ${subject} past paper questions and marking schemes on the topic of ${topic} for reference:
 
 ${context}
@@ -125,16 +155,14 @@ Based strictly on the style and format used in Cambridge ${level} ${subject} exa
 - Topic: ${topic}
 - Total Marks: ${marksInt}
 - Difficulty: ${diff}
-- Question Type: ${qType === 'multiple_choice' ? 'Multiple Choice' : qType === 'data_response' ? 'Data Response' : qType === 'essay' ? 'Essay' : 'Structured'}
+- Question Type: ${qType === 'data_response' ? 'Data Response' : qType === 'essay' ? 'Essay' : 'Structured'}
 
 ${formatInstructions}
 
 Do not copy any question directly from the past papers provided. Generate an original question inspired by the style and format only.`;
 
-        // ── Call the LLM ────────────────────────────────────────────────
         const raw = await callLLM(prompt, subject, 4000);
 
-        // ── Parse the structured response ───────────────────────────────
         const parseSection = (text, sectionName, nextSections) => {
             const pattern = new RegExp(
                 `${sectionName}:\\s*\\n([\\s\\S]*?)(?=${nextSections.map(s => `${s}:`).join('|')}|$)`,

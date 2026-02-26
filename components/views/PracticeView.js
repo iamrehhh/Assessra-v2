@@ -11,7 +11,7 @@ const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 const QUESTION_TYPES = ['Structured', 'Essay', 'Multiple Choice', 'Data Response'];
 
 export default function PracticeView() {
-    // Step state: 'configure' | 'question' | 'results'
+    // Step state: 'configure' | 'question' | 'results' | 'mcq_quiz' | 'mcq_summary'
     const [step, setStep] = useState('configure');
 
     // Config
@@ -22,12 +22,12 @@ export default function PracticeView() {
     const [difficulty, setDifficulty] = useState('Medium');
     const [questionType, setQuestionType] = useState('Structured');
 
-    // Generated question data
+    // Generated question data (non-MCQ)
     const [questionData, setQuestionData] = useState(null);
     const [generating, setGenerating] = useState(false);
     const [genError, setGenError] = useState('');
 
-    // Answer + evaluation
+    // Answer + evaluation (non-MCQ)
     const [answer, setAnswer] = useState('');
     const [evaluating, setEvaluating] = useState(false);
     const [results, setResults] = useState(null);
@@ -35,6 +35,13 @@ export default function PracticeView() {
 
     // Expandable sections in results
     const [expanded, setExpanded] = useState({ breakdown: true, feedback: true, model: false, tip: true });
+
+    // MCQ quiz state
+    const [mcqQuestions, setMcqQuestions] = useState([]);
+    const [mcqIndex, setMcqIndex] = useState(0);
+    const [mcqSelected, setMcqSelected] = useState(null);     // selected option letter
+    const [mcqSubmitted, setMcqSubmitted] = useState(false);   // has answered current question
+    const [mcqAnswers, setMcqAnswers] = useState([]);          // [{selected, correct, isCorrect}]
 
     // ── Generate a question ──────────────────────────────────────────
     const handleGenerate = async () => {
@@ -60,12 +67,22 @@ export default function PracticeView() {
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to generate question');
+            if (!res.ok) throw new Error(data.detail || data.error || 'Failed to generate question');
 
-            setQuestionData(data);
-            setAnswer('');
-            setResults(null);
-            setStep('question');
+            // MCQ mode: sequential quiz flow
+            if (data.mcqMode) {
+                setMcqQuestions(data.mcqQuestions);
+                setMcqIndex(0);
+                setMcqSelected(null);
+                setMcqSubmitted(false);
+                setMcqAnswers([]);
+                setStep('mcq_quiz');
+            } else {
+                setQuestionData(data);
+                setAnswer('');
+                setResults(null);
+                setStep('question');
+            }
         } catch (err) {
             setGenError(err.message);
         } finally {
@@ -73,7 +90,32 @@ export default function PracticeView() {
         }
     };
 
-    // ── Evaluate the answer ──────────────────────────────────────────
+    // ── MCQ: Submit current answer ───────────────────────────────────
+    const handleMcqSubmit = () => {
+        if (!mcqSelected || mcqSubmitted) return;
+        const current = mcqQuestions[mcqIndex];
+        const isCorrect = mcqSelected === current.correct;
+        setMcqSubmitted(true);
+        setMcqAnswers(prev => [...prev, {
+            questionIndex: mcqIndex,
+            selected: mcqSelected,
+            correct: current.correct,
+            isCorrect,
+        }]);
+    };
+
+    // ── MCQ: Go to next question or summary ──────────────────────────
+    const handleMcqNext = () => {
+        if (mcqIndex + 1 < mcqQuestions.length) {
+            setMcqIndex(prev => prev + 1);
+            setMcqSelected(null);
+            setMcqSubmitted(false);
+        } else {
+            setStep('mcq_summary');
+        }
+    };
+
+    // ── Evaluate the answer (non-MCQ) ────────────────────────────────
     const handleSubmit = async () => {
         if (!answer.trim()) return;
         setEvaluating(true);
@@ -156,9 +198,225 @@ export default function PracticeView() {
     );
 
     // ═══════════════════════════════════════════════════════════════════
+    // MCQ QUIZ MODE
+    // ═══════════════════════════════════════════════════════════════════
+    if (step === 'mcq_quiz') {
+        const current = mcqQuestions[mcqIndex];
+        const progressPct = ((mcqIndex + (mcqSubmitted ? 1 : 0)) / mcqQuestions.length) * 100;
+
+        return (
+            <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
+                {/* Progress Bar + Counter */}
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <button onClick={() => { setStep('configure'); setMcqQuestions([]); }}
+                            className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors font-medium text-sm">
+                            <span className="material-symbols-outlined text-base">arrow_back</span>
+                            Exit Quiz
+                        </button>
+                        <span className="text-sm font-bold text-slate-400">
+                            Question <span className="text-primary">{mcqIndex + 1}</span> of {mcqQuestions.length}
+                        </span>
+                    </div>
+                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${progressPct}%` }} />
+                    </div>
+                </div>
+
+                {/* Chips */}
+                <div className="flex flex-wrap gap-2">
+                    <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">
+                        {subject}
+                    </span>
+                    <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">
+                        {level}
+                    </span>
+                    <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
+                        MCQ
+                    </span>
+                </div>
+
+                {/* Question Card */}
+                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-6">
+                    <h3 className="text-lg font-bold text-slate-100 leading-relaxed">
+                        {current?.question || 'Loading...'}
+                    </h3>
+
+                    {/* Options A, B, C, D */}
+                    <div className="space-y-3">
+                        {current?.options && Object.entries(current.options).map(([letter, text]) => {
+                            let optionStyle = 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20';
+
+                            if (mcqSubmitted) {
+                                if (letter === current.correct) {
+                                    optionStyle = 'bg-green-500/15 border-green-500/40 text-green-300';
+                                } else if (letter === mcqSelected && letter !== current.correct) {
+                                    optionStyle = 'bg-red-500/15 border-red-500/40 text-red-300';
+                                } else {
+                                    optionStyle = 'bg-white/5 border-white/5 opacity-50';
+                                }
+                            } else if (mcqSelected === letter) {
+                                optionStyle = 'bg-primary/15 border-primary/40 text-primary';
+                            }
+
+                            return (
+                                <button
+                                    key={letter}
+                                    onClick={() => !mcqSubmitted && setMcqSelected(letter)}
+                                    disabled={mcqSubmitted}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${optionStyle} ${!mcqSubmitted ? 'cursor-pointer' : 'cursor-default'}`}
+                                >
+                                    <span className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0 border ${mcqSubmitted && letter === current.correct ? 'bg-green-500/20 border-green-500/50 text-green-300' :
+                                            mcqSubmitted && letter === mcqSelected && letter !== current.correct ? 'bg-red-500/20 border-red-500/50 text-red-300' :
+                                                mcqSelected === letter && !mcqSubmitted ? 'bg-primary/20 border-primary/50 text-primary' :
+                                                    'bg-white/5 border-white/10 text-slate-400'
+                                        }`}>
+                                        {mcqSubmitted && letter === current.correct ? '✓' :
+                                            mcqSubmitted && letter === mcqSelected && letter !== current.correct ? '✕' :
+                                                letter}
+                                    </span>
+                                    <span className="text-sm font-medium text-slate-200">{text}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Submit / Feedback */}
+                    {!mcqSubmitted ? (
+                        <button
+                            onClick={handleMcqSubmit}
+                            disabled={!mcqSelected}
+                            className={`w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${mcqSelected
+                                    ? 'bg-primary hover:bg-primary/90 text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                    : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
+                                }`}>
+                            <span className="material-symbols-outlined text-base">check_circle</span>
+                            Submit Answer
+                        </button>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Correct / Wrong banner */}
+                            <div className={`rounded-xl p-4 border ${mcqSelected === current.correct
+                                    ? 'bg-green-500/10 border-green-500/20'
+                                    : 'bg-red-500/10 border-red-500/20'
+                                }`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className={`text-2xl ${mcqSelected === current.correct ? '' : ''}`}>
+                                        {mcqSelected === current.correct ? '✅' : '❌'}
+                                    </span>
+                                    <span className={`font-black text-lg ${mcqSelected === current.correct ? 'text-green-400' : 'text-red-400'
+                                        }`}>
+                                        {mcqSelected === current.correct ? 'Correct!' : 'Incorrect'}
+                                    </span>
+                                </div>
+                                {mcqSelected !== current.correct && (
+                                    <p className="text-sm text-slate-300 mb-1">
+                                        You selected <span className="font-bold text-red-400">{mcqSelected}</span>, the correct answer is <span className="font-bold text-green-400">{current.correct}</span>.
+                                    </p>
+                                )}
+                                <p className="text-sm text-slate-300 leading-relaxed mt-2">
+                                    {current.explanation}
+                                </p>
+                            </div>
+
+                            {/* Next / Finish button */}
+                            <button
+                                onClick={handleMcqNext}
+                                className="w-full bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]">
+                                <span className="material-symbols-outlined text-base">
+                                    {mcqIndex + 1 < mcqQuestions.length ? 'arrow_forward' : 'flag'}
+                                </span>
+                                {mcqIndex + 1 < mcqQuestions.length ? 'Next Question' : 'View Results'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // MCQ SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    if (step === 'mcq_summary') {
+        const correctCount = mcqAnswers.filter(a => a.isCorrect).length;
+        const totalCount = mcqAnswers.length;
+
+        return (
+            <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
+                {/* Score Header */}
+                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <ScoreRing awarded={correctCount} total={totalCount} />
+                        <div className="text-center sm:text-left space-y-2">
+                            <h2 className="text-2xl font-black text-slate-100">Quiz Complete!</h2>
+                            <div className="flex items-center gap-3 justify-center sm:justify-start">
+                                <span className={`text-4xl font-black ${(correctCount / totalCount * 100) >= 70 ? 'text-green-400' :
+                                        (correctCount / totalCount * 100) >= 40 ? 'text-amber-400' : 'text-red-400'
+                                    }`}>
+                                    {Math.round(correctCount / totalCount * 100)}%
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                                <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">{subject}</span>
+                                <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">{topic}</span>
+                                <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">MCQ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Per-question breakdown */}
+                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-4">
+                    <h3 className="text-lg font-bold text-slate-100">Question Breakdown</h3>
+                    <div className="space-y-3">
+                        {mcqQuestions.map((q, i) => {
+                            const ans = mcqAnswers[i];
+                            return (
+                                <div key={i} className={`rounded-xl p-4 border ${ans?.isCorrect ? 'bg-green-500/5 border-green-500/15' : 'bg-red-500/5 border-red-500/15'
+                                    }`}>
+                                    <div className="flex items-start gap-3">
+                                        <span className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${ans?.isCorrect ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                            }`}>
+                                            {ans?.isCorrect ? '✓' : '✕'}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-slate-200 mb-1">Q{i + 1}. {q.question}</p>
+                                            <p className="text-xs text-slate-400">
+                                                Your answer: <span className={ans?.isCorrect ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{ans?.selected}</span>
+                                                {!ans?.isCorrect && <> · Correct: <span className="text-green-400 font-bold">{ans?.correct}</span></>}
+                                            </p>
+                                            <p className="text-xs text-slate-500 mt-1">{q.explanation}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button onClick={() => { setStep('configure'); setMcqQuestions([]); setMcqAnswers([]); }}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]">
+                        <span className="material-symbols-outlined text-base">auto_awesome</span>
+                        Try Another Quiz
+                    </button>
+                    <button onClick={() => { setMcqIndex(0); setMcqSelected(null); setMcqSubmitted(false); setMcqAnswers([]); setStep('mcq_quiz'); }}
+                        className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
+                        Retry Same Quiz
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
     // STEP 1: CONFIGURE
     // ═══════════════════════════════════════════════════════════════════
     if (step === 'configure') {
+        const isMCQ = questionType === 'Multiple Choice';
         return (
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                 {/* Header */}
@@ -202,10 +460,13 @@ export default function PracticeView() {
                     {/* Marks + Question Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Marks</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                {isMCQ ? 'Number of Questions' : 'Marks'}
+                            </label>
                             <input type="number" value={marks} onChange={e => setMarks(parseInt(e.target.value) || 1)}
-                                min={1} max={30}
+                                min={1} max={isMCQ ? 20 : 30}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors" />
+                            {isMCQ && <p className="text-xs text-slate-500 mt-1">Each question = 1 mark with A, B, C, D options</p>}
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Question Type</label>
@@ -245,12 +506,12 @@ export default function PracticeView() {
                         {generating ? (
                             <>
                                 <div className="w-5 h-5 border-3 border-background-dark/30 border-t-background-dark rounded-full animate-spin" />
-                                Generating your question...
+                                {isMCQ ? `Generating ${marks} MCQs...` : 'Generating your question...'}
                             </>
                         ) : (
                             <>
                                 <span className="material-symbols-outlined">auto_awesome</span>
-                                Generate Question ✨
+                                {isMCQ ? `Generate ${marks} MCQs ✨` : 'Generate Question ✨'}
                             </>
                         )}
                     </button>
@@ -260,7 +521,7 @@ export default function PracticeView() {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 2: QUESTION + ANSWER
+    // STEP 2: QUESTION + ANSWER (non-MCQ)
     // ═══════════════════════════════════════════════════════════════════
     if (step === 'question') {
         return (
@@ -286,8 +547,8 @@ export default function PracticeView() {
                             {marks} marks
                         </span>
                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${difficulty === 'Easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                difficulty === 'Hard' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            difficulty === 'Hard' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
                             }`}>
                             {difficulty}
                         </span>
@@ -352,7 +613,7 @@ export default function PracticeView() {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 3: RESULTS
+    // STEP 3: RESULTS (non-MCQ)
     // ═══════════════════════════════════════════════════════════════════
     return (
         <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
@@ -364,7 +625,7 @@ export default function PracticeView() {
                         <h2 className="text-2xl font-black text-slate-100">Your Score</h2>
                         <div className="flex items-center gap-3 justify-center sm:justify-start">
                             <span className={`text-4xl font-black ${(results?.percentage || 0) >= 70 ? 'text-green-400' :
-                                    (results?.percentage || 0) >= 40 ? 'text-amber-400' : 'text-red-400'
+                                (results?.percentage || 0) >= 40 ? 'text-amber-400' : 'text-red-400'
                                 }`}>
                                 {results?.percentage || 0}%
                             </span>
