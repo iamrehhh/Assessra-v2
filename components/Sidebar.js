@@ -32,6 +32,7 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
         { id: 'home', icon: 'grid_view', label: 'Overview' },
         { id: 'papers', icon: 'book', label: 'Subjects' },
         { id: 'practice', icon: 'auto_awesome', label: 'AI Practice' },
+        { id: 'saved', icon: 'collections_bookmark', label: 'Saved Sets' },
         { id: 'scorecard', icon: 'bar_chart', label: 'Scorecard' },
         { id: 'leaderboard', icon: 'leaderboard', label: 'Leaderboard' },
     ];

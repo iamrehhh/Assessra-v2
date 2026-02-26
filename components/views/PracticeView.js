@@ -46,6 +46,83 @@ export default function PracticeView() {
     // Diagram budget tracking: max 2 diagram questions per subject per session
     const [diagramCount, setDiagramCount] = useState({});
 
+    // Save practice session state
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedSetId, setSavedSetId] = useState(null);
+
+    // ── Save Practice Session ──────────────────────────────────────────
+    const handleSaveSet = async (isMcq) => {
+        if (isSaving || savedSetId) return;
+        setIsSaving(true);
+        try {
+            const subjectValue = subject.toLowerCase().replace(' ', '_');
+            const practiceData = isMcq ? { mcqQuestions, mcqAnswers } : { questionData, answer, results };
+
+            const reqBody = {
+                subject: subjectValue,
+                topic: topic.trim() || (isMcq ? '' : questionData?.topic) || 'Practice Set',
+                is_mcq: isMcq,
+                score: isMcq ? mcqAnswers.filter(a => a.isCorrect).length : (results?.marksAwarded || 0),
+                max_marks: isMcq ? mcqAnswers.length : (results?.totalMarks || marks),
+                practice_data: practiceData
+            };
+
+            const res = await fetch('/api/user/saved-practices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reqBody)
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to save');
+            setSavedSetId(data.savedPractice.id);
+        } catch (err) {
+            console.error('Save practice error:', err);
+            alert('Failed to save practice set');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // ── MCQ Summary Logging (Moved to top level) ─────────────────────
+    useEffect(() => {
+        if (step === 'mcq_summary') {
+            const correctCount = mcqAnswers.filter(a => a.isCorrect).length;
+            const totalCount = mcqAnswers.length;
+            const subjectValue = subject.toLowerCase().replace(' ', '_');
+            const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
+
+            // Log AI Practice session
+            fetch('/api/practice-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: subjectValue,
+                    level: levelValue,
+                    topic: topic.trim(),
+                    questionType: 'multiple_choice',
+                    difficulty: difficulty.toLowerCase(),
+                    marks: totalCount,
+                    score: correctCount
+                })
+            }).catch(() => { });
+
+            // Integrate with Daily Progress / Streak
+            fetch('/api/scores/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paperId: `ai_practice_mcq_${Date.now()}`,
+                    paperTitle: `AI MCQ - ${topic.trim() || 'General'}`,
+                    subject: subjectValue,
+                    questionNumber: 'all',
+                    score: correctCount,
+                    maxMarks: totalCount
+                })
+            }).catch(() => { });
+        }
+    }, [step]); // Only run when step changes
+
     // ── Generate a question ──────────────────────────────────────────
     const handleGenerate = async () => {
         if (!topic.trim()) { setGenError('Please enter a topic.'); return; }
@@ -55,6 +132,8 @@ export default function PracticeView() {
         try {
             const subjectValue = subject.toLowerCase().replace(' ', '_');
             const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
+
+            setSavedSetId(null); // Reset saved status on new generation
 
             const res = await fetch('/api/generate-question', {
                 method: 'POST',
@@ -190,6 +269,20 @@ export default function PracticeView() {
                     marks,
                     score: data.marksAwarded,
                     hasDiagram: !!questionData?.hasDiagram
+                })
+            }).catch(() => { });
+
+            // Integrate with Daily Progress / Streak
+            fetch('/api/scores/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paperId: `ai_practice_${Date.now()}`,
+                    paperTitle: `AI Practice - ${questionData?.topic || topic.trim() || 'General'}`,
+                    subject: subjectValue,
+                    questionNumber: 'all',
+                    score: data.marksAwarded,
+                    maxMarks: marks
                 })
             }).catch(() => { });
         } catch (err) {
@@ -407,27 +500,6 @@ export default function PracticeView() {
         const correctCount = mcqAnswers.filter(a => a.isCorrect).length;
         const totalCount = mcqAnswers.length;
 
-        // Log the final score for MCQ when summary loads
-        // We only want to log this once per quiz completion
-        useEffect(() => {
-            const subjectValue = subject.toLowerCase().replace(' ', '_');
-            const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
-
-            fetch('/api/practice-log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    subject: subjectValue,
-                    level: levelValue,
-                    topic: topic.trim(),
-                    questionType: 'multiple_choice',
-                    difficulty: difficulty.toLowerCase(),
-                    marks: totalCount,
-                    score: correctCount
-                })
-            }).catch(() => { });
-        }, []); // Empty dependency array ensures it runs exactly once when component mounts
-
         return (
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                 {/* Score Header */}
@@ -483,12 +555,17 @@ export default function PracticeView() {
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                    <button onClick={() => { setStep('configure'); setMcqQuestions([]); setMcqAnswers([]); }}
+                    <button onClick={() => { setStep('configure'); setMcqQuestions([]); setMcqAnswers([]); setSavedSetId(null); }}
                         className="flex-1 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]">
                         <span className="material-symbols-outlined text-base">auto_awesome</span>
                         Try Another Quiz
                     </button>
-                    <button onClick={() => { setMcqIndex(0); setMcqSelected(null); setMcqSubmitted(false); setMcqAnswers([]); setStep('mcq_quiz'); }}
+                    <button onClick={() => handleSaveSet(true)} disabled={isSaving || savedSetId}
+                        className={`px-6 py-3.5 rounded-xl font-bold text-sm border transition-all flex items-center justify-center gap-2 ${(isSaving || savedSetId) ? 'border-primary/20 text-primary/50 bg-primary/5 cursor-not-allowed' : 'text-primary border-primary hover:bg-primary/10'}`}>
+                        <span className="material-symbols-outlined text-base">{savedSetId ? 'bookmark_added' : 'bookmark_add'}</span>
+                        {savedSetId ? 'Saved' : (isSaving ? 'Saving...' : 'Save Set')}
+                    </button>
+                    <button onClick={() => { setMcqIndex(0); setMcqSelected(null); setMcqSubmitted(false); setMcqAnswers([]); setStep('mcq_quiz'); setSavedSetId(null); }}
                         className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
                         Retry Same Quiz
                     </button>
@@ -748,12 +825,17 @@ export default function PracticeView() {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
-                <button onClick={() => { setStep('configure'); setQuestionData(null); setAnswer(''); setResults(null); }}
+                <button onClick={() => { setStep('configure'); setQuestionData(null); setAnswer(''); setResults(null); setSavedSetId(null); }}
                     className="flex-1 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]">
                     <span className="material-symbols-outlined text-base">auto_awesome</span>
                     Try Another Question
                 </button>
-                <button onClick={() => { setStep('question'); setResults(null); setAnswer(''); }}
+                <button onClick={() => handleSaveSet(false)} disabled={isSaving || savedSetId}
+                    className={`px-6 py-3.5 rounded-xl font-bold text-sm border transition-all flex items-center justify-center gap-2 ${(isSaving || savedSetId) ? 'border-primary/20 text-primary/50 bg-primary/5 cursor-not-allowed' : 'text-primary border-primary hover:bg-primary/10'}`}>
+                    <span className="material-symbols-outlined text-base">{savedSetId ? 'bookmark_added' : 'bookmark_add'}</span>
+                    {savedSetId ? 'Saved' : (isSaving ? 'Saving...' : 'Save Set')}
+                </button>
+                <button onClick={() => { setStep('question'); setResults(null); setAnswer(''); setSavedSetId(null); }}
                     className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
                     Try Again
                 </button>
