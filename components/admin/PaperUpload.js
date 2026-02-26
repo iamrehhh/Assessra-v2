@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { ingestAction } from '@/app/actions/ingestAction';
 
 // ─── Subject and level options ──────────────────────────────────────────────
 const SUBJECTS = [
@@ -65,25 +66,11 @@ export default function PaperUpload() {
                 formData.append('level', levelValue);
                 formData.append('year', detectYear(file.name));
                 formData.append('type', typeValue);
+                formData.append('adminSecret', process.env.NEXT_PUBLIC_ADMIN_SECRET || '');
 
-                const res = await fetch('/api/ingest', {
-                    method: 'POST',
-                    headers: {
-                        'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
-                    },
-                    body: formData,
-                });
-                let data;
-                try {
-                    data = await res.json();
-                } catch (parseError) {
-                    if (res.status === 413) {
-                        throw new Error('File is too large (Payload Too Large). Max size is ~50MB.');
-                    }
-                    throw new Error(`Server returned a non-JSON response (${res.status}). Ensure the file fits within size limits.`);
-                }
+                const data = await ingestAction(formData);
 
-                if (res.ok) {
+                if (data.success) {
                     const replacedMsg = data.replaced ? ' (replaced previous version)' : '';
                     setFileStatuses(prev => ({
                         ...prev,
