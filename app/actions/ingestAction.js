@@ -3,6 +3,7 @@
 import { ingestPDF } from '@/lib/rag';
 import supabase from '@/lib/supabase';
 
+
 export async function ingestAction(formData) {
     try {
         // ── Admin auth check ────────────────────────────────────────────

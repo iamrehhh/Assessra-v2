@@ -13,6 +13,8 @@ export const metadata = {
   description: "AI-powered past paper platform for AS & A Level students",
 };
 
+export const maxDuration = 300;
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={jakarta.variable}>
