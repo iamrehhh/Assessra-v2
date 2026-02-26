@@ -36,6 +36,82 @@ export async function POST(request) {
             context = 'No past paper context available.';
         }
 
+        // ── Build question-type-specific instructions ─────────────────
+        let formatInstructions = '';
+        if (qType === 'multiple_choice') {
+            formatInstructions = `
+FORMAT RULES (Multiple Choice):
+- Write a clear question stem
+- Provide exactly 4 options labelled A, B, C, D
+- Exactly one option must be correct
+- Distractors must be plausible but clearly wrong
+- Do NOT reveal the answer in the question stem
+- Each question is worth 1 mark
+
+Your response must follow this exact structure:
+
+QUESTION:
+[Question stem]
+
+A. [Option A]
+B. [Option B]
+C. [Option C]
+D. [Option D]
+
+MARK ALLOCATION:
+1 mark for correct answer
+
+MARKING SCHEME:
+Correct answer: [Letter]
+[Explanation of why this is correct and why each distractor is wrong]
+
+EXAMINER NOTES:
+[Common misconceptions that lead to wrong answers]`;
+        } else if (qType === 'data_response') {
+            formatInstructions = `
+FORMAT RULES (Data Response):
+- First provide a short data stimulus (table, extract, or scenario with numbers/data)
+- Then ask structured sub-questions (a), (b), (c) etc. based on the data
+- Include a mix of knowledge, application, and analysis questions
+- Use command words: identify, calculate, explain, analyse, evaluate
+
+Your response must follow this exact structure:
+
+QUESTION:
+[Data/stimulus/extract]
+
+[Sub-questions (a), (b), (c) etc. with marks shown as [X marks] for each]
+
+MARK ALLOCATION:
+[Breakdown per sub-question]
+
+MARKING SCHEME:
+[Detailed per sub-question with acceptable answers]
+
+EXAMINER NOTES:
+[Common mistakes and what distinguishes high scoring answers]`;
+        } else {
+            formatInstructions = `
+FORMAT RULES (${qType === 'essay' ? 'Essay' : 'Structured'}):
+${qType === 'essay'
+                    ? '- Write a single essay question using high-order command words (Discuss, Evaluate, To what extent, Assess)\n- The question should require extended writing with arguments for and against'
+                    : '- Write a multi-part structured question with sub-parts (a), (b), (c) etc.\n- Progress from low-order (Define, State, Identify) to high-order (Explain, Analyse, Evaluate)\n- Show marks per sub-part as [X marks]'}
+
+Your response must follow this exact structure:
+
+QUESTION:
+[The full question text]
+
+MARK ALLOCATION:
+[Breakdown of marks per part]
+
+MARKING SCHEME:
+[Detailed marking scheme showing all acceptable answers]
+
+EXAMINER NOTES:
+[Common mistakes candidates make on this topic]`;
+        }
+
         // ── Build the generation prompt ─────────────────────────────────
         const prompt = `Here are real Cambridge ${level} ${subject} past paper questions and marking schemes on the topic of ${topic} for reference:
 
@@ -43,27 +119,15 @@ ${context}
 
 ---
 
-Based strictly on the style, format, difficulty, and command words used in the above Cambridge examples, generate ONE new original question with the following specifications:
+Based strictly on the style and format used in Cambridge ${level} ${subject} exams, generate ONE new original question with these specifications:
 - Subject: ${subject}
 - Level: ${level}
 - Topic: ${topic}
 - Total Marks: ${marksInt}
 - Difficulty: ${diff}
-- Question Type: ${qType}
+- Question Type: ${qType === 'multiple_choice' ? 'Multiple Choice' : qType === 'data_response' ? 'Data Response' : qType === 'essay' ? 'Essay' : 'Structured'}
 
-Your response must follow this exact structure:
-
-QUESTION:
-[The full question text using appropriate Cambridge command words such as define, explain, analyse, evaluate, discuss, calculate, describe]
-
-MARK ALLOCATION:
-[Breakdown of marks per part if multi-part question]
-
-MARKING SCHEME:
-[Detailed marking scheme showing all acceptable answers, mark allocation per point, and examiner notes on what to accept or reject]
-
-EXAMINER NOTES:
-[Common mistakes candidates make on this topic and what distinguishes a high scoring answer]
+${formatInstructions}
 
 Do not copy any question directly from the past papers provided. Generate an original question inspired by the style and format only.`;
 
