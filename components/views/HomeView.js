@@ -34,7 +34,8 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 let totalMax = 0;
                 let completed = 0;
 
-                const todayString = new Date().toLocaleDateString();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
                 if (scoresData.attempts && scoresData.attempts.length > 0) {
                     completed = scoresData.attempts.length;
@@ -42,8 +43,9 @@ export default function HomeView({ setView, setSelectedSubject }) {
                         totalS += s.score;
                         totalMax += s.maxMarks;
 
-                        const attemptDate = new Date(s.submittedAt).toLocaleDateString();
-                        if (attemptDate === todayString) {
+                        const attemptDate = new Date(s.submittedAt);
+                        attemptDate.setHours(0, 0, 0, 0);
+                        if (attemptDate.getTime() === today.getTime()) {
                             todayS += s.score;
                         }
                     });
@@ -54,8 +56,9 @@ export default function HomeView({ setView, setSelectedSubject }) {
                         totalS += s.score;
                         totalMax += s.maxMarks;
 
-                        const attemptDate = new Date(s.submittedAt || s.submitted_at).toLocaleDateString();
-                        if (attemptDate === todayString) {
+                        const attemptDate = new Date(s.submittedAt || s.submitted_at);
+                        attemptDate.setHours(0, 0, 0, 0);
+                        if (attemptDate.getTime() === today.getTime()) {
                             todayS += s.score;
                         }
                     });

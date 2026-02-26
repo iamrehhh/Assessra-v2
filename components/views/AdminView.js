@@ -384,7 +384,7 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
-            ) : (
+            ) : tab === 'scores' ? (
                 /* Scores Table */
                 filteredScores.length === 0 ? (
                     <div style={styles.emptyState}>
@@ -454,7 +454,82 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
-            )}
+            ) : tab === 'practice' ? (
+                /* AI Practice Table */
+                filteredPractice.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🧠</p>
+                        <p style={{ fontWeight: 600 }}>No practice logs found</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>User</th>
+                                    <th style={styles.th}>Stats</th>
+                                    <th style={styles.th}>Question Types</th>
+                                    <th style={styles.th}>Last Active</th>
+                                    <th style={styles.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredPractice.map(entry => (
+                                    <tr key={entry.email} style={{ transition: 'background 0.15s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                        <td style={styles.td}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{entry.name || entry.email}</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{entry.email}</div>
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <div style={{ fontWeight: 700, color: '#1e293b' }}>
+                                                {entry.totalSessions} <span style={{ fontWeight: 500, color: '#64748b', fontSize: '0.85rem' }}>Sessions</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                                                {entry.subjects.slice(0, 3).map(s => (
+                                                    <span key={s} style={{ ...styles.pill('gray'), fontSize: '0.7rem', padding: '2px 8px' }}>{s}</span>
+                                                ))}
+                                                {entry.subjects.length > 3 && (
+                                                    <span style={{ ...styles.pill('gray'), fontSize: '0.7rem', padding: '2px 8px' }}>+{entry.subjects.length - 3}</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, max-content)', gap: '4px 12px', fontSize: '0.8rem', color: '#64748b' }}>
+                                                {entry.types.multiple_choice > 0 && <div>MCQ: <span style={{ fontWeight: 600, color: '#334155' }}>{entry.types.multiple_choice}</span></div>}
+                                                {entry.types.structured > 0 && <div>Structured: <span style={{ fontWeight: 600, color: '#334155' }}>{entry.types.structured}</span></div>}
+                                                {entry.types.essay > 0 && <div>Essay: <span style={{ fontWeight: 600, color: '#334155' }}>{entry.types.essay}</span></div>}
+                                                {entry.types.data_response > 0 && <div>Data: <span style={{ fontWeight: 600, color: '#334155' }}>{entry.types.data_response}</span></div>}
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <div style={{ fontWeight: 500, color: '#334155' }}>
+                                                {new Date(entry.lastActive).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                                {new Date(entry.lastActive).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <button
+                                                style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#3b82f6', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                onClick={() => { setSelectedUserLogs(entry); setPracticeModalOpen(true); }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                                            >
+                                                View Logs
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )
+            ) : null}
 
             {/* Practice Drill-down Modal */}
             {practiceModalOpen && selectedUserLogs && (
