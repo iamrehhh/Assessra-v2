@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ToastContext';
 
 const SUBJECTS = [
     'Economics', 'Business', 'Maths', 'Biology', 'Chemistry',
