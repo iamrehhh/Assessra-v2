@@ -33,6 +33,16 @@ export default function PaperUpload() {
         setFileStatuses({});
     };
 
+    // ── Auto-detect year from Cambridge filename (e.g. 9708_s24_qp_41 → 2024) ─
+    const detectYear = (filename) => {
+        const match = filename.match(/[_-]([smw])(\d{2})[_-]/i);
+        if (match) {
+            const yy = parseInt(match[2], 10);
+            return String(yy >= 90 ? 1900 + yy : 2000 + yy);
+        }
+        return year; // fallback to manual field
+    };
+
     // ── Upload all selected files ────────────────────────────────────
     const handleUpload = async () => {
         if (files.length === 0) return;
@@ -53,7 +63,7 @@ export default function PaperUpload() {
                 formData.append('file', file);
                 formData.append('subject', subjectValue);
                 formData.append('level', levelValue);
-                formData.append('year', year);
+                formData.append('year', detectYear(file.name));
                 formData.append('type', typeValue);
 
                 const res = await fetch('/api/ingest', {
