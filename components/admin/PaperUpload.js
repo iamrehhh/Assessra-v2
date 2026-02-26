@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ingestAction } from '@/app/actions/ingestAction';
+import { extractTextFromPDF, splitText } from '@/lib/pdfUtils';
+import { embedAction } from '@/app/actions/embedAction';
 
 // ─── Subject and level options ──────────────────────────────────────────────
 const SUBJECTS = [
@@ -52,69 +53,85 @@ export default function PaperUpload() {
         const typeValue = docType === 'Textbook' ? 'textbook' : docType === 'Mark Scheme' ? 'markscheme' : 'paper';
         const subjectValue = subject.toLowerCase().replace(' ', '_');
         const levelValue = level === 'A Level' ? 'alevel' : 'igcse';
+        const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 
         for (const file of files) {
             setFileStatuses(prev => ({
                 ...prev,
-                [file.name]: { status: 'uploading', message: 'Uploading...', chunks: 0 }
+                [file.name]: { status: 'uploading', message: 'Extracting text... (This may take a minute for textbooks)', chunks: 0 }
             }));
 
             try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('subject', subjectValue);
-                formData.append('level', levelValue);
-                formData.append('year', detectYear(file.name));
-                formData.append('type', typeValue);
-                formData.append('adminSecret', process.env.NEXT_PUBLIC_ADMIN_SECRET || '');
+                // 1. Extract text in browser
+                const text = await extractTextFromPDF(file);
 
-                const data = await ingestAction(formData);
-
-                if (data.success) {
-                    const replacedMsg = data.replaced ? ' (replaced previous version)' : '';
-                    setFileStatuses(prev => ({
-                        ...prev,
-                        [file.name]: {
-                            status: 'success',
-                            message: `Successfully ingested ${data.chunks} chunks${replacedMsg}`,
-                            chunks: data.chunks,
-                        }
-                    }));
-                    // Add to session history (newest first)
-                    setHistory(prev => [{
-                        filename: file.name,
-                        subject,
-                        level,
-                        year,
-                        type: docType,
-                        chunks: data.chunks,
-                        status: 'success',
-                    }, ...prev]);
-                } else {
-                    setFileStatuses(prev => ({
-                        ...prev,
-                        [file.name]: {
-                            status: 'error',
-                            message: data.detail || data.error || 'Upload failed',
-                            chunks: 0,
-                        }
-                    }));
-                    setHistory(prev => [{
-                        filename: file.name,
-                        subject,
-                        level,
-                        year,
-                        type: docType,
-                        chunks: 0,
-                        status: 'error',
-                    }, ...prev]);
+                if (!text || text.trim().length === 0) {
+                    throw new Error('PDF appears to be empty or contains no extractable text.');
                 }
+
+                // 2. Chunk text
+                const chunks = splitText(text, 500, 100);
+
+                // 3. Send to server in batches of 100
+                const batchSize = 100;
+                let insertedChunks = 0;
+
+                const metadata = {
+                    subject: subjectValue,
+                    level: levelValue,
+                    year: detectYear(file.name),
+                    type: typeValue,
+                    filename: file.name
+                };
+
+                for (let i = 0; i < chunks.length; i += batchSize) {
+                    const batch = chunks.slice(i, i + batchSize);
+                    const isFirstBatch = i === 0;
+
+                    setFileStatuses(prev => ({
+                        ...prev,
+                        [file.name]: {
+                            status: 'uploading',
+                            message: `Uploading chunks ${Math.min(i + batchSize, chunks.length)} / ${chunks.length}...`,
+                            chunks: insertedChunks
+                        }
+                    }));
+
+                    const data = await embedAction(batch, metadata, adminSecret, isFirstBatch);
+
+                    if (!data.success) {
+                        throw new Error(data.error || 'Batch upload failed');
+                    }
+
+                    insertedChunks += data.inserted;
+                }
+
+                setFileStatuses(prev => ({
+                    ...prev,
+                    [file.name]: {
+                        status: 'success',
+                        message: `Successfully ingested ${insertedChunks} chunks.`,
+                        chunks: insertedChunks,
+                    }
+                }));
+
+                setHistory(prev => [{
+                    filename: file.name,
+                    subject,
+                    level,
+                    year,
+                    type: docType,
+                    chunks: insertedChunks,
+                    status: 'success',
+                }, ...prev]);
+
             } catch (err) {
+                console.error('Upload Error:', err);
                 setFileStatuses(prev => ({
                     ...prev,
                     [file.name]: {
                         status: 'error',
-                        message: 'Network error: ' + err.message,
+                        message: err.message || 'An error occurred during upload',
                         chunks: 0,
                     }
                 }));
@@ -131,7 +148,6 @@ export default function PaperUpload() {
         }
 
         setUploading(false);
-        // Reset file input but keep other fields for back-to-back uploads
         setFiles([]);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
