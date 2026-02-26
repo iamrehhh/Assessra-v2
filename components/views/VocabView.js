@@ -131,6 +131,7 @@ function shuffle(arr) {
 
 export default function VocabView() {
     const questions = useMemo(() => shuffle(vocabQuestionsBank), []);
+    const confirmDialog = useConfirm();
 
     const [current, setCurrent] = useState(0);
     const [score, setScore] = useState(0);
@@ -176,15 +177,17 @@ export default function VocabView() {
         saveProgress(next, score, answered);
     }
 
-    function reset() {
-        if (!confirm('Reset all vocab progress?')) return;
+    // --- Admin Feature: Reset Progress ---
+    const handleResetAll = async () => {
+        const isConfirmed = await confirmDialog('Reset Progress', 'Are you sure you want to reset all vocabulary progress? This action cannot be undone.');
+        if (!isConfirmed) return;
         setCurrent(0);
         setScore(0);
         setAnswered(0);
         setSelected(null);
         setShowResult(false);
         localStorage.removeItem('assessra_vocab_progress');
-    }
+    };
 
     if (showResult || current >= questions.length) {
         const pct = answered > 0 ? Math.round((score / answered) * 100) : 0;
@@ -195,7 +198,7 @@ export default function VocabView() {
                     <h2 style={{ fontSize: '5rem', background: 'linear-gradient(135deg, var(--lime-primary), #16a34a)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0, fontWeight: 800 }}>{pct}%</h2>
                     <p style={{ fontSize: '1.8rem', color: '#666', marginTop: 15, fontWeight: 600 }}>{score} / {answered} Correct</p>
                 </div>
-                <button className="nav-btn" onClick={reset} style={{ background: 'var(--lime-primary)', color: 'white', padding: '18px 40px', fontSize: '1.2rem', fontWeight: 700, borderRadius: 10, boxShadow: '0 4px 12px rgba(132,204,22,0.3)' }}>🔄 Restart Quiz</button>
+                <button className="nav-btn" onClick={handleResetAll} style={{ background: 'var(--lime-primary)', color: 'white', padding: '18px 40px', fontSize: '1.2rem', fontWeight: 700, borderRadius: 10, boxShadow: '0 4px 12px rgba(132,204,22,0.3)' }}>🔄 Restart Quiz</button>
             </div>
         );
     }
@@ -223,7 +226,7 @@ export default function VocabView() {
                     <div style={{ position: 'absolute', height: '100%', background: 'linear-gradient(90deg, var(--lime-primary), #16a34a)', width: `${((current + 1) / questions.length) * 100}%`, borderRadius: 6, transition: 'width 0.5s' }} />
                 </div>
                 <div style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem', marginTop: 8 }}>{Math.round(((current + 1) / questions.length) * 100)}% Complete</div>
-                <button onClick={reset} style={{ width: '100%', marginTop: 20, padding: 12, background: 'white', border: '2px solid var(--lime-primary)', color: 'var(--lime-dark)', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>🔄 Reset Progress</button>
+                <button onClick={handleResetAll} style={{ width: '100%', marginTop: 20, padding: 12, background: 'white', border: '2px solid var(--lime-primary)', color: 'var(--lime-dark)', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>🔄 Reset Progress</button>
             </div>
 
             {/* Question area */}

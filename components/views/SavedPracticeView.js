@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ToastContext';
+import { useConfirm } from '@/components/ConfirmContext';
 
 export default function SavedPracticeView() {
+    const toast = useToast();
+    const confirmDialog = useConfirm();
     const [savedSets, setSavedSets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -33,7 +37,8 @@ export default function SavedPracticeView() {
 
     const handleDelete = async (id, e) => {
         e.stopPropagation(); // Prevent opening the set details when clicking delete
-        if (!confirm('Are you sure you want to delete this saved practice set?')) return;
+        const isConfirmed = await confirmDialog('Delete Practice Set', 'Are you sure you want to permanently delete this saved practice set?');
+        if (!isConfirmed) return;
 
         try {
             const res = await fetch(`/api/user/saved-practices?id=${id}`, { method: 'DELETE' });
@@ -46,9 +51,10 @@ export default function SavedPracticeView() {
             if (selectedSet && selectedSet.id === id) {
                 setSelectedSet(null);
             }
+            toast('Set deleted.', 'success');
         } catch (err) {
             console.error(err);
-            alert('Failed to delete: ' + err.message);
+            toast('Failed to delete: ' + err.message, 'error');
         }
     };
 

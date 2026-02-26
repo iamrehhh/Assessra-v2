@@ -11,6 +11,7 @@ const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 const QUESTION_TYPES = ['Structured', 'Essay', 'Multiple Choice', 'Data Response'];
 
 export default function PracticeView() {
+    const toast = useToast();
     // Step state: 'configure' | 'question' | 'results' | 'mcq_quiz' | 'mcq_summary'
     const [step, setStep] = useState('configure');
 
@@ -76,9 +77,10 @@ export default function PracticeView() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to save');
             setSavedSetId(data.savedPractice.id);
+            toast('Practice set saved successfully!', 'success');
         } catch (err) {
             console.error('Save practice error:', err);
-            alert('Failed to save practice set');
+            toast('Failed to save practice set', 'error');
         } finally {
             setIsSaving(false);
         }

@@ -173,6 +173,8 @@ function generateQuestions(data) {
 }
 
 export default function IdiomsView() {
+    const { data: session } = useSession();
+    const confirmDialog = useConfirm();
     const questions = useMemo(() => generateQuestions(idiomsData), []);
 
     const [current, setCurrent] = useState(0);
@@ -205,11 +207,18 @@ export default function IdiomsView() {
         setCurrent(n); setSelected(null); save(n, score, answered);
     }
 
-    function reset() {
-        if (!confirm('Reset all idioms progress?')) return;
-        setCurrent(0); setScore(0); setAnswered(0); setSelected(null); setShowResult(false);
-        localStorage.removeItem('assessra_idioms_progress');
-    }
+    // --- Admin Feature: Reset Progress ---
+    const handleResetAll = async () => {
+        const isConfirmed = await confirmDialog('Reset Progress', 'Are you sure you want to reset all idioms progress? This action cannot be undone.');
+        if (!isConfirmed) return;
+        try {
+            setCurrent(0); setScore(0); setAnswered(0); setSelected(null); setShowResult(false);
+            localStorage.removeItem('assessra_idioms_progress');
+        } catch (error) {
+            console.error("Failed to reset idioms progress:", error);
+            // Optionally, show an error message to the user
+        }
+    };
 
     if (showResult || current >= questions.length) {
         const pct = answered > 0 ? Math.round((score / answered) * 100) : 0;
@@ -219,7 +228,7 @@ export default function IdiomsView() {
                 <h1 style={{ color: 'var(--lime-dark)', fontSize: '2.8rem', marginBottom: 15 }}>Quiz Complete!</h1>
                 <div style={{ fontSize: '3rem', fontWeight: 800, color: '#16a34a', margin: '20px 0' }}>{score}/{answered}</div>
                 <p style={{ fontSize: '1.3rem', color: '#666', marginBottom: 30 }}>{pct}% Correct</p>
-                <button onClick={reset} style={{ padding: '15px 40px', background: 'linear-gradient(135deg, var(--lime-primary), #16a34a)', color: 'white', border: 'none', borderRadius: 12, fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(132,204,22,0.3)' }}>🔄 Restart Quiz</button>
+                <button onClick={handleResetAll} style={{ padding: '15px 40px', background: 'linear-gradient(135deg, var(--lime-primary), #16a34a)', color: 'white', border: 'none', borderRadius: 12, fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(132,204,22,0.3)' }}>🔄 Restart Quiz</button>
             </div>
         );
     }
@@ -237,7 +246,7 @@ export default function IdiomsView() {
                         <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: 5 }}>Score</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--lime-dark)' }}>{score}/{answered}</div>
                     </div>
-                    <button onClick={reset} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>🔄 Reset</button>
+                    <button onClick={handleResetAll} style={{ padding: '10px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>🔄 Reset</button>
                 </div>
             </div>
 

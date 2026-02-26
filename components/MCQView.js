@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useConfirm } from '@/components/ConfirmContext';
 import { useSession } from 'next-auth/react';
 
 export default function MCQView({ paperId, paperData, onBack }) {
+    const confirmDialog = useConfirm();
     const paper = paperData[paperId];
     const { data: session } = useSession();
     const [answers, setAnswers] = useState({});
@@ -35,9 +37,12 @@ export default function MCQView({ paperId, paperData, onBack }) {
         setAnswers(prev => ({ ...prev, [qIdx]: letter }));
     }
 
-    function handleSubmit(auto = false) {
+    const handleSubmit = async (auto = false) => {
         if (submitted) return;
-        if (!auto && !window.confirm('Are you ready to submit your answers for grading?')) return;
+        if (!auto) {
+            const isConfirmed = await confirmDialog('Submit Answers', 'Are you ready to submit your answers for grading?');
+            if (!isConfirmed) return;
+        }
         clearInterval(timerRef.current);
         let correct = 0;
         paper.answers.forEach((ans, i) => { if (answers[i] === ans) correct++; });

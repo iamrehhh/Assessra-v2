@@ -1,5 +1,7 @@
 'use client';
 
+import { useToast } from '@/components/ToastContext';
+
 export default function SubjectsPanel({ isOpen, onClose, onSelect }) {
     const subjects = [
         {
@@ -75,6 +77,8 @@ export default function SubjectsPanel({ isOpen, onClose, onSelect }) {
 }
 
 function SubjectAccordion({ subject, onSelect }) {
+    const toast = useToast();
+
     return (
         <div style={{ borderBottom: '1px solid #f0f0f0' }}>
             <div className="panel-subject-title">
@@ -87,8 +91,8 @@ function SubjectAccordion({ subject, onSelect }) {
                         key={paper}
                         className="paper-item"
                         onClick={() => {
-                            if (subject.disabled) {
-                                alert('Mathematics is currently disabled.');
+                            if (subject.name === 'Mathematics (9709)') { // Changed condition to match the name
+                                toast('Mathematics is currently disabled.', 'info');
                                 return;
                             }
                             onSelect(subject.key, paper);
