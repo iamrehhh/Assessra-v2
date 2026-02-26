@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastContext';
+import SavedPracticeView from './SavedPracticeView';
 
 const SUBJECTS = [
     'Economics', 'Business', 'Maths', 'Biology', 'Chemistry',
@@ -13,6 +14,8 @@ const QUESTION_TYPES = ['Structured', 'Essay', 'Multiple Choice', 'Data Response
 
 export default function PracticeView() {
     const toast = useToast();
+    // Tab state: 'new' | 'saved'
+    const [activeTab, setActiveTab] = useState('new');
     // Step state: 'configure' | 'question' | 'results' | 'mcq_quiz' | 'mcq_summary'
     const [step, setStep] = useState('configure');
 
@@ -592,95 +595,114 @@ export default function PracticeView() {
                     <p className="text-slate-400">Generate custom Cambridge-style questions on any topic</p>
                 </div>
 
-                {/* Form Card */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-6">
-                    {/* Subject + Level */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subject</label>
-                            <select value={subject} onChange={e => setSubject(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                {SUBJECTS.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Level</label>
-                            <select value={level} onChange={e => setLevel(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                {LEVELS.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Topic */}
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Topic</label>
-                        <input
-                            type="text" value={topic} onChange={e => setTopic(e.target.value)}
-                            placeholder="e.g. price elasticity of demand, SWOT analysis, organic chemistry..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
-                        />
-                    </div>
-
-                    {/* Marks + Question Type */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                {isMCQ ? 'Number of Questions' : 'Marks'}
-                            </label>
-                            <input type="number" value={marks} onChange={e => setMarks(parseInt(e.target.value) || 1)}
-                                min={1} max={isMCQ ? 20 : 30}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors" />
-                            {isMCQ && <p className="text-xs text-slate-500 mt-1">Each question = 1 mark with A, B, C, D options</p>}
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Question Type</label>
-                            <select value={questionType} onChange={e => setQuestionType(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                {QUESTION_TYPES.map(qt => <option key={qt} value={qt} className="bg-slate-900">{qt}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Difficulty Pills */}
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Difficulty</label>
-                        <div className="flex gap-2">
-                            {DIFFICULTIES.map(d => (
-                                <button key={d} onClick={() => setDifficulty(d)}
-                                    className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${difficulty === d
-                                        ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                        : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'
-                                        }`}>
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Error */}
-                    {genError && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm font-medium">
-                            {genError}
-                        </div>
-                    )}
-
-                    {/* Generate Button */}
-                    <button onClick={handleGenerate} disabled={generating}
-                        className={`w-full bg-primary hover:bg-primary/90 text-background-dark py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all ${generating ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:-translate-y-0.5'}`}>
-                        {generating ? (
-                            <>
-                                <div className="w-5 h-5 border-3 border-background-dark/30 border-t-background-dark rounded-full animate-spin" />
-                                {isMCQ ? `Generating ${marks} MCQs...` : 'Generating your question...'}
-                            </>
-                        ) : (
-                            <>
-                                <span className="material-symbols-outlined">auto_awesome</span>
-                                {isMCQ ? `Generate ${marks} MCQs ✨` : 'Generate Question ✨'}
-                            </>
-                        )}
+                {/* Tab Controller */}
+                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full max-w-sm mx-auto">
+                    <button
+                        onClick={() => setActiveTab('new')}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'new' ? 'bg-primary text-background-dark shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                        New Practice
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('saved')}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'saved' ? 'bg-primary text-background-dark shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                    >
+                        Saved Sets
                     </button>
                 </div>
+
+                {activeTab === 'saved' ? (
+                    <SavedPracticeView isEmbedded={true} />
+                ) : (
+                    <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-6">
+                        {/* Subject + Level */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subject</label>
+                                <select value={subject} onChange={e => setSubject(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    {SUBJECTS.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Level</label>
+                                <select value={level} onChange={e => setLevel(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    {LEVELS.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Topic */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Topic</label>
+                            <input
+                                type="text" value={topic} onChange={e => setTopic(e.target.value)}
+                                placeholder="e.g. price elasticity of demand, SWOT analysis, organic chemistry..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
+                            />
+                        </div>
+
+                        {/* Marks + Question Type */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                    {isMCQ ? 'Number of Questions' : 'Marks'}
+                                </label>
+                                <input type="number" value={marks} onChange={e => setMarks(parseInt(e.target.value) || 1)}
+                                    min={1} max={isMCQ ? 20 : 30}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors" />
+                                {isMCQ && <p className="text-xs text-slate-500 mt-1">Each question = 1 mark with A, B, C, D options</p>}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Question Type</label>
+                                <select value={questionType} onChange={e => setQuestionType(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    {QUESTION_TYPES.map(qt => <option key={qt} value={qt} className="bg-slate-900">{qt}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Difficulty Pills */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Difficulty</label>
+                            <div className="flex gap-2">
+                                {DIFFICULTIES.map(d => (
+                                    <button key={d} onClick={() => setDifficulty(d)}
+                                        className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${difficulty === d
+                                            ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                            : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'
+                                            }`}>
+                                        {d}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Error */}
+                        {genError && (
+                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm font-medium">
+                                {genError}
+                            </div>
+                        )}
+
+                        {/* Generate Button */}
+                        <button onClick={handleGenerate} disabled={generating}
+                            className={`w-full bg-primary hover:bg-primary/90 text-background-dark py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all ${generating ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-[0_0_30px_rgba(34,197,94,0.3)] hover:-translate-y-0.5'}`}>
+                            {generating ? (
+                                <>
+                                    <div className="w-5 h-5 border-3 border-background-dark/30 border-t-background-dark rounded-full animate-spin" />
+                                    {isMCQ ? `Generating ${marks} MCQs...` : 'Generating your question...'}
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined">auto_awesome</span>
+                                    {isMCQ ? `Generate ${marks} MCQs ✨` : 'Generate Question ✨'}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }

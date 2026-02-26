@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastContext';
 import { useConfirm } from '@/components/ConfirmContext';
 
-export default function SavedPracticeView() {
+export default function SavedPracticeView({ isEmbedded = false }) {
     const toast = useToast();
     const confirmDialog = useConfirm();
     const [savedSets, setSavedSets] = useState([]);
@@ -240,13 +240,15 @@ export default function SavedPracticeView() {
     return (
         <div className="space-y-8 animate-fade-in max-w-5xl mx-auto pb-12">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-white mb-2">
-                    <span className="text-primary material-symbols-outlined align-middle mr-2 text-4xl">bookmarks</span>
-                    Saved Sets
-                </h1>
-                <p className="text-slate-400 text-lg">Review and learn from your previous AI practice sessions.</p>
-            </div>
+            {!isEmbedded && (
+                <div>
+                    <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-white mb-2">
+                        <span className="text-primary material-symbols-outlined align-middle mr-2 text-4xl">bookmarks</span>
+                        Saved Sets
+                    </h1>
+                    <p className="text-slate-400 text-lg">Review and learn from your previous AI practice sessions.</p>
+                </div>
+            )}
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20">

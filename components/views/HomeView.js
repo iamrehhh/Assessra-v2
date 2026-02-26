@@ -21,8 +21,11 @@ export default function HomeView({ setView, setSelectedSubject }) {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
+                const userEmail = session?.user?.email;
+                if (!userEmail) return;
+
                 // Fetch user scores
-                const scoresRes = await fetch('/api/scores/user');
+                const scoresRes = await fetch(`/api/scores/user?username=${encodeURIComponent(userEmail)}`);
                 const scoresData = await scoresRes.json();
 
                 // Fetch leaderboard for rank
@@ -67,7 +70,6 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 const avg = totalMax > 0 ? Math.round((totalS / totalMax) * 100 * 10) / 10 : 0;
 
                 // Find rank in leaderboard
-                const userEmail = session?.user?.email;
                 let currentRank = '-';
                 if (lbData.leaderboard && userEmail) {
                     const idx = lbData.leaderboard.findIndex(u => u.username === userEmail);
