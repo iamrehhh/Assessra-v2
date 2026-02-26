@@ -67,11 +67,12 @@ export default function PaperUpload() {
                 const data = await res.json();
 
                 if (res.ok) {
+                    const replacedMsg = data.replaced ? ' (replaced previous version)' : '';
                     setFileStatuses(prev => ({
                         ...prev,
                         [file.name]: {
                             status: 'success',
-                            message: `Successfully ingested ${data.chunks} chunks`,
+                            message: `Successfully ingested ${data.chunks} chunks${replacedMsg}`,
                             chunks: data.chunks,
                         }
                     }));

@@ -50,12 +50,30 @@ export async function POST(request) {
             filename: file.name,
         };
 
+        // ── Duplicate detection: remove old chunks if same file was uploaded before ──
+        const supabase = (await import('@/lib/supabase')).default;
+        const { data: existing } = await supabase
+            .from('document_chunks')
+            .select('id')
+            .eq('filename', file.name)
+            .limit(1);
+
+        let replaced = false;
+        if (existing && existing.length > 0) {
+            await supabase
+                .from('document_chunks')
+                .delete()
+                .eq('filename', file.name);
+            replaced = true;
+        }
+
         const chunks = await ingestPDF(buffer, metadata);
 
         return NextResponse.json({
             success: true,
             chunks,
             filename: file.name,
+            replaced,
         });
     } catch (err) {
         console.error('Ingest API error:', err);
