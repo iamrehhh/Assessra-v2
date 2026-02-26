@@ -1,7 +1,20 @@
 // /api/mark/route.js
 // Direct OpenAI GPT-4o-mini marking — mirrors the logic from the original app.py
 
-import OpenAI from 'openai';
+import { callLLM } from '@/lib/llm';
+
+function getSubject(pdf, paperTitle) {
+    const p = (pdf || '').toLowerCase();
+    const t = (paperTitle || '').toLowerCase();
+    if (t.includes('math') || p.includes('9709') || p.includes('0580')) return 'maths';
+    if (t.includes('english') || p.includes('9093') || p.includes('0500')) return 'english';
+    if (t.includes('general paper') || p.includes('8021')) return 'general_paper';
+    if (t.includes('science') || t.includes('physics') || t.includes('chemistry') || t.includes('biology') || p.includes('9700') || p.includes('9701') || p.includes('9702') || p.includes('0610') || p.includes('0620') || p.includes('0625')) return 'sciences';
+    if (t.includes('economic') || p.includes('9708') || p.includes('0455')) return 'economics';
+    if (t.includes('business') || p.includes('9609') || p.includes('0450')) return 'business';
+    if (t.includes('history') || p.includes('9489') || p.includes('0470')) return 'history';
+    return null;
+}
 
 // ─── Build system prompt based on paper type ────────────────────────────────
 
@@ -164,15 +177,12 @@ export async function POST(request) {
         const body = await request.json();
         const { question, marks, answer, paperTitle, pdf, caseStudy } = body;
 
-        if (!process.env.OPENAI_API_KEY) {
-            return Response.json({ error: 'OPENAI_API_KEY is not configured on the server.' }, { status: 503 });
+        if (!process.env.OPENAI_API_KEY && process.env.LLM_PROVIDER !== 'claude') {
+            return Response.json({ error: 'LLM API key is not configured on the server.' }, { status: 503 });
         }
 
-        const client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
-
         const marksInt = parseInt(marks, 10) || 12;
+        const subject = getSubject(pdf, paperTitle);
         const systemPrompt = buildSystemPrompt(pdf, marksInt);
         const rubric = buildRubric(pdf, marksInt);
         const modelAnswerInstruction = buildModelAnswerInstruction(pdf, marksInt);
@@ -195,27 +205,32 @@ MODEL ANSWER INSTRUCTION (generate after marking):
 ${modelAnswerInstruction}
 
 ---
-Respond ONLY with a valid JSON object in this exact format:
-{
-  "score": <integer, 0 to ${marksInt}>,
-  "feedback": "<detailed feedback explaining what was done well, what was missing, and how to improve. Reference rubric levels. 150-300 words.>",
-  "modelAnswer": "<a full model/sample answer as described in the instruction above>"
-}
+ADDITIONAL CONTEXT:
+${systemPrompt}
 `;
 
-        const completion = await client.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt },
-            ],
-            temperature: 1.0,
-            max_tokens: 16384,
-            response_format: { type: 'json_object' },
-        });
+        const raw = await callLLM(userPrompt, subject, 16384);
 
-        const raw = completion.choices[0].message.content;
-        const result = JSON.parse(raw);
+        let score = marksInt; // Fallback
+        const scoreMatch = raw.match(/MARKS AWARDED:\s*(\d+(\.\d+)?)/i);
+        if (scoreMatch) {
+            score = parseFloat(scoreMatch[1]);
+        }
+
+        let feedback = raw;
+        let modelAnswer = "See feedback for full details.";
+
+        const modelAnswerSplit = raw.split(/MODEL ANSWER:/i);
+        if (modelAnswerSplit.length > 1) {
+            feedback = modelAnswerSplit[0].trim();
+            modelAnswer = modelAnswerSplit[1].trim();
+        }
+
+        const result = {
+            score,
+            feedback,
+            modelAnswer
+        };
 
         return Response.json(result);
     } catch (err) {

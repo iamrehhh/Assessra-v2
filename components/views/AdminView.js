@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import PaperUpload from '@/components/admin/PaperUpload';
 
 export default function AdminView() {
     const [tab, setTab] = useState('users');
@@ -245,6 +246,9 @@ export default function AdminView() {
                 <button style={styles.tab(tab === 'scores')} onClick={() => { setTab('scores'); setSearchTerm(''); }}>
                     📊 Scores
                 </button>
+                <button style={styles.tab(tab === 'upload')} onClick={() => { setTab('upload'); setSearchTerm(''); }}>
+                    📄 Upload Papers
+                </button>
             </div>
 
             {/* Search */}
@@ -256,7 +260,9 @@ export default function AdminView() {
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
 
-            {loading ? (
+            {tab === 'upload' ? (
+                <PaperUpload />
+            ) : loading ? (
                 <div style={styles.emptyState}>
                     <div style={{ width: '36px', height: '36px', border: '4px solid #f3f3f3', borderTop: '4px solid var(--lime-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px auto' }} />
                     <p style={{ fontWeight: 600 }}>Loading...</p>
