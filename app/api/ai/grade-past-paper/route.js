@@ -7,7 +7,7 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { subject, level, year, questionLabel, studentAnswer } = body;
+        const { subject, level, year, questionLabel, questionText, totalMarks, studentAnswer } = body;
 
         if (!subject || !level || !questionLabel || !studentAnswer) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -16,8 +16,9 @@ export async function POST(request) {
         const openai = getOpenAIClient();
 
         // 1. Embed the query context to find relevant markscheme chunks
-        // We include the question label (e.g., "1(a)", "Question 3") to help vector search
-        const queryText = `Mark scheme for ${subject} ${level} ${year || ''} ${questionLabel}`;
+        // We include the question label AND text to help vector search find the exact markscheme entry
+        let queryText = `Mark scheme for ${subject} ${level} ${year || ''} ${questionLabel}`;
+        if (questionText) queryText += ` ${questionText}`;
         const queryEmbeddingRes = await openai.embeddings.create({
             model: 'text-embedding-ada-002',
             input: queryText,
@@ -59,8 +60,12 @@ export async function POST(request) {
         }
 
         // 3. Evaluate using OpenAI structured output
-        const systemPrompt = `You are an expert ${subject} Cambridge examiner.
-Your task is to officially mark a student's answer for Question: ${questionLabel}.
+        const systemPrompt = `You are an expert ${subject} Cambridge examiner for ${level}.
+Your task is to officially mark a student's answer.
+
+Question Reference: ${questionLabel}
+${questionText ? `Question Text: ${questionText}` : ''}
+${totalMarks > 0 ? `Total Marks Available: ${totalMarks}` : ''}
 
 Context retrieved from the official Mark Scheme for this paper:
 ${markSchemeContext ? markSchemeContext : "No specific mark scheme found for this exact paper. Apply general Cambridge marking principles for this topic."}
@@ -69,7 +74,7 @@ Student's Answer:
 ${studentAnswer}
 
 Instructions:
-1. Provide a realistic mark score. (e.g. "3/4 Marks" or "2/2 Marks"). Estimate total marks based on the context or question depth if not explicitly stated.
+1. Provide a realistic mark score. ${totalMarks > 0 ? `It must be out of ${totalMarks} (e.g., "3/${totalMarks} Marks").` : `(e.g. "3/4 Marks"). Estimate total marks based on the context or question depth if not explicitly stated.`} Be strict as per Cambridge standards.
 2. Provide a breakdown of what they got right, referencing specific points in the mark scheme.
 3. Provide constructive examiner feedback on what was missing or poorly explained.
 4. Construct a perfect Model Answer that would obtain full marks.

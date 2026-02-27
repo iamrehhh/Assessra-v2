@@ -14,10 +14,11 @@ export default function PracticeSplitScreen({ paperId }) {
     const [insertFilename, setInsertFilename] = useState(null);
 
     // Workspace state
-    // Blocks represent the questions the student is answering: { id, label, answer, status, feedback }
+    // Blocks represent the questions the student is answering: { id, label, questionText, marks, answer, status, feedback }
     const [blocks, setBlocks] = useState([
-        { id: '1', label: 'Question 1', answer: '', status: 'idle', feedback: null }
+        { id: '1', label: 'Q1', questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }
     ]);
+    const [extracting, setExtracting] = useState(false);
 
     useEffect(() => {
         // Fetch metadata to see if there's an insert associated, and get the exact URL
@@ -46,7 +47,44 @@ export default function PracticeSplitScreen({ paperId }) {
 
     const addBlock = () => {
         const nextNum = blocks.length + 1;
-        setBlocks([...blocks, { id: Date.now().toString(), label: `Question ${nextNum}`, answer: '', status: 'idle', feedback: null }]);
+        setBlocks([...blocks, { id: Date.now().toString(), label: `Q${nextNum}`, questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }]);
+    };
+
+    const extractQuestions = async () => {
+        setExtracting(true);
+        try {
+            const res = await fetch('/api/past-papers/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.questions && data.questions.length > 0) {
+                const newBlocks = data.questions.map((q, idx) => ({
+                    id: Date.now().toString() + idx,
+                    label: q.label,
+                    questionText: q.text,
+                    marks: q.marks,
+                    answer: '',
+                    status: 'idle',
+                    feedback: null
+                }));
+                // Replace or append? Let's replace the default empty one if nothing was typed there.
+                if (blocks.length === 1 && !blocks[0].answer && !blocks[0].questionText) {
+                    setBlocks(newBlocks);
+                } else {
+                    setBlocks([...blocks, ...newBlocks]);
+                }
+            } else {
+                alert(data.error || 'No questions could be extracted from this paper automatically.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to connect to extraction service.');
+        } finally {
+            setExtracting(false);
+        }
     };
 
     const updateBlock = (id, field, value) => {
@@ -81,6 +119,8 @@ export default function PracticeSplitScreen({ paperId }) {
                     level: meta.level,
                     year: meta.year,
                     questionLabel: block.label,
+                    questionText: block.questionText,
+                    totalMarks: block.marks,
                     studentAnswer: block.answer
                 })
             });
@@ -158,19 +198,63 @@ export default function PracticeSplitScreen({ paperId }) {
                     </div>
 
                     <div className="p-6 md:p-8 space-y-8 pb-32">
+                        {/* Auto-Extract Banner */}
+                        {blocks.length === 1 && !blocks[0].questionText && !blocks[0].answer && (
+                            <div className="bg-primary/10 border border-primary/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-3">
+                                <span className="material-symbols-outlined text-primary text-4xl">auto_awesome</span>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-100">AI Question Extractor</h3>
+                                    <p className="text-slate-400 text-sm mt-1 max-w-sm">Automatically scan this specific past paper and pull out all questions, labels, and marks into your workspace.</p>
+                                </div>
+                                <button
+                                    onClick={extractQuestions}
+                                    disabled={extracting}
+                                    className="mt-2 bg-primary text-background-dark font-bold px-6 py-2.5 rounded-xl hover:shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all flex items-center gap-2"
+                                >
+                                    {extracting ? (
+                                        <><div className="w-4 h-4 border-2 border-background-dark border-t-transparent rounded-full animate-spin"></div> Extracting...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-sm">smart_toy</span> Extract Questions</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
                         {blocks.map((block, index) => (
-                            <div key={block.id} className="glass rounded-3xl p-6 border border-white/5 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <input
-                                        type="text"
-                                        value={block.label}
-                                        onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
-                                        className="bg-transparent text-lg font-bold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-b border-primary/50 w-1/2"
-                                        placeholder="e.g. Question 1(a)"
-                                    />
+                            <div key={block.id} className="relative bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl space-y-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 pr-4">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <input
+                                                type="text"
+                                                value={block.label}
+                                                onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
+                                                className="bg-transparent text-lg font-black text-slate-100 placeholder-slate-600 focus:outline-none focus:border-b border-primary/50 w-24"
+                                                placeholder="e.g. Q1a"
+                                            />
+                                            <div className="flex items-center bg-primary rounded-full px-3 py-0.5 border border-primary/20">
+                                                <input
+                                                    type="number"
+                                                    value={block.marks || ''}
+                                                    onChange={(e) => updateBlock(block.id, 'marks', parseInt(e.target.value) || 0)}
+                                                    className="bg-transparent text-xs font-bold text-background-dark text-center focus:outline-none w-6"
+                                                    placeholder="0"
+                                                />
+                                                <span className="text-xs font-bold text-background-dark pr-1">Marks</span>
+                                            </div>
+                                        </div>
+                                        <textarea
+                                            value={block.questionText}
+                                            onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
+                                            rows={2}
+                                            placeholder="Paste or type the question text here..."
+                                            className="w-full bg-transparent text-slate-100 font-bold placeholder-slate-500 focus:outline-none resize-y min-h-[50px] leading-relaxed"
+                                        />
+                                    </div>
+
                                     {blocks.length > 1 && (
-                                        <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-red-400 transition-colors">
-                                            <span className="material-symbols-outlined">delete</span>
+                                        <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-red-400 transition-colors shrink-0">
+                                            <span className="material-symbols-outlined">close</span>
                                         </button>
                                     )}
                                 </div>
@@ -178,28 +262,30 @@ export default function PracticeSplitScreen({ paperId }) {
                                 <textarea
                                     value={block.answer}
                                     onChange={(e) => updateBlock(block.id, 'answer', e.target.value)}
-                                    rows={6}
+                                    rows={8}
                                     placeholder={`Type your answer for ${block.label} here...`}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors resize-y min-h-[150px]"
+                                    className="w-full bg-background-dark/50 border border-white/10 rounded-2xl px-5 py-4 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors resize-y min-h-[200px]"
                                     disabled={block.status === 'evaluating' || block.status === 'done'}
                                 />
 
                                 <div className="flex gap-3">
                                     {block.status !== 'done' && (
-                                        <button
-                                            onClick={() => handleSubmit(block.id)}
-                                            disabled={block.status === 'evaluating' || !block.answer.trim()}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
-                                                ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
-                                                : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                                }`}
-                                        >
-                                            {block.status === 'evaluating' ? (
-                                                <><div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" /> Evaluating...</>
-                                            ) : (
-                                                <><span className="material-symbols-outlined text-base">check_circle</span> Submit Answer</>
-                                            )}
-                                        </button>
+                                        <div className="flex-1 flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handleSubmit(block.id)}
+                                                disabled={block.status === 'evaluating' || !block.answer.trim()}
+                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
+                                                    ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+                                                    : 'bg-primary text-background-dark shadow-[0_4px_14px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.4)] hover:-translate-y-0.5'
+                                                    }`}
+                                            >
+                                                {block.status === 'evaluating' ? (
+                                                    <><div className="w-5 h-5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" /> Strict Marking...</>
+                                                ) : (
+                                                    <><span className="material-symbols-outlined text-base">fact_check</span> Submit for Strict Marking</>
+                                                )}
+                                            </button>
+                                        </div>
                                     )}
 
                                     {block.status === 'done' && block.feedback && (
@@ -221,10 +307,10 @@ export default function PracticeSplitScreen({ paperId }) {
 
                         <button
                             onClick={addBlock}
-                            className="w-full py-4 rounded-3xl border-2 border-dashed border-white/10 text-slate-400 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center gap-2 font-bold"
+                            className="w-full py-4 rounded-3xl border-2 border-dashed border-white/10 text-slate-400 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center gap-2 font-bold mb-12"
                         >
                             <span className="material-symbols-outlined">add</span>
-                            Add Answer Block
+                            Add Empty Answer Block
                         </button>
                     </div>
                 </div>

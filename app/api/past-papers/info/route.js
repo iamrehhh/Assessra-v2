@@ -39,9 +39,9 @@ export async function GET(request) {
             }
         }
 
-        // 3. Construct the public pdf URLs manually using the base URL
-        const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const bucketPath = `${baseUrl}/storage/v1/object/public/past_papers`;
+        // 3. Construct the local public pdf URLs
+        // We will host them in public/past_papers/
+        const bucketPath = '/past_papers';
 
         return NextResponse.json({
             pdfUrl: `${bucketPath}/${filename}`,
