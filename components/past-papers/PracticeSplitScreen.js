@@ -208,7 +208,10 @@ export default function PracticeSplitScreen({ paperId }) {
                 <div className="w-1/2 h-full flex flex-col border-r border-white/10 bg-[#1e1e1e]">
                     {/* Header */}
                     <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-4 shrink-0">
-                        <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold">
+                        <button onClick={() => {
+                            window.location.hash = 'pastpapers';
+                            router.push('/');
+                        }} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold">
                             <span className="material-symbols-outlined text-base">arrow_back</span>
                             Exit
                         </button>
@@ -264,15 +267,15 @@ export default function PracticeSplitScreen({ paperId }) {
                         {/* Active Timer Display */}
                         {timerDuration && timerVisible && (
                             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${timerSeconds === 0 ? 'bg-red-500/20 border-red-500/30' :
-                                    timerUrgent ? 'bg-red-500/10 border-red-500/30 animate-pulse' :
-                                        timerWarning ? 'bg-amber-500/10 border-amber-500/20' :
-                                            'bg-white/5 border-white/10'
+                                timerUrgent ? 'bg-red-500/10 border-red-500/30 animate-pulse' :
+                                    timerWarning ? 'bg-amber-500/10 border-amber-500/20' :
+                                        'bg-white/5 border-white/10'
                                 }`}>
                                 {/* Timer text */}
                                 <span className={`text-sm font-mono font-black tracking-wider ${timerSeconds === 0 ? 'text-red-400' :
-                                        timerUrgent ? 'text-red-400' :
-                                            timerWarning ? 'text-amber-400' :
-                                                'text-slate-100'
+                                    timerUrgent ? 'text-red-400' :
+                                        timerWarning ? 'text-amber-400' :
+                                            'text-slate-100'
                                     }`}>
                                     {formatTime(timerSeconds)}
                                 </span>
@@ -282,10 +285,10 @@ export default function PracticeSplitScreen({ paperId }) {
                                     onClick={toggleTimer}
                                     disabled={timerSeconds === 0}
                                     className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${timerSeconds === 0
-                                            ? 'text-slate-600 cursor-not-allowed'
-                                            : timerRunning
-                                                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-                                                : 'bg-primary/20 text-primary hover:bg-primary/30'
+                                        ? 'text-slate-600 cursor-not-allowed'
+                                        : timerRunning
+                                            ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                            : 'bg-primary/20 text-primary hover:bg-primary/30'
                                         }`}
                                 >
                                     <span className="material-symbols-outlined text-base">

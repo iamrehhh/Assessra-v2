@@ -12,7 +12,31 @@ export default function MCQView({ paperId, paperData, onBack }) {
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(null);
     const [timeLeft, setTimeLeft] = useState(75 * 60);
+    const [feedbacks, setFeedbacks] = useState({});
+    const [loadingFeedbacks, setLoadingFeedbacks] = useState({});
     const timerRef = useRef(null);
+
+    const getFeedback = async (qIdx, correctAnswer, userAnswer) => {
+        if (loadingFeedbacks[qIdx] || feedbacks[qIdx]) return;
+        setLoadingFeedbacks(prev => ({ ...prev, [qIdx]: true }));
+        try {
+            const res = await fetch('/api/mcq-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pdfPath: paper.pdf,
+                    questionNumber: qIdx + 1,
+                    userAnswer: userAnswer || 'None left blank',
+                    correctAnswer
+                })
+            });
+            const data = await res.json();
+            if (data.feedback) {
+                setFeedbacks(prev => ({ ...prev, [qIdx]: data.feedback }));
+            }
+        } catch (e) { console.error('Error fetching feedback', e); }
+        setLoadingFeedbacks(prev => ({ ...prev, [qIdx]: false }));
+    };
 
     useEffect(() => {
         if (submitted) { clearInterval(timerRef.current); return; }
@@ -49,12 +73,12 @@ export default function MCQView({ paperId, paperData, onBack }) {
         setScore(correct);
         setSubmitted(true);
         // Silently save to MongoDB
-        if (user) {
+        if (session?.user?.email) {
             fetch('/api/scores/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    username: user,
+                    username: session.user.email,
                     paperId,
                     paperTitle: `Economics MCQ — ${paperId}`,
                     subject: 'economics-p3',
@@ -107,22 +131,42 @@ export default function MCQView({ paperId, paperData, onBack }) {
                             const userAns = answers[i];
                             const isCorrect = userAns === correctAns;
                             return (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '10px', borderRadius: '8px', border: submitted ? (isCorrect ? '2px solid #22c55e' : '2px solid #ef4444') : '1px solid #eee', background: '#fafafa' }}>
-                                    <div style={{ width: '40px', fontWeight: 700, color: '#555' }}>Q{i + 1}</div>
-                                    <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'space-around' }}>
-                                        {['A', 'B', 'C', 'D'].map(letter => {
-                                            let bg = 'white', border = '2px solid #ccc', color = '#555';
-                                            if (!submitted && userAns === letter) { bg = 'var(--lime-primary)'; border = '2px solid var(--lime-primary)'; color = 'white'; }
-                                            if (submitted && letter === correctAns) { bg = '#22c55e'; border = '2px solid #22c55e'; color = 'white'; }
-                                            if (submitted && userAns === letter && !isCorrect && letter !== correctAns) { bg = '#ef4444'; border = '2px solid #ef4444'; color = 'white'; }
-                                            return (
-                                                <button key={letter} onClick={() => handleAnswer(i, letter)}
-                                                    style={{ width: 40, height: 40, borderRadius: '50%', background: bg, border, color, fontWeight: 700, cursor: submitted ? 'default' : 'pointer', transition: '0.15s' }}>
-                                                    {letter}
-                                                </button>
-                                            );
-                                        })}
+                                <div key={i} style={{ display: 'flex', flexDirection: 'column', padding: '10px', borderRadius: '8px', border: submitted ? (isCorrect ? '2px solid #22c55e' : '2px solid #ef4444') : '1px solid #eee', background: '#fafafa' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ width: '40px', fontWeight: 700, color: '#555' }}>Q{i + 1}</div>
+                                        <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'space-around' }}>
+                                            {['A', 'B', 'C', 'D'].map(letter => {
+                                                let bg = 'white', border = '2px solid #ccc', color = '#555';
+                                                if (!submitted && userAns === letter) { bg = 'var(--lime-primary)'; border = '2px solid var(--lime-primary)'; color = 'white'; }
+                                                if (submitted && letter === correctAns) { bg = '#22c55e'; border = '2px solid #22c55e'; color = 'white'; }
+                                                if (submitted && userAns === letter && !isCorrect && letter !== correctAns) { bg = '#ef4444'; border = '2px solid #ef4444'; color = 'white'; }
+                                                return (
+                                                    <button key={letter} onClick={() => handleAnswer(i, letter)}
+                                                        style={{ width: 40, height: 40, borderRadius: '50%', background: bg, border, color, fontWeight: 700, cursor: submitted ? 'default' : 'pointer', transition: '0.15s' }}>
+                                                        {letter}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {submitted && !isCorrect && (
+                                            <button
+                                                onClick={() => getFeedback(i, correctAns, userAns)}
+                                                style={{ marginLeft: '12px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', cursor: 'pointer', transition: '0.2s', width: '80px' }}
+                                                disabled={loadingFeedbacks[i]}
+                                            >
+                                                {loadingFeedbacks[i] ? '...' : '✨ Why?'}
+                                            </button>
+                                        )}
                                     </div>
+                                    {feedbacks[i] && (
+                                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', lineHeight: '1.6', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#6366f1' }}>auto_awesome</span>
+                                                AI Feedback
+                                            </div>
+                                            {feedbacks[i]}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
