@@ -33,7 +33,6 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
         { id: 'papers', icon: 'book', label: 'Subjects' },
         { id: 'practice', icon: 'auto_awesome', label: 'AI Practice' },
         { id: 'pastpapers', icon: 'auto_stories', label: 'Past Papers' },
-        { id: 'scorecard', icon: 'bar_chart', label: 'Scorecard' },
         { id: 'leaderboard', icon: 'leaderboard', label: 'Leaderboard' },
     ];
 

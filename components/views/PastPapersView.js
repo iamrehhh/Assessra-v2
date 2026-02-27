@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ScorecardView from './ScorecardView';
 
 export default function PastPapersView() {
     const router = useRouter();
@@ -13,6 +14,7 @@ export default function PastPapersView() {
     const [selectedLevel, setSelectedLevel] = useState(null);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [selectedPaperTab, setSelectedPaperTab] = useState(null);
+    const [showScorecard, setShowScorecard] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -210,11 +212,20 @@ export default function PastPapersView() {
                 <span className="text-primary font-bold">{formatLabel(selectedSubject)}</span>
             </div>
 
-            <div className="mb-4">
-                <h2 className="text-3xl font-black tracking-tight text-slate-100">
-                    Available Past Papers
-                </h2>
-                <p className="text-slate-400 mt-2">Select a paper to start practicing in the split-screen view.</p>
+            <div className="mb-4 flex flex-wrap items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-100">
+                        Available Past Papers
+                    </h2>
+                    <p className="text-slate-400 mt-2">Select a paper to start practicing in the split-screen view.</p>
+                </div>
+                <button
+                    onClick={() => setShowScorecard(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-primary text-background-dark hover:bg-white hover:-translate-y-0.5 shadow-lg shadow-primary/10 transition-all"
+                >
+                    <span className="material-symbols-outlined text-lg">bar_chart</span>
+                    My Scorecard
+                </button>
             </div>
 
             {papers.length === 0 ? (
@@ -305,6 +316,22 @@ export default function PastPapersView() {
                         )}
                     </div>
                 </>
+            )}
+
+            {/* In-built Scorecard Modal Wrapper */}
+            {showScorecard && (
+                <div className="fixed inset-0 z-[9999] bg-background-dark overflow-y-auto p-6 lg:p-12 animate-fade-in">
+                    <div className="max-w-4xl mx-auto bg-[#1e1e1e] rounded-3xl p-8 border border-white/5 shadow-2xl relative">
+                        <button
+                            onClick={() => setShowScorecard(false)}
+                            className="absolute top-6 right-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold bg-white/5 w-fit px-4 py-2 rounded-xl"
+                        >
+                            <span className="material-symbols-outlined text-sm">close</span>
+                            Close
+                        </button>
+                        <ScorecardView filterSubject={selectedSubject === 'general_paper' ? 'general' : selectedSubject} />
+                    </div>
+                </div>
             )}
         </div>
     );

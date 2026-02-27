@@ -29,7 +29,7 @@ function ScoreBadge({ score, max }) {
     );
 }
 
-export default function ScorecardView() {
+export default function ScorecardView({ filterSubject }) {
     const { data: session } = useSession();
     const user = session?.user?.name;
     const [data, setData] = useState(null);
@@ -41,9 +41,40 @@ export default function ScorecardView() {
         if (!user) return;
         fetch(`/api/scores/user?username=${encodeURIComponent(user)}`)
             .then(r => r.json())
-            .then(d => { setData(d); setLoading(false); })
+            .then(d => {
+                if (filterSubject) {
+                    const prefix = filterSubject === 'general_paper' ? 'general' : filterSubject;
+                    const filteredAttempts = (d.attempts || []).filter(a => a.subject && a.subject.startsWith(prefix));
+
+                    const subjectTotals = {};
+                    let grandTotal = 0;
+                    let grandMax = 0;
+
+                    for (const a of filteredAttempts) {
+                        const s = a.subject;
+                        if (!subjectTotals[s]) subjectTotals[s] = { score: 0, maxMarks: 0, attempts: 0 };
+                        subjectTotals[s].score += a.score;
+                        subjectTotals[s].maxMarks += a.maxMarks;
+                        subjectTotals[s].attempts += 1;
+                        grandTotal += a.score;
+                        grandMax += a.maxMarks;
+                    }
+
+                    setData({
+                        username: d.username,
+                        attempts: filteredAttempts,
+                        subjectTotals,
+                        grandTotal,
+                        grandMax,
+                        grandPercent: grandMax > 0 ? Math.round((grandTotal / grandMax) * 100) : 0,
+                    });
+                } else {
+                    setData(d);
+                }
+                setLoading(false);
+            })
             .catch(() => { setError('Failed to load scores.'); setLoading(false); });
-    }, [user]);
+    }, [user, filterSubject]);
 
     if (loading) return <div style={{ textAlign: 'center', padding: '60px', color: '#aaa' }}>⏳ Loading your scorecard...</div>;
     if (error) return <div style={{ textAlign: 'center', padding: '60px', color: '#ef4444' }}>{error}</div>;

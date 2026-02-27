@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function GeneralPaperView({ paperId, paperData, onBack }) {
     const paper = paperData[paperId];
+    const { data: session } = useSession();
     const [answers, setAnswers] = useState({});
     const [loading, setLoading] = useState({});
     const [results, setResults] = useState({});
@@ -35,6 +37,15 @@ export default function GeneralPaperView({ paperId, paperData, onBack }) {
             const data = await res.json();
             setResults(prev => ({ ...prev, [q.n]: data }));
             setSubmitted(prev => ({ ...prev, [q.n]: true }));
+
+            // Silently save score
+            if (data.score !== undefined && session?.user?.name) {
+                fetch('/api/scores/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: session.user.name, paperId, paperTitle: paper.title, subject: 'general-p1', questionNumber: q.n, score: data.score, maxMarks: q.m }),
+                }).catch(() => { });
+            }
         } catch {
             setResults(prev => ({ ...prev, [q.n]: { error: 'Failed to connect to AI server.' } }));
         } finally {
