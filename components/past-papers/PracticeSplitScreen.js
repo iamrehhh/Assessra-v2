@@ -221,81 +221,89 @@ export default function PracticeSplitScreen({ paperId }) {
                         )}
 
                         {blocks.map((block, index) => (
-                            <div key={block.id} className="relative bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-xl space-y-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1 pr-4">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <input
-                                                type="text"
-                                                value={block.label}
-                                                onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
-                                                className="bg-transparent text-lg font-black text-slate-100 placeholder-slate-600 focus:outline-none focus:border-b border-primary/50 w-24"
-                                                placeholder="e.g. Q1a"
-                                            />
-                                            <div className="flex items-center bg-primary rounded-full px-3 py-0.5 border border-primary/20">
-                                                <input
-                                                    type="number"
-                                                    value={block.marks || ''}
-                                                    onChange={(e) => updateBlock(block.id, 'marks', parseInt(e.target.value) || 0)}
-                                                    className="bg-transparent text-xs font-bold text-background-dark text-center focus:outline-none w-6"
-                                                    placeholder="0"
-                                                />
-                                                <span className="text-xs font-bold text-background-dark pr-1">Marks</span>
-                                            </div>
-                                        </div>
-                                        <textarea
-                                            value={block.questionText}
-                                            onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
-                                            rows={2}
-                                            placeholder="Paste or type the question text here..."
-                                            className="w-full bg-transparent text-slate-100 font-bold placeholder-slate-500 focus:outline-none resize-y min-h-[50px] leading-relaxed"
+                            <div key={block.id} className="bg-[#18181b] rounded-3xl p-6 border border-white/10 shadow-2xl space-y-6">
+                                {/* Top Row: Label, Marks, Close */}
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl font-black text-white w-24">
+                                        <input
+                                            type="text"
+                                            value={block.label}
+                                            onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
+                                            className="bg-transparent focus:outline-none w-full placeholder-slate-600"
+                                            placeholder="e.g. 1a"
                                         />
+                                    </h3>
+
+                                    {/* Center: Marks Pill */}
+                                    <div className="flex items-center justify-center bg-primary rounded-full px-4 py-1 flex-1 max-w-fit mx-auto shadow-[0_0_15px_rgba(34,197,94,0.15)]">
+                                        <input
+                                            type="number"
+                                            value={block.marks || ''}
+                                            onChange={(e) => updateBlock(block.id, 'marks', parseInt(e.target.value) || 0)}
+                                            className="bg-transparent text-xs font-bold text-background-dark text-center focus:outline-none w-6"
+                                            placeholder="0"
+                                        />
+                                        <span className="text-xs font-bold text-background-dark pr-1">Marks</span>
                                     </div>
 
-                                    {blocks.length > 1 && (
-                                        <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-red-400 transition-colors shrink-0">
-                                            <span className="material-symbols-outlined">close</span>
-                                        </button>
-                                    )}
+                                    {/* Right: Close */}
+                                    <div className="w-24 flex justify-end">
+                                        {blocks.length > 1 && (
+                                            <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-xl">close</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <textarea
-                                    value={block.answer}
-                                    onChange={(e) => updateBlock(block.id, 'answer', e.target.value)}
-                                    rows={8}
-                                    placeholder={`Type your answer for ${block.label} here...`}
-                                    className="w-full bg-background-dark/50 border border-white/10 rounded-2xl px-5 py-4 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors resize-y min-h-[200px]"
-                                    disabled={block.status === 'evaluating' || block.status === 'done'}
-                                />
+                                {/* Question Text Box (White Outline) */}
+                                <div className="border border-white/80 rounded-xl p-4 min-h-[100px]">
+                                    <textarea
+                                        value={block.questionText}
+                                        onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
+                                        rows={3}
+                                        placeholder="Paste or type the exact question text here..."
+                                        className="w-full bg-transparent text-white font-bold placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
+                                    />
+                                </div>
 
+                                {/* Answer Box (Green Outline) */}
+                                <div className="border border-primary rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+                                    <textarea
+                                        value={block.answer}
+                                        onChange={(e) => updateBlock(block.id, 'answer', e.target.value)}
+                                        rows={8}
+                                        placeholder={`Type your answer for ${block.label || '1'} here...`}
+                                        className="w-full bg-transparent px-5 py-4 text-slate-100 placeholder-slate-500/80 focus:outline-none resize-y min-h-[200px]"
+                                        disabled={block.status === 'evaluating' || block.status === 'done'}
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
                                 <div className="flex gap-3">
                                     {block.status !== 'done' && (
-                                        <div className="flex-1 flex flex-col gap-2">
-                                            <button
-                                                onClick={() => handleSubmit(block.id)}
-                                                disabled={block.status === 'evaluating' || !block.answer.trim()}
-                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
-                                                    ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
-                                                    : 'bg-primary text-background-dark shadow-[0_4px_14px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_20px_rgba(34,197,94,0.4)] hover:-translate-y-0.5'
-                                                    }`}
-                                            >
-                                                {block.status === 'evaluating' ? (
-                                                    <><div className="w-5 h-5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" /> Strict Marking...</>
-                                                ) : (
-                                                    <><span className="material-symbols-outlined text-base">fact_check</span> Submit for Strict Marking</>
-                                                )}
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() => handleSubmit(block.id)}
+                                            disabled={block.status === 'evaluating' || !block.answer.trim()}
+                                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
+                                                ? 'bg-[#18181b] text-slate-500 cursor-not-allowed border border-white/5'
+                                                : 'bg-[#27272a] text-slate-300 hover:bg-[#3f3f46] hover:text-white border border-white/5'
+                                                }`}
+                                        >
+                                            {block.status === 'evaluating' ? (
+                                                <><div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" /> Strict Marking...</>
+                                            ) : (
+                                                <><span className="material-symbols-outlined text-sm">fact_check</span> Submit for Strict Marking</>
+                                            )}
+                                        </button>
                                     )}
 
                                     {block.status === 'done' && block.feedback && (
                                         <button
                                             onClick={() => {
-                                                // Dispatch an event or state to open a modal. For now, we'll keep it inline or show a modal component state if added.
-                                                // Actually the design calls for a popup modal. Let's add a state for active feedback modal.
                                                 window.dispatchEvent(new CustomEvent('open-feedback-modal', { detail: block }));
                                             }}
-                                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-primary text-primary hover:bg-primary/10 transition-all"
+                                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold border border-primary text-primary hover:bg-primary/10 transition-all"
                                         >
                                             <span className="material-symbols-outlined text-base">bar_chart</span>
                                             View AI Feedback

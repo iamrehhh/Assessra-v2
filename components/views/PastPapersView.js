@@ -161,16 +161,36 @@ export default function PastPapersView() {
     // Get distinct "paper" documents for this level and subject
     const papers = data.documents.filter(d => d.level === selectedLevel && d.subject === selectedSubject && d.type === 'paper');
 
-    // Group papers by year
-    const papersByYear = papers.reduce((acc, paper) => {
-        const year = paper.year || 'Unknown Year';
-        if (!acc[year]) acc[year] = [];
-        acc[year].push(paper);
-        return acc;
-    }, {});
+    // Group papers by Paper Num -> Year -> Season based on Cambridge naming conventions (e.g., 9708_s25_qp_32)
+    const groupedPapers = {};
+    papers.forEach(paper => {
+        const filename = paper.filename;
+        const parts = filename.replace('.pdf', '').split('_');
 
-    // Sort years descending
-    const sortedYears = Object.keys(papersByYear).sort((a, b) => b.localeCompare(a));
+        let paperNum = 'Other';
+        let season = 'Unknown Season';
+        let year = paper.year ? paper.year.toString() : 'Unknown Year';
+
+        if (parts.length >= 4) {
+            const seasonCode = parts[1][0].toLowerCase();
+            if (seasonCode === 's') season = 'May-June';
+            else if (seasonCode === 'w') season = 'Oct-Nov';
+            else if (seasonCode === 'm') season = 'Feb-March';
+
+            const paperCode = parts[3];
+            if (paperCode && paperCode.length > 0 && !isNaN(paperCode[0])) {
+                paperNum = `Paper ${paperCode[0]}`;
+            }
+        }
+
+        if (!groupedPapers[paperNum]) groupedPapers[paperNum] = {};
+        if (!groupedPapers[paperNum][year]) groupedPapers[paperNum][year] = {};
+        if (!groupedPapers[paperNum][year][season]) groupedPapers[paperNum][year][season] = [];
+
+        groupedPapers[paperNum][year][season].push(paper);
+    });
+
+    const sortedPaperNums = Object.keys(groupedPapers).sort();
 
     const handlePaperClick = (filename) => {
         router.push(`/past-papers/practice/${encodeURIComponent(filename)}`);
@@ -204,42 +224,75 @@ export default function PastPapersView() {
                     <p>There are no uploaded past papers for {formatLabel(selectedSubject)} yet.</p>
                 </div>
             ) : (
-                <div className="space-y-10">
-                    {sortedYears.map((year) => (
-                        <div key={year} className="space-y-4">
-                            <h3 className="text-2xl font-black text-slate-200 border-b border-white/10 pb-2 mb-4 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary">calendar_month</span>
-                                {year}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {papersByYear[year].sort((a, b) => a.filename.localeCompare(b.filename)).map((paper, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => handlePaperClick(paper.filename)}
-                                        className="glass p-5 rounded-2xl border border-white/5 hover:border-primary/50 hover:bg-primary/5 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10 flex items-start gap-4 group"
-                                    >
-                                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:text-primary transition-all">
-                                            <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-lg font-bold text-slate-100 truncate mb-1 group-hover:text-primary transition-colors">
-                                                {paper.filename.replace('.pdf', '')}
-                                            </h4>
-                                            <div className="flex items-center gap-3">
-                                                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                                    <span className="material-symbols-outlined text-[14px]">history_edu</span>
-                                                    Past Paper
-                                                </span>
+                <div className="space-y-12">
+                    {sortedPaperNums.map((paperNum) => {
+                        const yearsObj = groupedPapers[paperNum];
+                        const sortedYears = Object.keys(yearsObj).sort((a, b) => b.localeCompare(a));
+
+                        return (
+                            <div key={paperNum} className="space-y-6">
+                                <h3 className="text-2xl font-black text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">folder_open</span>
+                                    {paperNum}
+                                </h3>
+
+                                <div className="space-y-8 pl-4 border-l border-white/10 ml-3">
+                                    {sortedYears.map(year => {
+                                        const seasonsObj = yearsObj[year];
+                                        const sortedSeasons = Object.keys(seasonsObj).sort();
+
+                                        return (
+                                            <div key={year} className="space-y-4">
+                                                <h4 className="text-xl font-bold text-slate-200 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-sm opacity-50">calendar_today</span>
+                                                    {year}
+                                                </h4>
+
+                                                <div className="space-y-4 pl-4 border-l border-white/5 ml-2">
+                                                    {sortedSeasons.map(season => (
+                                                        <div key={season} className="space-y-3">
+                                                            <h5 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-xs">wb_sunny</span>
+                                                                {season}
+                                                            </h5>
+
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {seasonsObj[season].sort((a, b) => a.filename.localeCompare(b.filename)).map((paper, idx) => (
+                                                                    <button
+                                                                        key={idx}
+                                                                        onClick={() => handlePaperClick(paper.filename)}
+                                                                        className="glass p-5 rounded-2xl border border-white/5 hover:border-primary/50 hover:bg-white/5 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex items-start gap-4 group"
+                                                                    >
+                                                                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:text-primary transition-all">
+                                                                            <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <h4 className="text-base font-bold text-slate-100 truncate mb-1 group-hover:text-primary transition-colors">
+                                                                                {paper.filename.replace('.pdf', '')}
+                                                                            </h4>
+                                                                            <div className="flex items-center gap-3">
+                                                                                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                                                    <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                                                                                    {formatLabel(selectedSubject)}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="shrink-0 flex items-center h-12">
+                                                                            <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">arrow_forward</span>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="shrink-0 flex items-center h-12">
-                                            <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">arrow_forward</span>
-                                        </div>
-                                    </button>
-                                ))}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
