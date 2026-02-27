@@ -12,6 +12,7 @@ export default function PastPapersView() {
     // Selection State
     const [selectedLevel, setSelectedLevel] = useState(null);
     const [selectedSubject, setSelectedSubject] = useState(null);
+    const [selectedPaperTab, setSelectedPaperTab] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -158,10 +159,8 @@ export default function PastPapersView() {
     }
 
     // Step 3: Select Paper
-    // Get distinct "paper" documents for this level and subject
     const papers = data.documents.filter(d => d.level === selectedLevel && d.subject === selectedSubject && d.type === 'paper');
 
-    // Group papers by Paper Num -> Year -> Season based on Cambridge naming conventions (e.g., 9708_s25_qp_32)
     const groupedPapers = {};
     papers.forEach(paper => {
         const filename = paper.filename;
@@ -191,6 +190,7 @@ export default function PastPapersView() {
     });
 
     const sortedPaperNums = Object.keys(groupedPapers).sort();
+    const activeTab = (selectedPaperTab && sortedPaperNums.includes(selectedPaperTab)) ? selectedPaperTab : sortedPaperNums[0];
 
     const handlePaperClick = (filename) => {
         router.push(`/past-papers/practice/${encodeURIComponent(filename)}`);
@@ -199,18 +199,18 @@ export default function PastPapersView() {
     return (
         <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
             <div className="flex items-center gap-4 text-slate-400 font-medium text-sm mb-6 bg-white/5 border border-white/5 w-fit rounded-xl p-1 px-3">
-                <button onClick={() => { setSelectedLevel(null); setSelectedSubject(null); }} className="hover:text-white flex items-center transition-colors">
+                <button onClick={() => { setSelectedLevel(null); setSelectedSubject(null); setSelectedPaperTab(null); }} className="hover:text-white flex items-center transition-colors">
                     Levels
                 </button>
                 <span className="material-symbols-outlined text-sm opacity-50">chevron_right</span>
-                <button onClick={() => setSelectedSubject(null)} className="hover:text-white flex items-center transition-colors">
+                <button onClick={() => { setSelectedSubject(null); setSelectedPaperTab(null); }} className="hover:text-white flex items-center transition-colors">
                     {formatLabel(selectedLevel)}
                 </button>
                 <span className="material-symbols-outlined text-sm opacity-50">chevron_right</span>
                 <span className="text-primary font-bold">{formatLabel(selectedSubject)}</span>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-4">
                 <h2 className="text-3xl font-black tracking-tight text-slate-100">
                     Available Past Papers
                 </h2>
@@ -224,21 +224,32 @@ export default function PastPapersView() {
                     <p>There are no uploaded past papers for {formatLabel(selectedSubject)} yet.</p>
                 </div>
             ) : (
-                <div className="space-y-12">
-                    {sortedPaperNums.map((paperNum) => {
-                        const yearsObj = groupedPapers[paperNum];
-                        const sortedYears = Object.keys(yearsObj).sort((a, b) => b.localeCompare(a));
+                <>
+                    {/* Paper Categories Tabs */}
+                    <div className="flex flex-wrap items-center gap-3 mb-8 border-b border-white/10 pb-4">
+                        {sortedPaperNums.map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setSelectedPaperTab(tab)}
+                                className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === tab ? 'bg-primary text-background-dark shadow-lg shadow-primary/20' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                <span className="material-symbols-outlined text-[18px]">folder_open</span>
+                                {tab}
+                            </button>
+                        ))}
+                    </div>
 
-                        return (
-                            <div key={paperNum} className="space-y-6">
-                                <h3 className="text-2xl font-black text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
-                                    <span className="material-symbols-outlined">folder_open</span>
-                                    {paperNum}
+                    <div className="space-y-12">
+                        {activeTab && groupedPapers[activeTab] && (
+                            <div className="space-y-6">
+                                <h3 className="text-2xl font-black text-primary pb-2 flex items-center gap-2">
+                                    <span className="material-symbols-outlined">description</span>
+                                    {activeTab} Papers
                                 </h3>
 
                                 <div className="space-y-8 pl-4 border-l border-white/10 ml-3">
-                                    {sortedYears.map(year => {
-                                        const seasonsObj = yearsObj[year];
+                                    {Object.keys(groupedPapers[activeTab]).sort((a, b) => b.localeCompare(a)).map(year => {
+                                        const seasonsObj = groupedPapers[activeTab][year];
                                         const sortedSeasons = Object.keys(seasonsObj).sort();
 
                                         return (
@@ -291,9 +302,9 @@ export default function PastPapersView() {
                                     })}
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
+                        )}
+                    </div>
+                </>
             )}
         </div>
     );
