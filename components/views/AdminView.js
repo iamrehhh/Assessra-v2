@@ -8,9 +8,16 @@ export default function AdminView() {
     const [users, setUsers] = useState([]);
     const [scores, setScores] = useState([]);
     const [practiceLogs, setPracticeLogs] = useState([]);
+    const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Reports modal state
+    const [selectedReport, setSelectedReport] = useState(null);
+    const [reportReply, setReportReply] = useState('');
+    const [reportStatus, setReportStatus] = useState('open');
+    const [savingReport, setSavingReport] = useState(false);
 
     // Notification State
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -20,6 +27,7 @@ export default function AdminView() {
         if (tab === 'users') fetchUsers();
         else if (tab === 'scores') fetchScores();
         else if (tab === 'practice') fetchPracticeLogs();
+        else if (tab === 'reports') fetchReports();
         fetchNotification();
     }, [tab]);
 
@@ -89,6 +97,40 @@ export default function AdminView() {
             setPracticeLogs(data.logs || []);
         } catch { setPracticeLogs([]); }
         setLoading(false);
+    };
+
+    const fetchReports = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/reports');
+            const data = await res.json();
+            setReports(data.reports || []);
+        } catch { setReports([]); }
+        setLoading(false);
+    };
+
+    const updateReport = async () => {
+        if (!selectedReport) return;
+        setSavingReport(true);
+        try {
+            const res = await fetch('/api/reports', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: selectedReport.id,
+                    status: reportStatus,
+                    admin_reply: reportReply
+                })
+            });
+            if (res.ok) {
+                showAlert('Success', 'Report updated!');
+                setSelectedReport(null);
+                fetchReports();
+            } else {
+                showAlert('Error', 'Failed to update report.');
+            }
+        } catch { showAlert('Error', 'Network error.'); }
+        setSavingReport(false);
     };
 
     const deleteUser = async (id, email) => {
@@ -297,6 +339,9 @@ export default function AdminView() {
                 </button>
                 <button style={styles.tab(tab === 'upload')} onClick={() => { setTab('upload'); setSearchTerm(''); }}>
                     📄 Upload Papers
+                </button>
+                <button style={styles.tab(tab === 'reports')} onClick={() => { setTab('reports'); setSearchTerm(''); }}>
+                    🚨 Reports
                 </button>
             </div>
 
@@ -529,6 +574,87 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
+            ) : tab === 'reports' ? (
+                /* Reports Table */
+                reports.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🚨</p>
+                        <p style={{ fontWeight: 600 }}>No reports yet</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>User</th>
+                                    <th style={styles.th}>Category</th>
+                                    <th style={styles.th}>Page</th>
+                                    <th style={styles.th}>Description</th>
+                                    <th style={styles.th}>Status</th>
+                                    <th style={styles.th}>Date</th>
+                                    <th style={styles.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reports.filter(r =>
+                                    (r.user_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    (r.user_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    (r.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+                                ).map(report => (
+                                    <tr key={report.id} style={{ transition: 'background 0.15s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                        <td style={styles.td}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{report.user_name || 'Unknown'}</div>
+                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{report.user_email}</div>
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <span style={styles.pill(report.category === 'bug' ? 'orange' : 'gray')}>
+                                                {(report.category || 'other').replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>{report.page || '—'}</td>
+                                        <td style={{ ...styles.td, maxWidth: '250px' }}>
+                                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155' }}>
+                                                {report.description}
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <span style={{
+                                                ...styles.pill(
+                                                    report.status === 'resolved' ? 'green' :
+                                                        report.status === 'in_progress' ? 'orange' : 'gray'
+                                                ),
+                                                textTransform: 'capitalize'
+                                            }}>
+                                                {(report.status || 'open').replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td style={{ ...styles.td, fontSize: '0.82rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                            {report.created_at ? new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                        </td>
+                                        <td style={styles.td}>
+                                            <button
+                                                style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#3b82f6', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                onClick={() => {
+                                                    setSelectedReport(report);
+                                                    setReportReply(report.admin_reply || '');
+                                                    setReportStatus(report.status || 'open');
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                                            >
+                                                {report.admin_reply ? 'View / Edit' : 'Reply'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )
             ) : null}
 
             {/* Practice Drill-down Modal */}
@@ -594,6 +720,75 @@ export default function AdminView() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Report Detail / Reply Modal */}
+            {selectedReport && (
+                <div style={styles.modalOverlay} onClick={() => setSelectedReport(null)}>
+                    <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <div>
+                                <h3 style={styles.modalTitle}>Report from {selectedReport.user_name}</h3>
+                                <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '4px 0 0 0' }}>{selectedReport.user_email}</p>
+                            </div>
+                            <button style={styles.modalClose} onClick={() => setSelectedReport(null)}>✕</button>
+                        </div>
+                        <div style={{ padding: '24px', overflowY: 'auto', maxHeight: '60vh' }}>
+                            {/* Report Info */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                <span style={styles.pill(selectedReport.category === 'bug' ? 'orange' : 'gray')}>
+                                    {(selectedReport.category || 'other').replace('_', ' ')}
+                                </span>
+                                <span style={styles.pill('gray')}>Page: {selectedReport.page || 'Unknown'}</span>
+                                <span style={styles.pill('gray')}>
+                                    {selectedReport.created_at ? new Date(selectedReport.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                                </span>
+                            </div>
+
+                            {/* Description */}
+                            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+                                <p style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>User's Description</p>
+                                <p style={{ margin: 0, color: '#334155', fontSize: '0.95rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{selectedReport.description}</p>
+                            </div>
+
+                            {/* Status Select */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Status</label>
+                                <select
+                                    value={reportStatus}
+                                    onChange={e => setReportStatus(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '0.95rem', color: '#1e293b', background: 'white', outline: 'none', cursor: 'pointer' }}
+                                >
+                                    <option value="open">Open</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                </select>
+                            </div>
+
+                            {/* Reply Textarea */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Reply to User</label>
+                                <textarea
+                                    value={reportReply}
+                                    onChange={e => setReportReply(e.target.value)}
+                                    rows={4}
+                                    placeholder="Type your reply to the user here..."
+                                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '0.95rem', color: '#1e293b', background: 'white', outline: 'none', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
+                                />
+                            </div>
+                        </div>
+                        <div style={styles.modalFooter}>
+                            <button style={styles.modalCancel} onClick={() => setSelectedReport(null)}>Cancel</button>
+                            <button
+                                style={{ ...styles.modalPrimary, opacity: savingReport ? 0.6 : 1 }}
+                                onClick={updateReport}
+                                disabled={savingReport}
+                            >
+                                {savingReport ? 'Saving...' : 'Save & Send Reply'}
+                            </button>
                         </div>
                     </div>
                 </div>

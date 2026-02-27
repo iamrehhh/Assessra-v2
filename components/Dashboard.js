@@ -18,6 +18,7 @@ import ProfileView from './views/ProfileView';
 import AdminView from './views/AdminView';
 import PracticeView from './views/PracticeView';
 import PastPapersView from './views/PastPapersView';
+import ReportErrorModal from './ReportErrorModal';
 
 const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'idioms', 'tips', 'profile', 'admin'];
 
@@ -158,6 +159,7 @@ export default function Dashboard() {
                     {renderContent()}
                 </div>
             </main>
+            <ReportErrorModal currentView={view} />
         </div>
     );
 }

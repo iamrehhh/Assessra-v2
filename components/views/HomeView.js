@@ -13,6 +13,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
         todayScore: 0,
         leaderboardTop3: [],
         completedModules: 0,
+        streak: 0,
     });
 
     const user = session?.user?.name || 'Student';
@@ -76,13 +77,36 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     if (idx !== -1) currentRank = idx + 1;
                 }
 
+                // Calculate streak
+                let calculatedStreak = 0;
+                const allRecords = scoresData.attempts || scoresData.scores || [];
+                if (allRecords.length > 0) {
+                    const scoresByDate = {};
+                    allRecords.forEach(r => {
+                        const dateStr = new Date(r.submittedAt || r.submitted_at).toLocaleDateString();
+                        scoresByDate[dateStr] = (scoresByDate[dateStr] || 0) + r.score;
+                    });
+                    let checkDate = new Date();
+                    const todayStr = checkDate.toLocaleDateString();
+                    if ((scoresByDate[todayStr] || 0) >= 50) calculatedStreak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                    while (true) {
+                        const prevStr = checkDate.toLocaleDateString();
+                        if ((scoresByDate[prevStr] || 0) >= 50) {
+                            calculatedStreak++;
+                            checkDate.setDate(checkDate.getDate() - 1);
+                        } else break;
+                    }
+                }
+
                 setStats({
                     rank: currentRank,
                     avgScore: avg,
                     totalScore: totalS,
                     todayScore: todayS,
                     leaderboardTop3: lbData.leaderboard ? lbData.leaderboard.slice(0, 3) : [],
-                    completedModules: completed
+                    completedModules: completed,
+                    streak: calculatedStreak,
                 });
 
             } catch (err) {
@@ -125,17 +149,16 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 </div>
 
                 <div className="flex gap-3 shrink-0">
-                    <div className="glass p-4 rounded-2xl min-w-[140px] border border-white/5">
-                        <p className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wider">Class Rank</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-primary">#{stats.rank}</span>
+                    <div className="glass p-4 rounded-2xl min-w-[180px] border border-white/5 flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                            <span className="material-symbols-outlined text-primary text-2xl fill-1" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
                         </div>
-                    </div>
-                    <div className="glass p-4 rounded-2xl min-w-[140px] border border-white/5">
-                        <p className="text-xs text-slate-400 font-medium mb-1 uppercase tracking-wider">Avg. Score</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-slate-100">{stats.avgScore}</span>
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">%</span>
+                        <div>
+                            <p className="text-xs text-slate-400 font-medium mb-0.5 uppercase tracking-wider">Daily Streak</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-primary">{stats.streak}</span>
+                                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Days</span>
+                            </div>
                         </div>
                     </div>
                 </div>
