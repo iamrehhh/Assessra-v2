@@ -62,7 +62,31 @@ export default function PaperUpload() {
             }));
 
             try {
+                // 0. Upload actual PDF file to Supabase Storage
+                setFileStatuses(prev => ({
+                    ...prev,
+                    [file.name]: { ...prev[file.name], message: 'Uploading PDF to storage...' }
+                }));
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadRes = await fetch('/api/upload-pdf', {
+                    method: 'POST',
+                    headers: { 'x-admin-secret': adminSecret },
+                    body: formData
+                });
+
+                if (!uploadRes.ok) {
+                    const errorData = await uploadRes.json();
+                    throw new Error(errorData.error || 'Failed to upload PDF file to storage.');
+                }
+
                 // 1. Extract text in browser
+                setFileStatuses(prev => ({
+                    ...prev,
+                    [file.name]: { ...prev[file.name], message: 'Extracting text... (This may take a minute for textbooks)' }
+                }));
                 const text = await extractTextFromPDF(file);
 
                 if (!text || text.trim().length === 0) {

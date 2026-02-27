@@ -17,6 +17,7 @@ import OnboardingView from './views/OnboardingView';
 import ProfileView from './views/ProfileView';
 import AdminView from './views/AdminView';
 import PracticeView from './views/PracticeView';
+import PastPapersView from './views/PastPapersView';
 
 export default function Dashboard() {
     const { data: session } = useSession();
@@ -97,6 +98,8 @@ export default function Dashboard() {
                 return <DefinitionsView />;
             case 'practice':
                 return <PracticeView />;
+            case 'pastpapers':
+                return <PastPapersView />;
             case 'scorecard':
                 return <ScorecardView />;
             case 'vocab':
