@@ -1,99 +1,55 @@
 import { NextResponse } from 'next/server';
-import supabase from '@/lib/supabase';
+import { allPaperData, allMCQData, allGeneralPaperData } from '@/data/index';
 import path from 'path';
-import fs from 'fs';
-
-// Helper to recursively find a file in a directory
-const findFileRecursively = (dir, targetFilename) => {
-    let results = [];
-    const list = fs.readdirSync(dir);
-    list.forEach(file => {
-        file = path.resolve(dir, file);
-        const stat = fs.statSync(file);
-        if (stat && stat.isDirectory()) {
-            results = results.concat(findFileRecursively(file, targetFilename));
-        } else {
-            if (path.basename(file) === targetFilename) {
-                results.push(file);
-            }
-        }
-    });
-    return results;
-};
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
-        const filename = searchParams.get('filename');
+        // "filename" here is actually "paperId" because of the way we changed the routing
+        const paperId = searchParams.get('filename');
 
-        if (!filename) {
-            return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
+        if (!paperId) {
+            return NextResponse.json({ error: 'Paper ID is required' }, { status: 400 });
         }
 
-        // 1. Get the paper's metadata
-        const { data: docData, error: docError } = await supabase
-            .from('document_chunks')
-            .select('subject, level, year')
-            .eq('filename', filename)
-            .limit(1);
+        // 1. Find the paper in our static data dictionaries
+        const paperData = allPaperData[paperId] || allMCQData[paperId] || allGeneralPaperData[paperId];
 
-        if (docError) throw docError;
-
-        let insertFilename = null;
-
-        if (docData && docData.length > 0) {
-            const meta = docData[0];
-
-            // 2. Try to find a matching insert
-            const { data: insertData } = await supabase
-                .from('document_chunks')
-                .select('filename')
-                .eq('type', 'insert')
-                .eq('subject', meta.subject)
-                .eq('level', meta.level)
-                .eq('year', meta.year || '0')
-                .limit(1);
-
-            if (insertData && insertData.length > 0) {
-                insertFilename = insertData[0].filename;
-            }
+        if (!paperData) {
+            return NextResponse.json({ error: 'Paper not found in local data.' }, { status: 404 });
         }
 
-        // 3. Construct the local public pdf URLs
-        // We will host them in public/past_papers/
-        // Since the user is organizing them into nested folders, we need to find the specific path
-        const publicDir = path.join(process.cwd(), 'public');
-        const pastPapersDir = path.join(publicDir, 'past_papers');
+        // 2. Construct the local public pdf URLs
+        // We will host them in public/past_papers/papers/ (or /inserts/ etc based on the pdf string)
+        // Usually, `paperData.pdf` looks like "papers/8021_m25_qp_12.pdf"
 
-        let finalPdfUrl = null;
-        let finalInsertUrl = null;
+        const finalPdfUrl = `/past_papers/${paperData.pdf}`;
+        const finalInsertUrl = paperData.insert ? `/past_papers/${paperData.insert}` : null;
 
-        if (fs.existsSync(pastPapersDir)) {
-            // Find the main paper
-            const paperMatches = findFileRecursively(pastPapersDir, filename);
-            if (paperMatches.length > 0) {
-                // Convert absolute path to relative public path
-                finalPdfUrl = paperMatches[0].replace(publicDir, '');
-            }
+        // Let's deduce subject, level, year from our structures
+        // Our IDs look like: gp_2025_mj_12, econ_2024_w_42, etc.
+        const idParts = paperId.split('_');
+        let subject = 'unknown';
+        if (paperId.startsWith('gp_')) subject = 'general_paper';
+        else if (paperId.startsWith('bus_')) subject = 'business';
+        else if (paperId.startsWith('econ_')) subject = 'economics';
 
-            // Find the insert if it exists
-            if (insertFilename) {
-                const insertMatches = findFileRecursively(pastPapersDir, insertFilename);
-                if (insertMatches.length > 0) {
-                    finalInsertUrl = insertMatches[0].replace(publicDir, '');
-                }
-            }
-        }
-
-        // If not found locally, fallback to a best guess or return 404 URL
-        if (!finalPdfUrl) {
-            finalPdfUrl = `/past_papers/${filename}`; // fallback just in case
+        let year = '2025';
+        if (idParts.length >= 2 && !isNaN(idParts[1])) {
+            year = idParts[1];
         }
 
         return NextResponse.json({
             pdfUrl: finalPdfUrl,
-            insertFilename: insertFilename,
+            insertFilename: paperData.insert ? path.basename(paperData.insert) : null,
             insertUrl: finalInsertUrl,
+            questions: paperData.questions || [],
+            meta: {
+                title: paperData.title,
+                subject,
+                level: 'alevel',
+                year
+            }
         });
 
     } catch (err) {

@@ -260,7 +260,7 @@ export default function PastPapersView() {
                                                                 {seasonsObj[season].sort((a, b) => a.filename.localeCompare(b.filename)).map((paper, idx) => (
                                                                     <button
                                                                         key={idx}
-                                                                        onClick={() => handlePaperClick(paper.filename)}
+                                                                        onClick={() => handlePaperClick(paper.originalId)}
                                                                         className="glass p-5 rounded-2xl border border-white/5 hover:border-primary/50 hover:bg-white/5 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex items-start gap-4 group"
                                                                     >
                                                                         <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:text-primary transition-all">

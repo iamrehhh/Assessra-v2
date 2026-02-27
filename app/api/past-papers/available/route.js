@@ -1,51 +1,59 @@
 import { NextResponse } from 'next/server';
-import supabase from '@/lib/supabase';
+import { paperListings } from '@/data/index'; // Import local papers
 
 export async function GET() {
     try {
-        // Fetch all chunks but only the metadata we need. 
-        // Note: For a very large dataset, a dedicated "documents" metadata table or a Supabase RPC for "distinct" is better,
-        // but this works for now given the RAG ingestion design.
-        const { data, error } = await supabase
-            .from('document_chunks')
-            .select('filename, subject, level, year, type');
+        // We are moving to a fully structured, static setup for certain subjects.
+        // We will mock the "document" structure expected by the frontend.
+        const documents = [];
 
-        if (error) throw error;
+        // Helper to convert our local paper listings into the expected "document" format
+        const processListings = (listingsArray, subject, level) => {
+            listingsArray.forEach(paper => {
+                // The expected structure by PastPapersView is:
+                // { filename, subject, level, year, type }
 
-        // Filter out textbooks, we only want past papers, inserts, and markschemes
-        const validDocs = data.filter(d => ['paper', 'insert', 'markscheme'].includes(d.type));
+                // Extract season (e.g. 'Oct / Nov Series' -> 'Oct-Nov')
+                let seasonPrefix = 's'; // default May/June
+                if (paper.series.includes('Oct')) seasonPrefix = 'w';
+                else if (paper.series.includes('Feb')) seasonPrefix = 'm';
 
-        // Deduplicate based on filename since chunks belonging to the same file share the same metadata
-        const uniqueDocsMap = new Map();
-        validDocs.forEach(doc => {
-            if (!uniqueDocsMap.has(doc.filename)) {
-                uniqueDocsMap.set(doc.filename, {
-                    filename: doc.filename,
-                    subject: doc.subject,
-                    level: doc.level,
-                    year: doc.year,
-                    type: doc.type
+                // Extract paper number prefix (e.g., "8021/12" -> "12")
+                const codeParts = paper.code.split('/');
+                const variant = codeParts.length > 1 ? codeParts[1] : '1';
+
+                // Construct a mock filename that matches the Cambridge convention the UI expects
+                // e.g., 9708_s25_qp_32.pdf
+                // The exact prefix doesn't matter much as long as it parses correctly in the UI
+                const mockFilename = `${subject}_${seasonPrefix}${paper.year.slice(-2) || '25'}_qp_${variant}.pdf`;
+
+                documents.push({
+                    filename: mockFilename, // UI uses this to parse year/season/paper Num
+                    originalId: paper.id, // We'll pass this via routing later
+                    subject,
+                    level,
+                    year: paper.year || '2025',
+                    type: 'paper'
                 });
-            }
-        });
+            });
+        };
 
-        const uniqueDocs = Array.from(uniqueDocsMap.values());
-
-        // Grouping
-        const levels = [...new Set(uniqueDocs.map(d => d.level))];
-        const subjectsByLevel = {};
-        
-        levels.forEach(l => {
-            subjectsByLevel[l] = [...new Set(uniqueDocs.filter(d => d.level === l).map(d => d.subject))];
-        });
+        // Populate our documents
+        processListings(paperListings['business-p3'] || [], 'business', 'alevel');
+        processListings(paperListings['business-p4'] || [], 'business', 'alevel');
+        processListings(paperListings['economics-p3'] || [], 'economics', 'alevel');
+        processListings(paperListings['economics-p4'] || [], 'economics', 'alevel');
+        processListings(paperListings['general-p1'] || [], 'general_paper', 'alevel');
 
         return NextResponse.json({
             success: true,
-            levels,
-            subjectsByLevel,
-            documents: uniqueDocs
+            levels: ['alevel'], // Hardcoded to A Level for now
+            subjectsByLevel: {
+                'alevel': ['business', 'economics', 'general_paper']
+            },
+            documents
         });
-        
+
     } catch (err) {
         console.error('Error fetching available past papers:', err);
         return NextResponse.json({ error: 'Failed to fetch available past papers' }, { status: 500 });

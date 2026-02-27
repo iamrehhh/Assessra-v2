@@ -13,17 +13,12 @@ export default function PracticeSplitScreen({ paperId }) {
     const [showInsert, setShowInsert] = useState(false);
     const [insertFilename, setInsertFilename] = useState(null);
 
-    // Workspace state
-    // Blocks represent the questions the student is answering: { id, label, questionText, marks, answer, status, feedback }
-    const [blocks, setBlocks] = useState([
-        { id: '1', label: 'Q1', questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }
-    ]);
-    const [extracting, setExtracting] = useState(false);
+    // Meta state for evaluation
+    const [paperMeta, setPaperMeta] = useState(null);
 
     useEffect(() => {
-        // Fetch metadata to see if there's an insert associated, and get the exact URL
+        // Fetch metadata, exact URL, and pre-extracted questions
         const init = async () => {
-            // Fetch paper info (urls and possible insert filename) using our backend API
             try {
                 const res = await fetch(`/api/past-papers/info?filename=${filename}`);
                 const data = await res.json();
@@ -32,6 +27,21 @@ export default function PracticeSplitScreen({ paperId }) {
                     setPdfUrl(data.pdfUrl || '');
                     if (data.insertFilename) {
                         setInsertFilename(data.insertFilename);
+                    }
+                    if (data.meta) {
+                        setPaperMeta(data.meta);
+                    }
+                    if (data.questions && data.questions.length > 0) {
+                        const newBlocks = data.questions.map((q, idx) => ({
+                            id: Date.now().toString() + idx,
+                            label: q.n || `Q${idx + 1}`,
+                            questionText: q.t || '',
+                            marks: q.m || 0,
+                            answer: '',
+                            status: 'idle',
+                            feedback: null
+                        }));
+                        setBlocks(newBlocks);
                     }
                 } else {
                     console.error('Failed to get paper info:', data.error);
@@ -50,43 +60,6 @@ export default function PracticeSplitScreen({ paperId }) {
         setBlocks([...blocks, { id: Date.now().toString(), label: `Q${nextNum}`, questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }]);
     };
 
-    const extractQuestions = async () => {
-        setExtracting(true);
-        try {
-            const res = await fetch('/api/past-papers/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename })
-            });
-            const data = await res.json();
-
-            if (res.ok && data.questions && data.questions.length > 0) {
-                const newBlocks = data.questions.map((q, idx) => ({
-                    id: Date.now().toString() + idx,
-                    label: q.label,
-                    questionText: q.text,
-                    marks: q.marks,
-                    answer: '',
-                    status: 'idle',
-                    feedback: null
-                }));
-                // Replace or append? Let's replace the default empty one if nothing was typed there.
-                if (blocks.length === 1 && !blocks[0].answer && !blocks[0].questionText) {
-                    setBlocks(newBlocks);
-                } else {
-                    setBlocks([...blocks, ...newBlocks]);
-                }
-            } else {
-                alert(data.error || 'No questions could be extracted from this paper automatically.');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Failed to connect to extraction service.');
-        } finally {
-            setExtracting(false);
-        }
-    };
-
     const updateBlock = (id, field, value) => {
         setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
     };
@@ -102,22 +75,19 @@ export default function PracticeSplitScreen({ paperId }) {
         updateBlock(id, 'status', 'evaluating');
 
         try {
-            // First we need the subject, level, year to query the correct markscheme
-            const { data: docData } = await supabase.from('document_chunks')
-                .select('subject, level, year')
-                .eq('filename', filename)
-                .limit(1);
-
-            const meta = docData?.[0] || {};
+            // Use local static meta if available
+            const subject = paperMeta?.subject || 'unknown';
+            const level = paperMeta?.level || 'alevel';
+            const year = paperMeta?.year || '2025';
 
             // Call the evaluation endpoint (which handles RAG for the markscheme)
             const res = await fetch('/api/ai/grade-past-paper', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    subject: meta.subject,
-                    level: meta.level,
-                    year: meta.year,
+                    subject,
+                    level,
+                    year,
                     questionLabel: block.label,
                     questionText: block.questionText,
                     totalMarks: block.marks,
@@ -198,27 +168,7 @@ export default function PracticeSplitScreen({ paperId }) {
                     </div>
 
                     <div className="p-6 md:p-8 space-y-8 pb-32">
-                        {/* Auto-Extract Banner */}
-                        {blocks.length === 1 && !blocks[0].questionText && !blocks[0].answer && (
-                            <div className="bg-primary/10 border border-primary/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-3">
-                                <span className="material-symbols-outlined text-primary text-4xl">auto_awesome</span>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-100">AI Question Extractor</h3>
-                                    <p className="text-slate-400 text-sm mt-1 max-w-sm">Automatically scan this specific past paper and pull out all questions, labels, and marks into your workspace.</p>
-                                </div>
-                                <button
-                                    onClick={extractQuestions}
-                                    disabled={extracting}
-                                    className="mt-2 bg-primary text-background-dark font-bold px-6 py-2.5 rounded-xl hover:shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all flex items-center gap-2"
-                                >
-                                    {extracting ? (
-                                        <><div className="w-4 h-4 border-2 border-background-dark border-t-transparent rounded-full animate-spin"></div> Extracting...</>
-                                    ) : (
-                                        <><span className="material-symbols-outlined text-sm">smart_toy</span> Extract Questions</>
-                                    )}
-                                </button>
-                            </div>
-                        )}
+                        {/* Questions automatically load here */}
 
                         {blocks.map((block, index) => (
                             <div key={block.id} className="bg-[#18181b] rounded-3xl p-6 border border-white/10 shadow-2xl space-y-6">
