@@ -23,8 +23,12 @@ export async function GET(request) {
         // We will host them in public/past_papers/papers/ (or /inserts/ etc based on the pdf string)
         // Usually, `paperData.pdf` looks like "papers/8021_m25_qp_12.pdf"
 
-        const finalPdfUrl = `/past_papers/${paperData.pdf}`;
-        const finalInsertUrl = paperData.insert ? `/past_papers/${paperData.insert}` : null;
+        const finalPdfUrl = paperData.pdf.startsWith('past_papers/')
+            ? `/${paperData.pdf}`
+            : `/past_papers/${paperData.pdf}`;
+        const finalInsertUrl = paperData.insert
+            ? (paperData.insert.startsWith('past_papers/') ? `/${paperData.insert}` : `/past_papers/${paperData.insert}`)
+            : null;
 
         // Let's deduce subject, level, year from our structures
         // Our IDs look like: gp_2025_mj_12, econ_2024_w_42, etc.

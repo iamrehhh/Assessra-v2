@@ -20,8 +20,16 @@ export default function PastPaperPracticePage() {
 
     if (!params.paperId) return null;
 
-    if (allMCQData[params.paperId]) {
-        return <MCQView paperId={params.paperId} paperData={allMCQData} onBack={() => router.push('/#pastpapers')} />;
+    const paperId = decodeURIComponent(params.paperId);
+
+    console.log('--- DEBUG PastPaperPracticePage ---');
+    console.log('params.paperId:', params.paperId);
+    console.log('decoded paperId:', paperId);
+    console.log('allMCQData keys:', Object.keys(allMCQData));
+    console.log('is MCQ?', !!allMCQData[paperId]);
+
+    if (allMCQData[paperId]) {
+        return <MCQView paperId={paperId} paperData={allMCQData} onBack={() => router.push('/#pastpapers')} />;
     }
 
     return <PracticeSplitScreen paperId={params.paperId} />;
