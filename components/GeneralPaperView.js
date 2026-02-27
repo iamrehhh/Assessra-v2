@@ -54,7 +54,7 @@ export default function GeneralPaperView({ paperId, paperData, onBack }) {
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#f5f5f5' }}>
                 {/* PDF */}
                 <div style={{ flex: 6, height: '100%', borderRight: '1px solid #ddd' }}>
-                    <iframe src={`/${paper.pdf}`} style={{ width: '100%', height: '100%', border: 'none' }} title="General Paper PDF" />
+                    <iframe src={`/${paper.pdf}#toolbar=0&navpanes=0&scrollbar=0`} style={{ width: '100%', height: '100%', border: 'none' }} title="General Paper PDF" />
                 </div>
 
                 {/* Questions */}

@@ -86,7 +86,7 @@ export default function PaperView({ paperId, paperData, onBack }) {
                 {/* Left: PDF */}
                 <div style={{ flex: 6, height: '100%', position: 'relative', borderRight: '1px solid #ddd' }}>
                     <iframe
-                        src={`/${paper.pdf}`}
+                        src={`/${paper.pdf}#toolbar=0&navpanes=0&scrollbar=0`}
                         style={{ width: '100%', height: '100%', border: 'none' }}
                         title="Paper PDF"
                     />

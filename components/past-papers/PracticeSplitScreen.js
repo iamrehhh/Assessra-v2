@@ -238,7 +238,7 @@ export default function PracticeSplitScreen({ paperId }) {
                     {/* Iframe Viewer */}
                     <div className="flex-1 w-full bg-[#323639]">
                         <iframe
-                            src={showInsert && insertFilename ? pdfUrl.replace(filename, insertFilename) : pdfUrl}
+                            src={(showInsert && insertFilename ? pdfUrl.replace(filename, insertFilename) : pdfUrl) + '#toolbar=0&navpanes=0&scrollbar=0'}
                             className="w-full h-full border-none"
                             title="PDF Viewer"
                         />
