@@ -18,6 +18,7 @@ export default function AdminView() {
     const [reportReply, setReportReply] = useState('');
     const [reportStatus, setReportStatus] = useState('open');
     const [savingReport, setSavingReport] = useState(false);
+    const [deletingReport, setDeletingReport] = useState(false);
 
     // Notification State
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -131,6 +132,25 @@ export default function AdminView() {
             }
         } catch { showAlert('Error', 'Network error.'); }
         setSavingReport(false);
+    };
+
+    const deleteReport = async (id) => {
+        showConfirm('Delete Report', 'Permanently delete this error report? This action cannot be undone.', async () => {
+            closeModal();
+            setDeletingReport(true);
+            try {
+                const res = await fetch(`/api/reports?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setReports(prev => prev.filter(r => r.id !== id));
+                    setSelectedReport(null);
+                    showAlert('Success', 'Report deleted successfully.');
+                } else {
+                    const d = await res.json();
+                    showAlert('Error', d.error || 'Failed to delete report.');
+                }
+            } catch { showAlert('Error', 'Network error.'); }
+            setDeletingReport(false);
+        });
     };
 
     const deleteUser = async (id, email) => {
@@ -780,15 +800,26 @@ export default function AdminView() {
                                 />
                             </div>
                         </div>
-                        <div style={styles.modalFooter}>
-                            <button style={styles.modalCancel} onClick={() => setSelectedReport(null)}>Cancel</button>
-                            <button
-                                style={{ ...styles.modalPrimary, opacity: savingReport ? 0.6 : 1 }}
-                                onClick={updateReport}
-                                disabled={savingReport}
-                            >
-                                {savingReport ? 'Saving...' : 'Save & Send Reply'}
-                            </button>
+                        <div style={{ ...styles.modalFooter, justifyContent: 'space-between' }}>
+                            <div>
+                                <button
+                                    style={{ ...styles.modalDanger, opacity: deletingReport ? 0.6 : 1 }}
+                                    onClick={() => deleteReport(selectedReport.id)}
+                                    disabled={deletingReport}
+                                >
+                                    {deletingReport ? 'Deleting...' : 'Delete Report'}
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button style={styles.modalCancel} onClick={() => setSelectedReport(null)}>Cancel</button>
+                                <button
+                                    style={{ ...styles.modalPrimary, opacity: savingReport ? 0.6 : 1 }}
+                                    onClick={updateReport}
+                                    disabled={savingReport}
+                                >
+                                    {savingReport ? 'Saving...' : 'Save & Send Reply'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

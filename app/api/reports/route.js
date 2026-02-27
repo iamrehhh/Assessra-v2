@@ -107,3 +107,33 @@ export async function PATCH(req) {
         return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
     }
 }
+
+// DELETE — completely remove a report (admin only)
+export async function DELETE(req) {
+    try {
+        const session = await getServerSession();
+        if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const reportId = searchParams.get('id');
+
+        if (!reportId) {
+            return NextResponse.json({ error: 'Report ID is required' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('reports')
+            .delete()
+            .eq('id', reportId);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, id: reportId });
+
+    } catch (err) {
+        console.error('DELETE /api/reports error:', err);
+        return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
+    }
+}
