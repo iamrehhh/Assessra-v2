@@ -1,7 +1,7 @@
 // Economics Paper 4 — question data migrated from scripts/economics_p4.js
 export const economicsP4Data = {
     'econ_2024_fm_42': {
-        title: "French electricity prices", pdf: "papers/9708_m24_qp_42.pdf", questions: [
+        title: "French electricity prices", pdf: "A Level/Economics/Paper 4/9708_m24_qp_42.pdf", questions: [
             { n: '1a', m: 5, t: "Identify what caused the rise in the electricity prices and explain whether it can be concluded from the article that the price rise was an example of market failure." },
             { n: '1b', m: 4, t: "Is there any evidence in the article that the French government's decisions will increase competition or efficiency in the energy market?" },
             { n: '1c', m: 3, t: "(i) Distinguish between equality and equity." },
@@ -12,7 +12,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2025_fm_42': {
-        title: "China's population trend", pdf: "papers/9708_m25_qp_42.pdf", questions: [
+        title: "China's population trend", pdf: "A Level/Economics/Paper 4/9708_m25_qp_42.pdf", questions: [
             { n: '1a', m: 2, t: "Explain what is meant by an optimum population." },
             { n: '1b', m: 5, t: "Explain how China's population structure changed between 1970 and 2020 and consider whether the statement 'its population is decreasing' is supported by Fig. 1.1." },
             { n: '1c', m: 6, t: "Identify two observations economists have made about changes in China's population and analyse how these changes would affect GDP." },
@@ -24,7 +24,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2024_mj_41': {
-        title: "Income inequality", pdf: "papers/9708_s24_qp_41.pdf", questions: [
+        title: "Income inequality", pdf: "A Level/Economics/Paper 4/9708_s24_qp_41.pdf", questions: [
             { n: '1a', m: 3, t: "Describe what is meant by the Gini coefficient and its possible range of values." },
             { n: '1b', m: 3, t: "Distinguish between absolute poverty and relative poverty." },
             { n: '1c', m: 6, t: "Consider whether Table 1.1 supports the conclusion that greater inequality of incomes is linked to poor literacy ratios of females to males and leads to greater poverty." },
@@ -36,7 +36,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2024_mj_42': {
-        title: "Developments in the electric vehicle (EV) industry", pdf: "papers/9708_s24_qp_42.pdf", questions: [
+        title: "Developments in the electric vehicle (EV) industry", pdf: "A Level/Economics/Paper 4/9708_s24_qp_42.pdf", questions: [
             { n: '1a', m: 3, t: "Explain what is meant by internal economies of scale, using an example from the information." },
             { n: '1b', m: 3, t: "Consider what is meant by minimum efficient scale and to what extent the data in Table 1.1 suggest this has been achieved." },
             { n: '1c', m: 6, t: "Analyse, with the aid of a diagram, the likely impact of the change to EV on the labour market for workers producing ICE in southern Germany." },
@@ -48,7 +48,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2024_on_41': {
-        title: "Resource dependence", pdf: "papers/9708_w24_qp_41.pdf", questions: [
+        title: "Resource dependence", pdf: "A Level/Economics/Paper 4/9708_w24_qp_41.pdf", questions: [
             { n: '1a', m: 4, t: "With the aid of a diagram, explain the effect of natural resource development on the potential growth of Ghana." },
             { n: '1b', m: 4, t: "Explain how the extraction of natural resources in Ghana will 'create further employment in other sectors through the multiplier effect'." },
             { n: '1c', m: 4, t: "Explain what the information means by the 'Dutch disease' and using Fig. 1.1, consider to what extent Ghana suffered from this problem." },
@@ -60,7 +60,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2024_on_42': {
-        title: "Reduced Migration to the United States (US)", pdf: "papers/9708_w24_qp_42.pdf", questions: [
+        title: "Reduced Migration to the United States (US)", pdf: "A Level/Economics/Paper 4/9708_w24_qp_42.pdf", questions: [
             { n: '1a', m: 2, t: "Identify the relationship between the variables shown in Fig. 1.1 and suggest one possible reason for the relationship." },
             { n: '1b', m: 4, t: "With the help of a production possibility curve (PPC) diagram, explain both the likely effect of the prevention of migration to the US from 2019 and the retirement of older US workers on the US's productive potential." },
             { n: '1c', m: 6, t: "Using the information and labour market theory, analyse why the wages received by migrant workers in the high-tech industries are likely to be higher than the wages received by migrant workers in the hospitality industry." },
@@ -72,7 +72,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2024_on_43': {
-        title: "Large tech companies", pdf: "papers/9708_w24_qp_43.pdf", questions: [
+        title: "Large tech companies", pdf: "A Level/Economics/Paper 4/9708_w24_qp_43.pdf", questions: [
             { n: '1a', m: 4, t: "(i) Distinguish between limit pricing and predatory pricing." },
             { n: '1b', m: 6, t: "Assess three possible positive effects on the macroeconomy of the huge increase in the size of the five largest technology companies." },
             { n: '1c', m: 8, t: "The article says the growth of large firms is bad for consumers, bad for competition, and causes inequality. Consider whether this statement can be supported by the article and by economic theory." },
@@ -83,7 +83,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2025_mj_41': {
-        title: "The influence of governments", pdf: "papers/9708_s25_qp_41.pdf", questions: [
+        title: "The influence of governments", pdf: "A Level/Economics/Paper 4/9708_s25_qp_41.pdf", questions: [
             { n: '1a', m: 3, t: "The article refers to structural unemployment. Explain what this means and whether it is the same as the natural rate of unemployment." },
             { n: '1b', m: 6, t: "To keep unemployment low, one government used fiscal policy. Analyse how this policy can affect unemployment rates." },
             { n: '1c', m: 3, t: "Explain how the policies of high-income economies towards 'green energy' changed between 2015 and 2022." },
@@ -95,7 +95,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2025_on_41': {
-        title: "Working overseas", pdf: "papers/9708_w25_qp_41.pdf", questions: [
+        title: "Working overseas", pdf: "A Level/Economics/Paper 4/9708_w25_qp_41.pdf", questions: [
             { n: '1a', m: 2, t: "Explain what is meant by absolute poverty." },
             { n: '1b', m: 5, t: "Explain, with the aid of a diagram, how the migration of workers from a low-income country is likely to affect wages in the low-income country." },
             { n: '1c', m: 6, t: "The article states: 'Total remittances received by those countries in 2022 was $650 billion.' Analyse how this is likely to benefit the migrants' home economies." },
@@ -107,7 +107,7 @@ export const economicsP4Data = {
         ]
     },
     'econ_2025_on_42': {
-        title: "Resources in Brazil", pdf: "papers/9708_w25_qp_42.pdf", questions: [
+        title: "Resources in Brazil", pdf: "A Level/Economics/Paper 4/9708_w25_qp_42.pdf", questions: [
             { n: '1a', m: 3, t: "Explain the significance of measuring GDP at constant prices." },
             { n: '1b', m: 4, t: "Explain one possible benefit of horizontal integration and one possible benefit of vertical integration." },
             { n: '1c', m: 6, t: "Describe how the market structure in which individual farmers operate is likely to differ from the market structure in which the commodity traders operate." },

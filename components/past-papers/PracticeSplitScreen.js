@@ -66,7 +66,7 @@ export default function PracticeSplitScreen({ paperId }) {
     };
 
     const updateBlock = (id, field, value) => {
-        setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b));
+        setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
     };
 
     const removeBlock = (id) => {
