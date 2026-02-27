@@ -1,7 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+
+// ── Timer durations (seconds) by subject + paper ────────────────
+const TIMER_DURATIONS = {
+    'economics_p3': 75 * 60,     // 1hr 15min
+    'economics_p4': 120 * 60,    // 2hr
+    'business_p3': 105 * 60,     // 1hr 45min
+    'business_p4': 75 * 60,      // 1hr 15min
+    'general_paper_p1': 75 * 60, // 1hr 15min
+    'general_paper_p2': 105 * 60 // 1hr 45min
+};
+
+function getTimerDuration(paperId, meta) {
+    // Try to infer paper number from paperId (e.g. econ_2024_on_41 → paper 4)
+    const idParts = (paperId || '').split('_');
+    const variant = idParts[idParts.length - 1]; // e.g. "41"
+    const paperNum = variant ? variant[0] : null; // e.g. "4"
+
+    const subject = meta?.subject || '';
+    if (subject && paperNum) {
+        const key = `${subject}_p${paperNum}`;
+        if (TIMER_DURATIONS[key]) return TIMER_DURATIONS[key];
+    }
+    return null; // no timer available
+}
+
+function formatTime(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function PracticeSplitScreen({ paperId }) {
     const router = useRouter();
@@ -15,11 +47,18 @@ export default function PracticeSplitScreen({ paperId }) {
 
     // Answer blocks state
     const [blocks, setBlocks] = useState([
-        { id: Date.now().toString(), label: 'Q1', questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }
+        { id: Date.now().toString(), label: 'Q1', questionText: '', marks: 0, answer: '', status: 'idle', feedback: null, prefilled: false }
     ]);
 
     // Meta state for evaluation
     const [paperMeta, setPaperMeta] = useState(null);
+
+    // Timer state
+    const [timerDuration, setTimerDuration] = useState(null); // total seconds for this paper
+    const [timerSeconds, setTimerSeconds] = useState(0);       // remaining seconds
+    const [timerRunning, setTimerRunning] = useState(false);
+    const [timerVisible, setTimerVisible] = useState(false);
+    const timerRef = useRef(null);
 
     useEffect(() => {
         // Fetch metadata, exact URL, and pre-extracted questions
@@ -35,6 +74,12 @@ export default function PracticeSplitScreen({ paperId }) {
                     }
                     if (data.meta) {
                         setPaperMeta(data.meta);
+                        // Set timer duration based on meta
+                        const dur = getTimerDuration(filename, data.meta);
+                        if (dur) {
+                            setTimerDuration(dur);
+                            setTimerSeconds(dur);
+                        }
                     }
                     if (data.questions && data.questions.length > 0) {
                         const newBlocks = data.questions.map((q, idx) => ({
@@ -44,7 +89,8 @@ export default function PracticeSplitScreen({ paperId }) {
                             marks: q.m || 0,
                             answer: '',
                             status: 'idle',
-                            feedback: null
+                            feedback: null,
+                            prefilled: true
                         }));
                         setBlocks(newBlocks);
                     }
@@ -60,9 +106,37 @@ export default function PracticeSplitScreen({ paperId }) {
         init();
     }, [filename]);
 
+    // Timer tick effect
+    useEffect(() => {
+        if (timerRunning && timerSeconds > 0) {
+            timerRef.current = setInterval(() => {
+                setTimerSeconds(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timerRef.current);
+                        setTimerRunning(false);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timerRef.current);
+    }, [timerRunning]);
+
+    const toggleTimer = useCallback(() => {
+        if (timerSeconds <= 0) return;
+        setTimerRunning(prev => !prev);
+    }, [timerSeconds]);
+
+    const resetTimer = useCallback(() => {
+        setTimerRunning(false);
+        clearInterval(timerRef.current);
+        setTimerSeconds(timerDuration || 0);
+    }, [timerDuration]);
+
     const addBlock = () => {
         const nextNum = blocks.length + 1;
-        setBlocks([...blocks, { id: Date.now().toString(), label: `Q${nextNum}`, questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }]);
+        setBlocks([...blocks, { id: Date.now().toString(), label: `Q${nextNum}`, questionText: '', marks: 0, answer: '', status: 'idle', feedback: null, prefilled: false }]);
     };
 
     const updateBlock = (id, field, value) => {
@@ -70,7 +144,7 @@ export default function PracticeSplitScreen({ paperId }) {
     };
 
     const removeBlock = (id) => {
-        setBlocks(blocks.filter(b => b.id !== id));
+        setBlocks(prev => prev.filter(b => b.id !== id));
     };
 
     const handleSubmit = async (id) => {
@@ -111,6 +185,11 @@ export default function PracticeSplitScreen({ paperId }) {
             alert('Error evaluating answer: ' + err.message);
         }
     };
+
+    // Timer progress for visual indicator
+    const timerProgress = timerDuration ? (timerSeconds / timerDuration) : 0;
+    const timerUrgent = timerDuration && timerSeconds < timerDuration * 0.1; // last 10%
+    const timerWarning = timerDuration && timerSeconds < timerDuration * 0.25; // last 25%
 
     if (loading) {
         return (
@@ -165,11 +244,74 @@ export default function PracticeSplitScreen({ paperId }) {
 
                 {/* Right Panel: Workspace */}
                 <div className="w-1/2 h-full flex flex-col overflow-y-auto bg-background-dark relative">
-                    <div className="h-14 border-b border-white-10 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 flex items-center px-6 shrink-0 shrink-0">
+                    <div className="h-14 border-b border-white/10 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 flex items-center justify-between px-6 shrink-0">
                         <h2 className="text-lg font-black text-slate-100 flex items-center gap-2">
                             <span className="text-primary material-symbols-outlined text-xl">edit_square</span>
                             Practice Workspace
                         </h2>
+
+                        {/* Timer Toggle Button */}
+                        {timerDuration && !timerVisible && (
+                            <button
+                                onClick={() => setTimerVisible(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all text-xs font-bold"
+                            >
+                                <span className="material-symbols-outlined text-sm">timer</span>
+                                Start Timer
+                            </button>
+                        )}
+
+                        {/* Active Timer Display */}
+                        {timerDuration && timerVisible && (
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${timerSeconds === 0 ? 'bg-red-500/20 border-red-500/30' :
+                                    timerUrgent ? 'bg-red-500/10 border-red-500/30 animate-pulse' :
+                                        timerWarning ? 'bg-amber-500/10 border-amber-500/20' :
+                                            'bg-white/5 border-white/10'
+                                }`}>
+                                {/* Timer text */}
+                                <span className={`text-sm font-mono font-black tracking-wider ${timerSeconds === 0 ? 'text-red-400' :
+                                        timerUrgent ? 'text-red-400' :
+                                            timerWarning ? 'text-amber-400' :
+                                                'text-slate-100'
+                                    }`}>
+                                    {formatTime(timerSeconds)}
+                                </span>
+
+                                {/* Play / Pause */}
+                                <button
+                                    onClick={toggleTimer}
+                                    disabled={timerSeconds === 0}
+                                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${timerSeconds === 0
+                                            ? 'text-slate-600 cursor-not-allowed'
+                                            : timerRunning
+                                                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                                : 'bg-primary/20 text-primary hover:bg-primary/30'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-base">
+                                        {timerRunning ? 'pause' : 'play_arrow'}
+                                    </span>
+                                </button>
+
+                                {/* Reset */}
+                                <button
+                                    onClick={resetTimer}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+                                    title="Reset timer"
+                                >
+                                    <span className="material-symbols-outlined text-base">restart_alt</span>
+                                </button>
+
+                                {/* Close timer */}
+                                <button
+                                    onClick={() => { setTimerVisible(false); setTimerRunning(false); clearInterval(timerRef.current); }}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+                                    title="Hide timer"
+                                >
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6 md:p-8 space-y-8 pb-32">
@@ -180,30 +322,38 @@ export default function PracticeSplitScreen({ paperId }) {
                                 {/* Top Row: Label, Marks, Close */}
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-xl font-black text-white w-24">
-                                        <input
-                                            type="text"
-                                            value={block.label}
-                                            onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
-                                            className="bg-transparent focus:outline-none w-full placeholder-slate-600"
-                                            placeholder="e.g. 1a"
-                                        />
+                                        {block.prefilled ? (
+                                            <span>{block.label}</span>
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value={block.label}
+                                                onChange={(e) => updateBlock(block.id, 'label', e.target.value)}
+                                                className="bg-transparent focus:outline-none w-full placeholder-slate-600"
+                                                placeholder="e.g. 1a"
+                                            />
+                                        )}
                                     </h3>
 
                                     {/* Center: Marks Pill */}
                                     <div className="flex items-center justify-center bg-primary rounded-full px-4 py-1 flex-1 max-w-fit mx-auto shadow-[0_0_15px_rgba(34,197,94,0.15)]">
-                                        <input
-                                            type="number"
-                                            value={block.marks || ''}
-                                            onChange={(e) => updateBlock(block.id, 'marks', parseInt(e.target.value) || 0)}
-                                            className="bg-transparent text-xs font-bold text-background-dark text-center focus:outline-none w-6"
-                                            placeholder="0"
-                                        />
+                                        {block.prefilled ? (
+                                            <span className="text-xs font-bold text-background-dark px-1">{block.marks}</span>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                value={block.marks || ''}
+                                                onChange={(e) => updateBlock(block.id, 'marks', parseInt(e.target.value) || 0)}
+                                                className="bg-transparent text-xs font-bold text-background-dark text-center focus:outline-none w-6"
+                                                placeholder="0"
+                                            />
+                                        )}
                                         <span className="text-xs font-bold text-background-dark pr-1">Marks</span>
                                     </div>
 
                                     {/* Right: Close */}
                                     <div className="w-24 flex justify-end">
-                                        {blocks.length > 1 && (
+                                        {!block.prefilled && blocks.length > 1 && (
                                             <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-white transition-colors">
                                                 <span className="material-symbols-outlined text-xl">close</span>
                                             </button>
@@ -211,15 +361,21 @@ export default function PracticeSplitScreen({ paperId }) {
                                     </div>
                                 </div>
 
-                                {/* Question Text Box (White Outline) */}
-                                <div className="border border-white/80 rounded-xl p-4 min-h-[100px]">
-                                    <textarea
-                                        value={block.questionText}
-                                        onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
-                                        rows={3}
-                                        placeholder="Paste or type the exact question text here..."
-                                        className="w-full bg-transparent text-white font-bold placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
-                                    />
+                                {/* Question Text Box */}
+                                <div className={`border rounded-xl p-4 min-h-[60px] ${block.prefilled ? 'border-white/20 bg-white/[0.02]' : 'border-white/80'}`}>
+                                    {block.prefilled ? (
+                                        <p className="text-white font-bold leading-relaxed text-sm">
+                                            {block.questionText}
+                                        </p>
+                                    ) : (
+                                        <textarea
+                                            value={block.questionText}
+                                            onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
+                                            rows={3}
+                                            placeholder="Paste or type the exact question text here..."
+                                            className="w-full bg-transparent text-white font-bold placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Answer Box (Green Outline) */}
