@@ -96,31 +96,36 @@ export default function MCQView({ paperId, paperData, onBack }) {
     const timerStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
     return (
-        <div className="flex h-screen bg-background-dark text-slate-100 font-display overflow-hidden fixed inset-0 z-[9999]">
-            {/* Header */}
-            <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-4 shrink-0 shadow-md">
+        <div className="flex flex-col h-screen bg-background-dark text-slate-100 font-display overflow-hidden fixed inset-0 z-[9999]">
+            {/* Top Header */}
+            <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-6 shrink-0 shadow-md">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 cursor-pointer">
                         <span className="material-symbols-outlined text-base">arrow_back</span> Exit
                     </button>
-                    <h3 className="m-0 font-bold text-primary text-lg font-display">Economics P3 — MCQ</h3>
+                    <h3 className="m-0 font-bold text-primary text-lg font-display">{paper.title || 'Economics P3 — MCQ'}</h3>
                 </div>
-                <div className={`text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500' : 'text-slate-200')}`}>
+                <div className={`flex items-center gap-2 text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-slate-200')}`}>
+                    <span className="material-symbols-outlined text-sm">schedule</span>
                     {submitted ? `✓ ${score}/${paper.answers.length}` : timerStr}
                 </div>
             </div>
 
-            {/* Split screen */}
+            {/* Split Container */}
             <div className="flex flex-1 overflow-hidden bg-background-dark">
-                {/* PDF */}
+                {/* Left Panel: PDF Viewer */}
                 <div className="flex-[5.5] h-full border-r border-white/10 bg-[#323639]">
-                    <iframe src={encodeURI(`/${paper.pdf}`)} className="w-full h-full border-none" title="MCQ Paper" />
+                    <iframe
+                        src={encodeURI(`/${paper.pdf}#toolbar=0&navpanes=0&scrollbar=0`)}
+                        className="w-full h-full border-none"
+                        title="PDF Viewer"
+                    />
                 </div>
 
-                {/* Answer sheet */}
+                {/* Right Panel: Answer Sheet */}
                 <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-[#1e1e1e]">
                     {submitted && score !== null && (
-                        <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-6">
+                        <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
                             <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / paper.answers.length) * 100)}%</div>
                             <div className="text-lg text-slate-300 font-bold">Score: {score} / {paper.answers.length}</div>
                         </div>
