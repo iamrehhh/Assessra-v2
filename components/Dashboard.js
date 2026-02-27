@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
@@ -19,13 +19,37 @@ import AdminView from './views/AdminView';
 import PracticeView from './views/PracticeView';
 import PastPapersView from './views/PastPapersView';
 
+const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'idioms', 'tips', 'profile', 'admin'];
+
+function getInitialView() {
+    if (typeof window === 'undefined') return 'home';
+    const hash = window.location.hash.replace('#', '');
+    return VALID_VIEWS.includes(hash) ? hash : 'home';
+}
+
 export default function Dashboard() {
     const { data: session } = useSession();
-    const [view, setView] = useState('home');
+    const [view, setViewState] = useState(getInitialView);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+    // Wrap setView to also update the URL hash
+    const setView = useCallback((newView) => {
+        setViewState(newView);
+        window.location.hash = newView === 'home' ? '' : newView;
+    }, []);
+
+    // Listen for browser back/forward navigation
+    useEffect(() => {
+        const onHashChange = () => {
+            const hash = window.location.hash.replace('#', '');
+            setViewState(VALID_VIEWS.includes(hash) ? hash : 'home');
+        };
+        window.addEventListener('hashchange', onHashChange);
+        return () => window.removeEventListener('hashchange', onHashChange);
+    }, []);
 
     // Fetch user profile on mount
     useEffect(() => {
