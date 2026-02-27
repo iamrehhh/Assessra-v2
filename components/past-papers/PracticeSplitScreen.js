@@ -13,6 +13,11 @@ export default function PracticeSplitScreen({ paperId }) {
     const [showInsert, setShowInsert] = useState(false);
     const [insertFilename, setInsertFilename] = useState(null);
 
+    // Answer blocks state
+    const [blocks, setBlocks] = useState([
+        { id: Date.now().toString(), label: 'Q1', questionText: '', marks: 0, answer: '', status: 'idle', feedback: null }
+    ]);
+
     // Meta state for evaluation
     const [paperMeta, setPaperMeta] = useState(null);
 
