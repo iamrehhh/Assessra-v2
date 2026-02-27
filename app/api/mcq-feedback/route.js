@@ -4,7 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { callLLM } from '@/lib/llm';
 import fs from 'fs';
 import path from 'path';
-import pdfParse from 'pdf-parse';
+import { PDFParse as pdfParse } from 'pdf-parse';
 
 export async function POST(req) {
     try {
