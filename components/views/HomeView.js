@@ -16,6 +16,11 @@ export default function HomeView({ setView, setSelectedSubject }) {
         streak: 0,
     });
 
+    // Art Collector State
+    const [dailyArt, setDailyArt] = useState(null);
+    const [artLoading, setArtLoading] = useState(true);
+    const [artModalOpen, setArtModalOpen] = useState(false);
+
     const user = session?.user?.name || 'Student';
     const firstName = user.split(' ')[0] || 'Student';
 
@@ -126,9 +131,24 @@ export default function HomeView({ setView, setSelectedSubject }) {
             }
         };
 
+        const fetchDailyArt = async () => {
+            try {
+                const res = await fetch('/api/daily-art');
+                if (res.ok) {
+                    const data = await res.json();
+                    setDailyArt(data);
+                }
+            } catch (err) {
+                console.error('Failed to load daily art:', err);
+            } finally {
+                setArtLoading(false);
+            }
+        };
+
         if (session?.user) {
             fetchDashboardData();
             fetchQuote();
+            fetchDailyArt();
         }
     }, [session]);
 
@@ -178,37 +198,55 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 {/* Main Left Column */}
                 <div className="col-span-12 lg:col-span-8 space-y-6 flex flex-col">
 
-                    {/* Featured Course Card */}
-                    <div className="relative group overflow-hidden rounded-[2rem] glass p-1 border border-white/10 flex-shrink-0">
-                        <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem]">
-                            <img
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                alt="Modern university library"
-                                src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-transparent"></div>
-
-                            <div className="absolute bottom-0 left-0 p-6 md:p-8 w-full flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-                                <div className="space-y-3">
-                                    <div className="flex gap-2">
-                                        <span className="bg-primary/20 backdrop-blur-md text-primary text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-primary/30">Business</span>
-                                        <span className="bg-white/10 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-white/20">Paper 4</span>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-white">Business Strategy & Innovation</h3>
-                                        <p className="text-slate-300">Master the 20-mark essay structure</p>
-                                    </div>
-                                    <div className="flex items-center gap-4 pt-2">
-                                        <button
-                                            onClick={() => navigateToPaper('business')}
-                                            className="bg-primary hover:bg-primary/90 text-background-dark px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined">play_arrow</span>
-                                            Resume Practice
-                                        </button>
-                                    </div>
+                    {/* Vintage Art Collector Widget */}
+                    <div
+                        onClick={() => dailyArt && setArtModalOpen(true)}
+                        className="relative group overflow-hidden rounded-[2rem] glass p-1 border border-white/10 flex-shrink-0 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-white/20"
+                    >
+                        <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem] bg-slate-900 flex items-center justify-center">
+                            {artLoading ? (
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    <div className="w-8 h-8 border-3 border-white/10 border-t-primary rounded-full animate-spin"></div>
+                                    <p className="text-sm font-medium text-slate-400">Curating today's art...</p>
                                 </div>
-                            </div>
+                            ) : dailyArt ? (
+                                <>
+                                    <img
+                                        className="w-full h-full object-cover opacity-80 transition-transform duration-1000 group-hover:scale-110 group-hover:opacity-100"
+                                        alt={dailyArt.title}
+                                        src={dailyArt.imageUrl}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/50 to-transparent"></div>
+
+                                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-between">
+                                        <div className="flex justify-between items-start">
+                                            <div className="bg-background-dark/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm text-primary">palette</span>
+                                                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-200">Daily Collector</span>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <span className="material-symbols-outlined text-white">open_in_full</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                                            <div>
+                                                <h3 className="text-2xl md:text-3xl font-black text-white leading-tight drop-shadow-lg font-serif italic selection:bg-primary/30">
+                                                    {dailyArt.title}
+                                                </h3>
+                                                <p className="text-slate-300 font-medium text-sm md:text-base mt-1 drop-shadow-md">
+                                                    {dailyArt.artist} <span className="text-slate-500 mx-2">•</span> {dailyArt.date}
+                                                </p>
+                                            </div>
+                                            <p className="text-slate-200/90 italic text-sm md:text-base leading-relaxed border-l-2 border-primary/50 pl-4 py-1 max-w-2xl bg-gradient-to-r from-background-dark/40 to-transparent">
+                                                "{dailyArt.curatorNote}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-slate-500 font-medium z-10">Failed to load artwork.</div>
+                            )}
                         </div>
                     </div>
 
@@ -321,6 +359,63 @@ export default function HomeView({ setView, setSelectedSubject }) {
 
                 </div>
             </div>
+
+            {/* Vintage Art Modal */}
+            {artModalOpen && dailyArt && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/90 backdrop-blur-xl animate-fade-in"
+                    onClick={() => setArtModalOpen(false)}
+                >
+                    <div
+                        className="relative max-w-5xl w-full bg-slate-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col md:flex-row max-h-[90vh]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Image Section */}
+                        <div className="w-full md:w-3/5 bg-black flex items-center justify-center p-2">
+                            <img
+                                src={dailyArt.imageUrl}
+                                alt={dailyArt.title}
+                                className="max-w-full max-h-[50vh] md:max-h-[85vh] object-contain rounded-2xl"
+                            />
+                        </div>
+
+                        {/* Details Section */}
+                        <div className="w-full md:w-2/5 p-8 md:p-12 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-background-dark relative overflow-y-auto">
+                            <button
+                                onClick={() => setArtModalOpen(false)}
+                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+
+                            <div className="mb-6 inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full w-fit">
+                                <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
+                                <span className="text-primary text-[10px] font-black uppercase tracking-widest">Collector's Exhibit</span>
+                            </div>
+
+                            <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight font-serif italic mb-2">
+                                {dailyArt.title}
+                            </h2>
+                            <p className="text-slate-400 font-medium text-lg mb-8">
+                                {dailyArt.artist} <span className="mx-2 opacity-50">•</span> {dailyArt.date}
+                            </p>
+
+                            <div className="h-px w-12 bg-primary/50 mb-8"></div>
+
+                            <div className="relative">
+                                <span className="absolute -top-6 -left-4 text-6xl text-white/5 font-serif">"</span>
+                                <p className="text-slate-300 text-lg lg:text-xl leading-relaxed italic relative z-10 font-medium">
+                                    {dailyArt.curatorNote}
+                                </p>
+                            </div>
+
+                            <div className="mt-auto pt-10">
+                                <p className="text-xs text-slate-500 uppercase tracking-widest font-bold">New artwork curated daily</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Subjects Quick Links Removed per user request */}
         </div>
