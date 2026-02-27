@@ -76,10 +76,18 @@ export default function Dashboard() {
 
     if (isLoading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
-                <div style={{ padding: '20px', background: 'white', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center' }}>
-                    <div style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid var(--lime-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px auto' }}></div>
-                    <p style={{ color: '#666', fontWeight: 600 }}>Loading your profile...</p>
+            <div className="fixed inset-0 bg-background-dark flex flex-col items-center justify-center z-50">
+                <div className="flex flex-col items-center gap-6 animate-fade-in">
+                    <div className="relative">
+                        <div className="absolute inset-0 w-14 h-14 rounded-2xl bg-primary/30 blur-xl animate-pulse" />
+                        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                            <img src="/logo.jpg" alt="Assessra" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
+                    <p className="text-sm font-bold text-slate-400 tracking-wide">Loading your profile...</p>
+                    <div className="w-40 h-1 rounded-full bg-white/5 overflow-hidden">
+                        <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer" />
+                    </div>
                 </div>
             </div>
         );

@@ -3605,3 +3605,17 @@ textarea.expanded {
         padding: 8px 10px;
     }
 }
+
+/* ── Loading Screen Animations ── */
+@keyframes shimmer-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+.animate-shimmer {
+    animation: shimmer-slide 1.5s ease-in-out infinite;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
