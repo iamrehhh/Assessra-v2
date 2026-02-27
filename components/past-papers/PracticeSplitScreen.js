@@ -2,13 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '@/lib/supabase';
-
-// Helper to construct public URL (fallback if getPublicUrl is async, though it's sync in JS)
-const getPdfUrl = (filename) => {
-    const { data } = supabase.storage.from('past_papers').getPublicUrl(filename);
-    return data.publicUrl;
-};
 
 export default function PracticeSplitScreen({ paperId }) {
     const router = useRouter();
@@ -29,33 +22,21 @@ export default function PracticeSplitScreen({ paperId }) {
     useEffect(() => {
         // Fetch metadata to see if there's an insert associated, and get the exact URL
         const init = async () => {
-            setPdfUrl(getPdfUrl(filename));
-
-            // Try to find if there's an insert for the same subject/level/year
-            // We can query chunks for metadata
+            // Fetch paper info (urls and possible insert filename) using our backend API
             try {
-                const { data } = await supabase.from('document_chunks')
-                    .select('subject, level, year')
-                    .eq('filename', filename)
-                    .limit(1);
+                const res = await fetch(`/api/past-papers/info?filename=${filename}`);
+                const data = await res.json();
 
-                if (data && data.length > 0) {
-                    const meta = data[0];
-                    // Find an insert with same meta
-                    const { data: insertData } = await supabase.from('document_chunks')
-                        .select('filename')
-                        .eq('type', 'insert')
-                        .eq('subject', meta.subject)
-                        .eq('level', meta.level)
-                        .eq('year', meta.year || '0')
-                        .limit(1);
-
-                    if (insertData && insertData.length > 0) {
-                        setInsertFilename(insertData[0].filename);
+                if (res.ok) {
+                    setPdfUrl(data.pdfUrl || '');
+                    if (data.insertFilename) {
+                        setInsertFilename(data.insertFilename);
                     }
+                } else {
+                    console.error('Failed to get paper info:', data.error);
                 }
             } catch (e) {
-                console.error('Error finding insert:', e);
+                console.error('Error fetching paper info:', e);
             }
 
             setLoading(false);
@@ -160,7 +141,7 @@ export default function PracticeSplitScreen({ paperId }) {
                     {/* Iframe Viewer */}
                     <div className="flex-1 w-full bg-[#323639]">
                         <iframe
-                            src={showInsert ? getPdfUrl(insertFilename) : pdfUrl}
+                            src={showInsert && insertFilename ? pdfUrl.replace(filename, insertFilename) : pdfUrl}
                             className="w-full h-full border-none"
                             title="PDF Viewer"
                         />
@@ -209,8 +190,8 @@ export default function PracticeSplitScreen({ paperId }) {
                                             onClick={() => handleSubmit(block.id)}
                                             disabled={block.status === 'evaluating' || !block.answer.trim()}
                                             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
-                                                    ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
-                                                    : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                                ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+                                                : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
                                                 }`}
                                         >
                                             {block.status === 'evaluating' ? (
