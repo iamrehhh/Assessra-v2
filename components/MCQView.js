@@ -96,53 +96,58 @@ export default function MCQView({ paperId, paperData, onBack }) {
     const timerStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'white', display: 'flex', flexDirection: 'column', zIndex: 9999 }}>
+        <div className="flex h-screen bg-background-dark text-slate-100 font-display overflow-hidden fixed inset-0 z-[9999]">
             {/* Header */}
-            <div style={{ flexShrink: 0, padding: '12px 25px', borderBottom: '2px solid var(--lime-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', boxShadow: '0 2px 5px rgba(0,0,0,0.08)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <button onClick={onBack} style={{ background: '#eee', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 700 }}>← Exit</button>
-                    <h3 style={{ margin: 0, fontFamily: 'var(--font-playfair)', color: 'var(--lime-dark)' }}>9708 Economics — MCQ</h3>
+            <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-4 shrink-0 shadow-md">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 cursor-pointer">
+                        <span className="material-symbols-outlined text-base">arrow_back</span> Exit
+                    </button>
+                    <h3 className="m-0 font-bold text-primary text-lg font-display">Economics P3 — MCQ</h3>
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: submitted ? '#22c55e' : (timeLeft < 300 ? '#dc2626' : '#1e293b'), fontFamily: 'monospace' }}>
+                <div className={`text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500' : 'text-slate-200')}`}>
                     {submitted ? `✓ ${score}/${paper.answers.length}` : timerStr}
                 </div>
             </div>
 
             {/* Split screen */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#f5f5f5' }}>
+            <div className="flex flex-1 overflow-hidden bg-background-dark">
                 {/* PDF */}
-                <div style={{ flex: 6, height: '100%', borderRight: '1px solid #ddd' }}>
-                    <iframe src={encodeURI(`/${paper.pdf}`)} style={{ width: '100%', height: '100%', border: 'none' }} title="MCQ Paper" />
+                <div className="flex-[5.5] h-full border-r border-white/10 bg-[#323639]">
+                    <iframe src={encodeURI(`/${paper.pdf}`)} className="w-full h-full border-none" title="MCQ Paper" />
                 </div>
 
                 {/* Answer sheet */}
-                <div style={{ flex: 4, height: '100%', overflowY: 'auto', padding: '20px', background: 'white' }}>
+                <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-[#1e1e1e]">
                     {submitted && score !== null && (
-                        <div style={{ textAlign: 'center', padding: '20px', background: '#f0fdf4', border: '2px solid var(--lime-primary)', borderRadius: '12px', marginBottom: '20px' }}>
-                            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--lime-dark)' }}>{Math.round((score / paper.answers.length) * 100)}%</div>
-                            <div style={{ fontSize: '1.3rem', color: '#333', fontWeight: 700 }}>Score: {score} / {paper.answers.length}</div>
+                        <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-6">
+                            <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / paper.answers.length) * 100)}%</div>
+                            <div className="text-lg text-slate-300 font-bold">Score: {score} / {paper.answers.length}</div>
                         </div>
                     )}
 
-                    <h4 style={{ fontFamily: 'var(--font-playfair)', color: 'var(--lime-dark)', borderBottom: '2px solid #eee', paddingBottom: '10px', marginTop: 0 }}>Answer Sheet</h4>
+                    <h4 className="font-bold text-slate-200 border-b border-white/10 pb-3 mt-0 mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined">checklist</span> Answer Sheet
+                    </h4>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="flex flex-col gap-3">
                         {paper.answers.map((correctAns, i) => {
                             const userAns = answers[i];
                             const isCorrect = userAns === correctAns;
                             return (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', padding: '10px', borderRadius: '8px', border: submitted ? (isCorrect ? '2px solid #22c55e' : '2px solid #ef4444') : '1px solid #eee', background: '#fafafa' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <div style={{ width: '40px', fontWeight: 700, color: '#555' }}>Q{i + 1}</div>
-                                        <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'space-around' }}>
+                                <div key={i} className={`flex flex-col p-4 rounded-xl border ${submitted ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-white/10 bg-white/5'}`}>
+                                    <div className="flex items-center">
+                                        <div className="w-10 font-bold text-slate-400">Q{i + 1}</div>
+                                        <div className="flex gap-2 flex-1 justify-around">
                                             {['A', 'B', 'C', 'D'].map(letter => {
-                                                let bg = 'white', border = '2px solid #ccc', color = '#555';
-                                                if (!submitted && userAns === letter) { bg = 'var(--lime-primary)'; border = '2px solid var(--lime-primary)'; color = 'white'; }
-                                                if (submitted && letter === correctAns) { bg = '#22c55e'; border = '2px solid #22c55e'; color = 'white'; }
-                                                if (submitted && userAns === letter && !isCorrect && letter !== correctAns) { bg = '#ef4444'; border = '2px solid #ef4444'; color = 'white'; }
+                                                let bg = 'bg-white/5', border = 'border-white/10', color = 'text-slate-300';
+                                                let hover = 'hover:border-primary/50 hover:bg-white/10';
+                                                if (!submitted && userAns === letter) { bg = 'bg-primary'; border = 'border-primary'; color = 'text-background-dark'; hover = ''; }
+                                                if (submitted && letter === correctAns) { bg = 'bg-green-500'; border = 'border-green-500'; color = 'text-white'; hover = ''; }
+                                                if (submitted && userAns === letter && !isCorrect && letter !== correctAns) { bg = 'bg-red-500'; border = 'border-red-500'; color = 'text-white'; hover = ''; }
                                                 return (
                                                     <button key={letter} onClick={() => handleAnswer(i, letter)}
-                                                        style={{ width: 40, height: 40, borderRadius: '50%', background: bg, border, color, fontWeight: 700, cursor: submitted ? 'default' : 'pointer', transition: '0.15s' }}>
+                                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${bg} border ${border} ${color} font-bold transition-all ${submitted ? 'cursor-default' : `cursor-pointer ${hover}`}`}>
                                                         {letter}
                                                     </button>
                                                 );
@@ -151,17 +156,17 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                         {submitted && !isCorrect && (
                                             <button
                                                 onClick={() => getFeedback(i, correctAns, userAns)}
-                                                style={{ marginLeft: '12px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 800, background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', cursor: 'pointer', transition: '0.2s', width: '80px' }}
+                                                className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-20"
                                                 disabled={loadingFeedbacks[i]}
                                             >
-                                                {loadingFeedbacks[i] ? '...' : '✨ Why?'}
+                                                {loadingFeedbacks[i] ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span> : '✨ Why?'}
                                             </button>
                                         )}
                                     </div>
                                     {feedbacks[i] && (
-                                        <div style={{ marginTop: '12px', padding: '12px', background: 'white', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', lineHeight: '1.6', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                                            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#6366f1' }}>auto_awesome</span>
+                                        <div className="mt-4 p-4 bg-background-dark/50 rounded-xl text-sm text-slate-300 leading-relaxed border border-white/5">
+                                            <div className="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[16px] text-purple-400">auto_awesome</span>
                                                 AI Feedback
                                             </div>
                                             {feedbacks[i]}
@@ -173,8 +178,8 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     </div>
 
                     {!submitted && (
-                        <button onClick={() => handleSubmit()} style={{ marginTop: '20px', width: '100%', padding: '15px', background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', marginBottom: '40px' }}>
-                            Submit & Grade Test
+                        <button onClick={() => handleSubmit()} className="mt-8 w-full p-4 bg-primary hover:bg-primary/90 text-background-dark border-none rounded-xl font-black text-base cursor-pointer transition-colors shadow-lg shadow-primary/20 mb-10 flex justify-center items-center gap-2">
+                            <span className="material-symbols-outlined">send</span> Submit & Grade Test
                         </button>
                     )}
                 </div>
