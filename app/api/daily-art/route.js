@@ -13,8 +13,9 @@ export async function GET() {
         const dayOfYear = Math.floor(diff / oneDay);
 
         // Use the day of year to determine an offset (there are thousands of results, we just shift through them)
+        // Art Institute API limits offset to 1000 max (limit 20 * page 50 = 1000)
         const limit = 20;
-        const page = (dayOfYear % 100) + 1;
+        const page = (dayOfYear % 50) + 1;
 
         const res = await fetch(`https://api.artic.edu/api/v1/artworks/search?q=impressionism&query[term][is_public_domain]=true&fields=id,title,image_id,artist_title,date_display&limit=${limit}&page=${page}`, { next: { revalidate: 86400 } });
         const data = await res.json();
