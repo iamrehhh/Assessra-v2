@@ -13,6 +13,7 @@ export const economicsP3Data = {
     'econ_2024_fm_32': { pdf: "past_papers/A Level/Economics/Paper 3/9708_m24_qp_32.pdf", answers: ['B', 'B', 'B', 'C', 'B', 'C', 'D', 'B', 'A', 'D', 'C', 'D', 'A', 'C', 'C', 'B', 'C', 'A', 'A', 'D', 'C', 'C', 'C', 'C', 'B', 'A', 'D', 'C', 'D', 'B'] },
     'econ_2024_mj_32': {
         pdf: "past_papers/A Level/Economics/Paper 3/9708_s24_qp_32.pdf",
+        answers: ['B', 'D', 'C', 'C', 'C', 'B', 'A', 'D', 'D', 'B', 'B', 'C', 'D', 'B', 'A', 'D', 'B', 'B', 'C', 'A', 'D', 'D', 'B', 'C', 'C', 'B', 'A', 'D', 'A', 'A'],
         questions: [
             { n: '1', t: "The table shows the total utility gained by a consumer from the consumption of water. What can be concluded from this table?" },
             { n: '2', t: "A consumer has $100 to spend on two products, X and Y. The budget line shows the different possible combinations of products X and Y that can be purchased when all the consumer's income is spent. If the price of product Y increases to $10, what will be the maximum number of units of product X and product Y that the consumer can now purchase?" },
@@ -48,6 +49,7 @@ export const economicsP3Data = {
     },
     'econ_2024_mj_33': {
         pdf: "past_papers/A Level/Economics/Paper 3/9708_s24_qp_33.pdf",
+        answers: ['A', 'B', 'D', 'D', 'A', 'D', 'B', 'D', 'B', 'D', 'D', 'A', 'C', 'D', 'D', 'B', 'C', 'A', 'B', 'C', 'C', 'B', 'A', 'C', 'B', 'B', 'A', 'D', 'B', 'C'],
         questions: [
             { n: '1', t: "Which statement about the concept of utility is correct?" },
             { n: '2', t: "The diagram shows indifference curves I1, I2 and a budget line T. Which combination of X and Y gives the consumer maximum satisfaction?" },

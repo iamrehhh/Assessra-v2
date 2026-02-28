@@ -68,8 +68,12 @@ export default function MCQView({ paperId, paperData, onBack }) {
             if (!isConfirmed) return;
         }
         clearInterval(timerRef.current);
+        const ansList = paper.answers || [];
+        const totalQ = ansList.length || (paper.questions ? paper.questions.length : 0);
         let correct = 0;
-        paper.answers.forEach((ans, i) => { if (answers[i] === ans) correct++; });
+        if (ansList.length > 0) {
+            ansList.forEach((ans, i) => { if (answers[i] === ans) correct++; });
+        }
         setScore(correct);
         setSubmitted(true);
         // Silently save to MongoDB
@@ -84,7 +88,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     subject: 'economics-p3',
                     questionNumber: 'all',
                     score: correct,
-                    maxMarks: paper.answers.length,
+                    maxMarks: totalQ,
                 }),
             }).catch(() => { });
         }
@@ -107,7 +111,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 </div>
                 <div className={`flex items-center gap-2 text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-slate-200')}`}>
                     <span className="material-symbols-outlined text-sm">schedule</span>
-                    {submitted ? `✓ ${score}/${paper.answers.length}` : timerStr}
+                    {submitted ? `✓ ${score}/${(paper.answers || paper.questions || []).length}` : timerStr}
                 </div>
             </div>
 
@@ -126,8 +130,8 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-[#1e1e1e]">
                     {submitted && score !== null && (
                         <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
-                            <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / paper.answers.length) * 100)}%</div>
-                            <div className="text-lg text-slate-300 font-bold">Score: {score} / {paper.answers.length}</div>
+                            <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || paper.questions || []).length)) * 100)}%</div>
+                            <div className="text-lg text-slate-300 font-bold">Score: {score} / {(paper.answers || paper.questions || []).length}</div>
                         </div>
                     )}
 
@@ -136,50 +140,63 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     </h4>
 
                     <div className="flex flex-col gap-3">
-                        {paper.answers.map((correctAns, i) => {
-                            const userAns = answers[i];
-                            const isCorrect = userAns === correctAns;
-                            return (
-                                <div key={i} className={`flex flex-col p-4 rounded-xl border ${submitted ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-white/10 bg-white/5'}`}>
-                                    <div className="flex items-center">
-                                        <div className="w-10 font-bold text-slate-400">Q{i + 1}</div>
-                                        <div className="flex gap-2 flex-1 justify-around">
-                                            {['A', 'B', 'C', 'D'].map(letter => {
-                                                let bg = 'bg-white/5', border = 'border-white/10', color = 'text-slate-300';
-                                                let hover = 'hover:border-primary/50 hover:bg-white/10';
-                                                if (!submitted && userAns === letter) { bg = 'bg-primary'; border = 'border-primary'; color = 'text-background-dark'; hover = ''; }
-                                                if (submitted && letter === correctAns) { bg = 'bg-green-500'; border = 'border-green-500'; color = 'text-white'; hover = ''; }
-                                                if (submitted && userAns === letter && !isCorrect && letter !== correctAns) { bg = 'bg-red-500'; border = 'border-red-500'; color = 'text-white'; hover = ''; }
-                                                return (
-                                                    <button key={letter} onClick={() => handleAnswer(i, letter)}
-                                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${bg} border ${border} ${color} font-bold transition-all ${submitted ? 'cursor-default' : `cursor-pointer ${hover}`}`}>
-                                                        {letter}
-                                                    </button>
-                                                );
-                                            })}
+                        {(() => {
+                            const items = paper.questions || (paper.answers ? paper.answers.map((_, idx) => ({ n: idx + 1, t: null })) : []);
+                            const ansList = paper.answers || [];
+
+                            return items.map((qItem, i) => {
+                                const correctAns = ansList[i];
+                                const userAns = answers[i];
+                                const isCorrect = correctAns ? userAns === correctAns : false;
+                                return (
+                                    <div key={i} className={`flex flex-col p-4 rounded-xl border ${submitted && correctAns ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-white/10 bg-white/5'}`}>
+                                        {qItem.t && (
+                                            <div className="text-slate-200 mb-3 text-sm leading-relaxed border-b border-white/5 pb-3">
+                                                <span className="font-bold text-primary mr-2">Q{qItem.n || i + 1}.</span>
+                                                {qItem.t}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center">
+                                            {!qItem.t && <div className="w-10 font-bold text-slate-400">Q{i + 1}</div>}
+                                            <div className="flex gap-2 flex-1 justify-around">
+                                                {['A', 'B', 'C', 'D'].map(letter => {
+                                                    let bg = 'bg-white/5', border = 'border-white/10', color = 'text-slate-300';
+                                                    let hover = 'hover:border-primary/50 hover:bg-white/10';
+                                                    if (!submitted && userAns === letter) { bg = 'bg-primary'; border = 'border-primary'; color = 'text-background-dark'; hover = ''; }
+                                                    if (submitted && correctAns && letter === correctAns) { bg = 'bg-green-500'; border = 'border-green-500'; color = 'text-white'; hover = ''; }
+                                                    if (submitted && correctAns && userAns === letter && !isCorrect && letter !== correctAns) { bg = 'bg-red-500'; border = 'border-red-500'; color = 'text-white'; hover = ''; }
+                                                    if (submitted && !correctAns && userAns === letter) { bg = 'bg-primary/50'; border = 'border-primary/50'; color = 'text-white'; hover = ''; } // Just show selection if no answer key
+                                                    return (
+                                                        <button key={letter} onClick={() => handleAnswer(i, letter)}
+                                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${bg} border ${border} ${color} font-bold transition-all ${submitted ? 'cursor-default' : `cursor-pointer ${hover}`}`}>
+                                                            {letter}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {submitted && !isCorrect && correctAns && (
+                                                <button
+                                                    onClick={() => getFeedback(i, correctAns, userAns)}
+                                                    className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-20"
+                                                    disabled={loadingFeedbacks[i]}
+                                                >
+                                                    {loadingFeedbacks[i] ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span> : '✨ Why?'}
+                                                </button>
+                                            )}
                                         </div>
-                                        {submitted && !isCorrect && (
-                                            <button
-                                                onClick={() => getFeedback(i, correctAns, userAns)}
-                                                className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-20"
-                                                disabled={loadingFeedbacks[i]}
-                                            >
-                                                {loadingFeedbacks[i] ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span> : '✨ Why?'}
-                                            </button>
+                                        {feedbacks[i] && (
+                                            <div className="mt-4 p-4 bg-background-dark/50 rounded-xl text-sm text-slate-300 leading-relaxed border border-white/5">
+                                                <div className="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[16px] text-purple-400">auto_awesome</span>
+                                                    AI Feedback
+                                                </div>
+                                                {feedbacks[i]}
+                                            </div>
                                         )}
                                     </div>
-                                    {feedbacks[i] && (
-                                        <div className="mt-4 p-4 bg-background-dark/50 rounded-xl text-sm text-slate-300 leading-relaxed border border-white/5">
-                                            <div className="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-[16px] text-purple-400">auto_awesome</span>
-                                                AI Feedback
-                                            </div>
-                                            {feedbacks[i]}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                );
+                            });
+                        })()}
                     </div>
 
                     {!submitted && (
