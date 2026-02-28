@@ -15,6 +15,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
         completedModules: 0,
         streak: 0,
     });
+    const [activeUsers, setActiveUsers] = useState(1);
 
     // Daily Story State
     const [dailyStory, setDailyStory] = useState(null);
@@ -152,6 +153,35 @@ export default function HomeView({ setView, setSelectedSubject }) {
         }
     }, [session]);
 
+    // Active Users Heartbeat
+    useEffect(() => {
+        if (!session?.user?.email) return;
+
+        const pingActive = async () => {
+            try {
+                // Ping to update our own status
+                await fetch('/api/active-users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page: 'home' })
+                });
+
+                // Fetch total active
+                const res = await fetch('/api/active-users');
+                if (res.ok) {
+                    const data = await res.json();
+                    setActiveUsers(data.activeUsers || 1);
+                }
+            } catch (err) {
+                console.error('Failed active users heartbeat:', err);
+            }
+        };
+
+        pingActive(); // initial ping
+        const interval = setInterval(pingActive, 60000); // exactly every 1 minute
+        return () => clearInterval(interval);
+    }, [session]);
+
     const navigateToPaper = (subject) => {
         setSelectedSubject(subject);
         setView('papers');
@@ -187,6 +217,25 @@ export default function HomeView({ setView, setSelectedSubject }) {
                             <div className="flex items-baseline gap-1">
                                 <span className="text-2xl font-black text-primary">{stats.streak}</span>
                                 <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Days</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Active Users Widget */}
+                    <div className="glass p-4 rounded-2xl min-w-[170px] border border-white/5 flex items-center gap-3 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full blur-2xl -mr-10 -mt-10 animate-pulse"></div>
+                        <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20 shrink-0 relative z-10">
+                            <span className="relative flex h-3 w-3 absolute top-1 right-1">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                            <span className="material-symbols-outlined text-green-500 text-2xl absolute">group</span>
+                        </div>
+                        <div className="relative z-10">
+                            <p className="text-xs text-slate-400 font-medium mb-0.5 uppercase tracking-wider">Active Users</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black text-green-400">{activeUsers}</span>
+                                <span className="text-[10px] text-green-500/80 uppercase font-bold tracking-wider">Online</span>
                             </div>
                         </div>
                     </div>

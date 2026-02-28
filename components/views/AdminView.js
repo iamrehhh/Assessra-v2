@@ -8,6 +8,7 @@ export default function AdminView() {
     const [users, setUsers] = useState([]);
     const [scores, setScores] = useState([]);
     const [practiceLogs, setPracticeLogs] = useState([]);
+    const [activeUsersList, setActiveUsersList] = useState([]);
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
@@ -28,6 +29,7 @@ export default function AdminView() {
         if (tab === 'users') fetchUsers();
         else if (tab === 'scores') fetchScores();
         else if (tab === 'practice') fetchPracticeLogs();
+        else if (tab === 'active') fetchActiveUsers();
         else if (tab === 'reports') fetchReports();
         fetchNotification();
     }, [tab]);
@@ -95,8 +97,18 @@ export default function AdminView() {
         try {
             const res = await fetch('/api/admin/practice');
             const data = await res.json();
-            setPracticeLogs(data.logs || []);
+            setPracticeLogs(data.practiceScores || []);
         } catch { setPracticeLogs([]); }
+        setLoading(false);
+    };
+
+    const fetchActiveUsers = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/active-users');
+            const data = await res.json();
+            setActiveUsersList(data.activeUsers || []);
+        } catch { setActiveUsersList([]); }
         setLoading(false);
     };
 
@@ -224,8 +236,10 @@ export default function AdminView() {
         if (!practiceByUser[log.user_email]) {
             practiceByUser[log.user_email] = {
                 email: log.user_email,
-                name: log.user_name,
+                name: log.user_name || log.user_email,
                 totalSessions: 0,
+                totalScore: 0,
+                totalMax: 0,
                 subjects: new Set(),
                 types: { multiple_choice: 0, structured: 0, essay: 0, data_response: 0 },
                 lastActive: log.created_at,
@@ -234,6 +248,8 @@ export default function AdminView() {
         }
         const u = practiceByUser[log.user_email];
         u.totalSessions += 1;
+        u.totalScore += log.score || 0;
+        u.totalMax += log.marks || 0;
         u.subjects.add(log.subject);
         if (log.question_type) u.types[log.question_type] = (u.types[log.question_type] || 0) + 1;
         if (new Date(log.created_at) > new Date(u.lastActive)) u.lastActive = log.created_at;
@@ -242,10 +258,16 @@ export default function AdminView() {
     let practiceAggregated = Object.values(practiceByUser).map(u => ({
         ...u,
         subjects: Array.from(u.subjects),
+        percentage: u.totalMax > 0 ? Math.round((u.totalScore / u.totalMax) * 100) : 0,
         logs: u.logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     })).sort((a, b) => b.totalSessions - a.totalSessions);
 
     const filteredPractice = practiceAggregated.filter(u =>
+        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredActiveUsers = activeUsersList.filter(u =>
         (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -306,6 +328,10 @@ export default function AdminView() {
                     <p style={styles.statLabel}>AI Practice Sessions</p>
                     <p style={styles.statNumber}>{practiceLogs.length}</p>
                 </div>
+                <div style={styles.statCard}>
+                    <p style={styles.statLabel}><span style={{ color: '#22c55e' }}>●</span> Active Now</p>
+                    <p style={styles.statNumber}>{activeUsersList.length}</p>
+                </div>
             </div>
 
             {/* Notification Control */}
@@ -359,6 +385,9 @@ export default function AdminView() {
                 </button>
                 <button style={styles.tab(tab === 'upload')} onClick={() => { setTab('upload'); setSearchTerm(''); }}>
                     📄 Upload Papers
+                </button>
+                <button style={styles.tab(tab === 'active')} onClick={() => { setTab('active'); setSearchTerm(''); }}>
+                    <span style={{ color: '#22c55e' }}>●</span> Active
                 </button>
                 <button style={styles.tab(tab === 'reports')} onClick={() => { setTab('reports'); setSearchTerm(''); }}>
                     🚨 Reports
@@ -587,6 +616,58 @@ export default function AdminView() {
                                             >
                                                 View Logs
                                             </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )
+            ) : tab === 'active' ? (
+                /* Active Users Table */
+                filteredActiveUsers.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🟢</p>
+                        <p style={{ fontWeight: 600 }}>No users currently active</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>User</th>
+                                    <th style={styles.th}>Page</th>
+                                    <th style={styles.th}>Last Seen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredActiveUsers.map(user => (
+                                    <tr key={user.email} style={{ transition: 'background 0.15s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                        <td style={styles.td}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ ...styles.avatar(user.image), position: 'relative' }}>
+                                                    {!user.image && (user.name || '?').charAt(0).toUpperCase()}
+                                                    <span style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, background: '#22c55e', border: '2px solid white', borderRadius: '50%' }} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{user.name || 'Student'}</div>
+                                                    <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{user.email}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={styles.td}>
+                                            <span style={styles.pill('green')}>
+                                                {user.current_page || 'home'}
+                                            </span>
+                                        </td>
+                                        <td style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>
+                                            {(() => {
+                                                const date = new Date(user.last_seen);
+                                                const diff = Math.floor((new Date() - date) / 1000 / 60);
+                                                return diff === 0 ? 'Just now' : `${diff} min ago`;
+                                            })()}
                                         </td>
                                     </tr>
                                 ))}
