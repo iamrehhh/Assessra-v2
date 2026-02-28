@@ -26,6 +26,7 @@ export async function GET() {
     const { data: scores, error } = await supabase
         .from('scores')
         .select('*')
+        .not('paper_id', 'ilike', 'ai_practice_%')
         .order('submitted_at', { ascending: false });
 
     if (error) {

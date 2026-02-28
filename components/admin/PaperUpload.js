@@ -60,10 +60,13 @@ export default function PaperUpload() {
                 // 0. (Removed) We no longer upload the actual PDF to Supabase Storage.
                 // It is now managed through the local GitHub 'public/past_papers/' folder.
 
-                // 1. Extract text in browser
+                // 1. Sanitize filename to remove duplicates like ' (1)' or ' copy'
+                // This ensures uploading duplicate files replaces previous entries
+                const cleanFilename = file.name.replace(/(?:\s*\(\d+\)|\s*\-\s*copy)\.pdf$/i, '.pdf');
+
                 setFileStatuses(prev => ({
                     ...prev,
-                    [file.name]: { ...prev[file.name], message: 'Extracting text... (This may take a minute for textbooks)' }
+                    [cleanFilename]: { ...prev[cleanFilename], message: 'Extracting text... (This may take a minute for textbooks)' }
                 }));
                 const text = await extractTextFromPDF(file);
 
@@ -81,9 +84,9 @@ export default function PaperUpload() {
                 const metadata = {
                     subject: subjectValue,
                     level: levelValue,
-                    year: detectYear(file.name),
+                    year: detectYear(cleanFilename),
                     type: typeValue,
-                    filename: file.name
+                    filename: cleanFilename
                 };
 
                 for (let i = 0; i < chunks.length; i += batchSize) {
@@ -92,7 +95,7 @@ export default function PaperUpload() {
 
                     setFileStatuses(prev => ({
                         ...prev,
-                        [file.name]: {
+                        [cleanFilename]: {
                             status: 'uploading',
                             message: `Uploading chunks ${Math.min(i + batchSize, chunks.length)} / ${chunks.length}...`,
                             chunks: insertedChunks
@@ -110,7 +113,7 @@ export default function PaperUpload() {
 
                 setFileStatuses(prev => ({
                     ...prev,
-                    [file.name]: {
+                    [cleanFilename]: {
                         status: 'success',
                         message: `Successfully ingested ${insertedChunks} chunks.`,
                         chunks: insertedChunks,
@@ -118,7 +121,7 @@ export default function PaperUpload() {
                 }));
 
                 setHistory(prev => [{
-                    filename: file.name,
+                    filename: cleanFilename,
                     subject,
                     level,
                     year,
@@ -129,16 +132,17 @@ export default function PaperUpload() {
 
             } catch (err) {
                 console.error('Upload Error:', err);
+                const errorFilename = err.cleanFilename || file.name.replace(/(?:\s*\(\d+\)|\s*\-\s*copy)\.pdf$/i, '.pdf');
                 setFileStatuses(prev => ({
                     ...prev,
-                    [file.name]: {
+                    [errorFilename]: {
                         status: 'error',
                         message: err.message || 'An error occurred during upload',
                         chunks: 0,
                     }
                 }));
                 setHistory(prev => [{
-                    filename: file.name,
+                    filename: errorFilename,
                     subject,
                     level,
                     year,
