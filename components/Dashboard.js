@@ -155,9 +155,18 @@ export default function Dashboard() {
             <Sidebar view={view} setView={setView} userEmail={session?.user?.email} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
             <main className="flex-1 flex flex-col w-full h-full overflow-y-auto">
                 <TopHeader setView={setView} userProfile={userProfile} setIsMobileOpen={setIsMobileOpen} />
-                <div className="p-4 md:p-8 space-y-8 pb-20">
+                <div className="flex-1 p-4 md:p-8 space-y-8 pb-10">
                     {renderContent()}
                 </div>
+                
+                {/* Footer */}
+                <footer className="w-full py-6 mt-auto border-t border-white/5 flex flex-col items-center justify-center">
+                    <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                        © {new Date().getFullYear()} Abdul Rehan <span className="text-slate-700">|</span> 
+                        <a href="mailto:abdulrehanoffical@gmail.com" className="hover:text-primary transition-colors">abdulrehanoffical@gmail.com</a> <span className="text-slate-700">|</span> 
+                        <a href="https://github.com/iamrehhh/Assessra-v2" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">GitHub</a>
+                    </p>
+                </footer>
             </main>
             <ReportErrorModal currentView={view} />
         </div>
