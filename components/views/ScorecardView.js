@@ -31,15 +31,16 @@ function ScoreBadge({ score, max }) {
 
 export default function ScorecardView({ filterSubject }) {
     const { data: session } = useSession();
-    const user = session?.user?.name;
+    const userEmail = session?.user?.email;
+    const userName = session?.user?.name || userEmail;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [expandedPaper, setExpandedPaper] = useState(null);
 
     useEffect(() => {
-        if (!user) return;
-        fetch(`/api/scores/user?username=${encodeURIComponent(user)}`)
+        if (!userEmail) return;
+        fetch(`/api/scores/user?username=${encodeURIComponent(userEmail)}`)
             .then(r => r.json())
             .then(d => {
                 if (filterSubject) {
@@ -97,7 +98,7 @@ export default function ScorecardView({ filterSubject }) {
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>
                 <h2 style={{ fontSize: '2rem', color: 'var(--lime-dark)', fontFamily: 'var(--font-playfair)' }}>📊 My Scorecard</h2>
-                <p style={{ color: '#666' }}>Welcome, {user} — here's your performance overview</p>
+                <p style={{ color: '#666' }}>Welcome, {userName} — here's your performance overview</p>
             </div>
 
             {/* Grand total card */}

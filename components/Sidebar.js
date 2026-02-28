@@ -15,11 +15,11 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
         const fetchScores = async () => {
             try {
                 if (!userEmail) return;
-                const scoresRes = await fetch('/api/scores/user');
+                const scoresRes = await fetch(`/api/scores/user?username=${encodeURIComponent(userEmail)}`);
                 const scoresData = await scoresRes.json();
 
-                if (scoresData.scores && scoresData.scores.length > 0) {
-                    setCompletedPapers(scoresData.scores.length);
+                if (scoresData.attempts && scoresData.attempts.length > 0) {
+                    setCompletedPapers(scoresData.attempts.length);
                 }
             } catch (err) {
                 console.error('Failed to fetch user scores for sidebar:', err);

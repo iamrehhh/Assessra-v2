@@ -179,6 +179,27 @@ export default function PracticeSplitScreen({ paperId }) {
 
             updateBlock(id, 'feedback', resultData);
             updateBlock(id, 'status', 'done');
+
+            // Parse score from string e.g. "3/4 Marks" or "3"
+            let parsedScore = 0;
+            if (resultData.score) {
+                const match = String(resultData.score).match(/(\d+)/);
+                if (match) parsedScore = parseInt(match[1]);
+            }
+
+            // Silently save score to Supabase
+            fetch('/api/scores/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paperId: filename,
+                    paperTitle: `${subject} ${level} ${year} ${block.label}`,
+                    subject: subject,
+                    questionNumber: block.label,
+                    score: parsedScore,
+                    maxMarks: Math.max(1, block.marks),
+                })
+            }).catch(() => { });
         } catch (err) {
             console.error('Submit error:', err);
             updateBlock(id, 'status', 'idle');

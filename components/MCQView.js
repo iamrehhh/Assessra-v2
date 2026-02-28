@@ -88,7 +88,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     subject: 'economics-p3',
                     questionNumber: 'all',
                     score: correct,
-                    maxMarks: totalQ,
+                    maxMarks: Math.max(1, totalQ),
                 }),
             }).catch(() => { });
         }
