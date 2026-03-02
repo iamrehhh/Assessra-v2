@@ -598,12 +598,12 @@ h2 {
 
 .login-logo-container {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 40px;
 }
 
 .login-logo-img {
-    height: 72px;
-    /* Fixed height for uniform display */
+    height: 85px;
+    max-width: 100%;
     width: auto;
     object-fit: contain;
     mix-blend-mode: multiply;
@@ -614,33 +614,11 @@ h2 {
     filter: brightness(0) invert(1);
 }
 
-.login-tagline {
-    font-size: 0.95rem;
-    color: #8b7d6b;
-    margin-top: 12px;
-    font-weight: 500;
-}
+/* Removed login-tagline styles entirely since it was deleted */
 
-.dark .login-tagline {
-    color: #94a3b8;
-}
 
-.login-header-group {
-    text-align: center;
-    margin-bottom: 32px;
-}
+/* Removed login-heading styles entirely since it was deleted */
 
-.login-heading {
-    font-size: 1.75rem;
-    color: #2c251f;
-    font-weight: 700;
-    margin: 0;
-    font-family: 'Playfair Display', serif;
-}
-
-.dark .login-heading {
-    color: #f8fafc;
-}
 
 .input-group {
     position: relative;

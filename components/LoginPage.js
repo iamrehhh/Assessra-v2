@@ -106,8 +106,7 @@ function LoginContent() {
         <div className="login-screen">
             <div className="login-card">
                 <div className="login-logo-container">
-                    <img src="/logo.jpg" alt="Assessra" className="login-logo-img" />
-                    <div className="login-tagline">AI-powered exam preparation</div>
+                    <img src="/new-logo.png" alt="Assessra Premium Assessment Solutions" className="login-logo-img" />
                 </div>
 
                 {displayError && (
@@ -121,13 +120,6 @@ function LoginContent() {
                         ✅ {success}
                     </div>
                 )}
-
-                {/* Header */}
-                <div className="login-header-group">
-                    <h2 className="login-heading">
-                        {isSignUp ? 'Create Account' : 'Sign In'}
-                    </h2>
-                </div>
 
                 {/* Email/Password Form */}
                 <form onSubmit={handleSubmit} style={{ width: '100%' }}>
