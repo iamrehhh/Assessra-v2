@@ -40,8 +40,8 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
         <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border-main flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: 'var(--sidebar-bg)' }}>
             <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-                    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                        <img src="/logo.jpg" alt="Assessra Logo" className="w-full h-full object-cover" />
+                    <div className="w-9 h-9 flex items-center justify-center">
+                        <img src="/sidebar-icon.png" alt="Assessra Logo" className="w-full h-full object-contain" />
                     </div>
                     <h1 className="text-xl font-black tracking-tighter uppercase italic text-text-main m-0 leading-none">Assessra</h1>
                 </div>
