@@ -602,9 +602,10 @@ h2 {
 }
 
 .login-logo-img {
-    width: 340px;
-    /* Make it prominently cover the top space */
-    max-width: 90%;
+    display: block;
+    margin: 0 auto;
+    width: 380px;
+    max-width: 100%;
     height: auto;
     object-fit: contain;
 }
