@@ -606,7 +606,6 @@ h2 {
     max-width: 100%;
     width: auto;
     object-fit: contain;
-    mix-blend-mode: multiply;
 }
 
 .dark .login-logo-img {
