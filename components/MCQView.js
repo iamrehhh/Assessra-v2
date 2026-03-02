@@ -100,25 +100,25 @@ export default function MCQView({ paperId, paperData, onBack }) {
     const timerStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
     return (
-        <div className="flex flex-col h-screen bg-background-dark text-slate-100 font-display overflow-hidden fixed inset-0 z-[9999]">
+        <div className="flex flex-col h-screen bg-bg-base text-text-main font-display overflow-hidden fixed inset-0 z-[9999]">
             {/* Top Header */}
-            <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-6 shrink-0 shadow-md">
+            <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-6 shrink-0 shadow-md">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10 cursor-pointer">
+                    <button onClick={onBack} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-border-main hover:bg-black/10 dark:bg-white/10 cursor-pointer">
                         <span className="material-symbols-outlined text-base">arrow_back</span> Exit
                     </button>
                     <h3 className="m-0 font-bold text-primary text-lg font-display">{paper.title || 'Economics P3 — MCQ'}</h3>
                 </div>
-                <div className={`flex items-center gap-2 text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-slate-200')}`}>
+                <div className={`flex items-center gap-2 text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-text-main')}`}>
                     <span className="material-symbols-outlined text-sm">schedule</span>
                     {submitted ? `✓ ${score}/${(paper.answers || paper.questions || []).length}` : timerStr}
                 </div>
             </div>
 
             {/* Split Container */}
-            <div className="flex flex-1 overflow-hidden bg-background-dark">
+            <div className="flex flex-1 overflow-hidden bg-bg-base">
                 {/* Left Panel: PDF Viewer */}
-                <div className="flex-[5.5] h-full border-r border-white/10 bg-[#323639]">
+                <div className="flex-[5.5] h-full border-r border-border-main bg-[#323639]">
                     <iframe
                         src={encodeURI(`/${paper.pdf}#toolbar=0&navpanes=0&scrollbar=0`)}
                         className="w-full h-full border-none"
@@ -131,11 +131,11 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     {submitted && score !== null && (
                         <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
                             <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || paper.questions || []).length)) * 100)}%</div>
-                            <div className="text-lg text-slate-300 font-bold">Score: {score} / {(paper.answers || paper.questions || []).length}</div>
+                            <div className="text-lg text-text-muted font-bold">Score: {score} / {(paper.answers || paper.questions || []).length}</div>
                         </div>
                     )}
 
-                    <h4 className="font-bold text-slate-200 border-b border-white/10 pb-3 mt-0 mb-4 flex items-center gap-2">
+                    <h4 className="font-bold text-text-main border-b border-border-main pb-3 mt-0 mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined">checklist</span> Answer Sheet
                     </h4>
 
@@ -149,19 +149,19 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                 const userAns = answers[i];
                                 const isCorrect = correctAns ? userAns === correctAns : false;
                                 return (
-                                    <div key={i} className={`flex flex-col p-4 rounded-xl border ${submitted && correctAns ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-white/10 bg-white/5'}`}>
+                                    <div key={i} className={`flex flex-col p-4 rounded-xl border ${submitted && correctAns ? (isCorrect ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5') : 'border-border-main bg-black/5 dark:bg-white/5'}`}>
                                         {qItem.t && (
-                                            <div className="text-slate-200 mb-3 text-sm leading-relaxed border-b border-white/5 pb-3">
+                                            <div className="text-text-main mb-3 text-sm leading-relaxed border-b border-border-main pb-3">
                                                 <span className="font-bold text-primary mr-2">Q{qItem.n || i + 1}.</span>
                                                 {qItem.t}
                                             </div>
                                         )}
                                         <div className="flex items-center">
-                                            {!qItem.t && <div className="w-10 font-bold text-slate-400">Q{i + 1}</div>}
+                                            {!qItem.t && <div className="w-10 font-bold text-text-muted">Q{i + 1}</div>}
                                             <div className="flex gap-2 flex-1 justify-around">
                                                 {['A', 'B', 'C', 'D'].map(letter => {
-                                                    let bg = 'bg-white/5', border = 'border-white/10', color = 'text-slate-300';
-                                                    let hover = 'hover:border-primary/50 hover:bg-white/10';
+                                                    let bg = 'bg-black/5 dark:bg-white/5', border = 'border-border-main', color = 'text-text-muted';
+                                                    let hover = 'hover:border-primary/50 hover:bg-black/10 dark:bg-white/10';
                                                     if (!submitted && userAns === letter) { bg = 'bg-primary'; border = 'border-primary'; color = 'text-background-dark'; hover = ''; }
                                                     if (submitted && correctAns && letter === correctAns) { bg = 'bg-green-500'; border = 'border-green-500'; color = 'text-white'; hover = ''; }
                                                     if (submitted && correctAns && userAns === letter && !isCorrect && letter !== correctAns) { bg = 'bg-red-500'; border = 'border-red-500'; color = 'text-white'; hover = ''; }
@@ -185,8 +185,8 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                             )}
                                         </div>
                                         {feedbacks[i] && (
-                                            <div className="mt-4 p-4 bg-background-dark/50 rounded-xl text-sm text-slate-300 leading-relaxed border border-white/5">
-                                                <div className="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+                                            <div className="mt-4 p-4 bg-bg-base/50 rounded-xl text-sm text-text-muted leading-relaxed border border-border-main">
+                                                <div className="font-bold text-text-main mb-2 flex items-center gap-1.5">
                                                     <span className="material-symbols-outlined text-[16px] text-purple-400">auto_awesome</span>
                                                     AI Feedback
                                                 </div>

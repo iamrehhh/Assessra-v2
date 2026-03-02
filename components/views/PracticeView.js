@@ -314,8 +314,8 @@ export default function PracticeView() {
                         strokeLinecap="round" className="transition-all duration-1000 ease-out" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-slate-100">{awarded}</span>
-                    <span className="text-xs text-slate-500 font-bold">/ {total}</span>
+                    <span className="text-3xl font-black text-text-main">{awarded}</span>
+                    <span className="text-xs text-text-muted font-bold">/ {total}</span>
                 </div>
             </div>
         );
@@ -323,22 +323,22 @@ export default function PracticeView() {
 
     // ── Expandable section component ─────────────────────────────────
     const Section = ({ icon, title, content, id }) => (
-        <div className="glass rounded-2xl border border-white/5 overflow-hidden">
+        <div className="glass rounded-2xl border border-border-main overflow-hidden">
             <button
                 onClick={() => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-black/5 dark:bg-white/5 transition-colors"
             >
                 <div className="flex items-center gap-3">
                     <span className="text-lg">{icon}</span>
-                    <span className="font-bold text-slate-200">{title}</span>
+                    <span className="font-bold text-text-main">{title}</span>
                 </div>
-                <span className={`material-symbols-outlined text-slate-500 transition-transform ${expanded[id] ? 'rotate-180' : ''}`}>
+                <span className={`material-symbols-outlined text-text-muted transition-transform ${expanded[id] ? 'rotate-180' : ''}`}>
                     expand_more
                 </span>
             </button>
             {expanded[id] && (
                 <div className="px-5 pb-5 pt-0">
-                    <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{content}</div>
+                    <div className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">{content}</div>
                 </div>
             )}
         </div>
@@ -357,15 +357,15 @@ export default function PracticeView() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <button onClick={() => { setStep('configure'); setMcqQuestions([]); }}
-                            className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors font-medium text-sm">
+                            className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm">
                             <span className="material-symbols-outlined text-base">arrow_back</span>
                             Exit Quiz
                         </button>
-                        <span className="text-sm font-bold text-slate-400">
+                        <span className="text-sm font-bold text-text-muted">
                             Question <span className="text-primary">{mcqIndex + 1}</span> of {mcqQuestions.length}
                         </span>
                     </div>
-                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                             style={{ width: `${progressPct}%` }} />
                     </div>
@@ -376,7 +376,7 @@ export default function PracticeView() {
                     <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">
                         {subject}
                     </span>
-                    <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">
+                    <span className="bg-black/10 dark:bg-white/10 text-text-muted text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-border-main">
                         {level}
                     </span>
                     <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">
@@ -390,14 +390,14 @@ export default function PracticeView() {
                 </div>
 
                 {/* Question Card */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-6">
-                    <h3 className="text-lg font-bold text-slate-100 leading-relaxed">
+                <div className="glass rounded-3xl p-6 md:p-8 border border-border-main space-y-6">
+                    <h3 className="text-lg font-bold text-text-main leading-relaxed">
                         {current?.question || 'Loading...'}
                     </h3>
 
                     {/* Diagram image if present */}
                     {current?.diagramUrl && (
-                        <div className="rounded-xl overflow-hidden border border-white/10 bg-white">
+                        <div className="rounded-xl overflow-hidden border border-border-main bg-white">
                             <img
                                 src={current.diagramUrl}
                                 alt="Question diagram"
@@ -409,7 +409,7 @@ export default function PracticeView() {
                     {/* Options A, B, C, D */}
                     <div className="space-y-3">
                         {current?.options && Object.entries(current.options).map(([letter, text]) => {
-                            let optionStyle = 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20';
+                            let optionStyle = 'bg-black/5 dark:bg-white/5 border-border-main hover:bg-black/10 dark:bg-white/10 hover:border-border-main';
 
                             if (mcqSubmitted) {
                                 if (letter === current.correct) {
@@ -417,7 +417,7 @@ export default function PracticeView() {
                                 } else if (letter === mcqSelected && letter !== current.correct) {
                                     optionStyle = 'bg-red-500/15 border-red-500/40 text-red-300';
                                 } else {
-                                    optionStyle = 'bg-white/5 border-white/5 opacity-50';
+                                    optionStyle = 'bg-black/5 dark:bg-white/5 border-border-main opacity-50';
                                 }
                             } else if (mcqSelected === letter) {
                                 optionStyle = 'bg-primary/15 border-primary/40 text-primary';
@@ -433,13 +433,13 @@ export default function PracticeView() {
                                     <span className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0 border ${mcqSubmitted && letter === current.correct ? 'bg-green-500/20 border-green-500/50 text-green-300' :
                                         mcqSubmitted && letter === mcqSelected && letter !== current.correct ? 'bg-red-500/20 border-red-500/50 text-red-300' :
                                             mcqSelected === letter && !mcqSubmitted ? 'bg-primary/20 border-primary/50 text-primary' :
-                                                'bg-white/5 border-white/10 text-slate-400'
+                                                'bg-black/5 dark:bg-white/5 border-border-main text-text-muted'
                                         }`}>
                                         {mcqSubmitted && letter === current.correct ? '✓' :
                                             mcqSubmitted && letter === mcqSelected && letter !== current.correct ? '✕' :
                                                 letter}
                                     </span>
-                                    <span className="text-sm font-medium text-slate-200">{text}</span>
+                                    <span className="text-sm font-medium text-text-main">{text}</span>
                                 </button>
                             );
                         })}
@@ -452,7 +452,7 @@ export default function PracticeView() {
                             disabled={!mcqSelected}
                             className={`w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${mcqSelected
                                 ? 'bg-primary hover:bg-primary/90 text-background-dark hover:shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
+                                : 'bg-black/5 dark:bg-white/5 text-slate-600 cursor-not-allowed border border-border-main'
                                 }`}>
                             <span className="material-symbols-outlined text-base">check_circle</span>
                             Submit Answer
@@ -474,11 +474,11 @@ export default function PracticeView() {
                                     </span>
                                 </div>
                                 {mcqSelected !== current.correct && (
-                                    <p className="text-sm text-slate-300 mb-1">
+                                    <p className="text-sm text-text-muted mb-1">
                                         You selected <span className="font-bold text-red-400">{mcqSelected}</span>, the correct answer is <span className="font-bold text-green-400">{current.correct}</span>.
                                     </p>
                                 )}
-                                <p className="text-sm text-slate-300 leading-relaxed mt-2">
+                                <p className="text-sm text-text-muted leading-relaxed mt-2">
                                     {current.explanation}
                                 </p>
                             </div>
@@ -509,11 +509,11 @@ export default function PracticeView() {
         return (
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                 {/* Score Header */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5">
+                <div className="glass rounded-3xl p-6 md:p-8 border border-border-main">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                         <ScoreRing awarded={correctCount} total={totalCount} />
                         <div className="text-center sm:text-left space-y-2">
-                            <h2 className="text-2xl font-black text-slate-100">Quiz Complete!</h2>
+                            <h2 className="text-2xl font-black text-text-main">Quiz Complete!</h2>
                             <div className="flex items-center gap-3 justify-center sm:justify-start">
                                 <span className={`text-4xl font-black ${(correctCount / totalCount * 100) >= 70 ? 'text-green-400' :
                                     (correctCount / totalCount * 100) >= 40 ? 'text-amber-400' : 'text-red-400'
@@ -523,7 +523,7 @@ export default function PracticeView() {
                             </div>
                             <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">{subject}</span>
-                                <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">{topic}</span>
+                                <span className="bg-black/10 dark:bg-white/10 text-text-muted text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-border-main">{topic}</span>
                                 <span className="bg-amber-500/10 text-amber-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-amber-500/20">MCQ</span>
                             </div>
                         </div>
@@ -531,8 +531,8 @@ export default function PracticeView() {
                 </div>
 
                 {/* Per-question breakdown */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-4">
-                    <h3 className="text-lg font-bold text-slate-100">Question Breakdown</h3>
+                <div className="glass rounded-3xl p-6 md:p-8 border border-border-main space-y-4">
+                    <h3 className="text-lg font-bold text-text-main">Question Breakdown</h3>
                     <div className="space-y-3">
                         {mcqQuestions.map((q, i) => {
                             const ans = mcqAnswers[i];
@@ -545,12 +545,12 @@ export default function PracticeView() {
                                             {ans?.isCorrect ? '✓' : '✕'}
                                         </span>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-slate-200 mb-1">Q{i + 1}. {q.question}</p>
-                                            <p className="text-xs text-slate-400">
+                                            <p className="text-sm font-medium text-text-main mb-1">Q{i + 1}. {q.question}</p>
+                                            <p className="text-xs text-text-muted">
                                                 Your answer: <span className={ans?.isCorrect ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{ans?.selected}</span>
                                                 {!ans?.isCorrect && <> · Correct: <span className="text-green-400 font-bold">{ans?.correct}</span></>}
                                             </p>
-                                            <p className="text-xs text-slate-500 mt-1">{q.explanation}</p>
+                                            <p className="text-xs text-text-muted mt-1">{q.explanation}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -572,7 +572,7 @@ export default function PracticeView() {
                         {savedSetId ? 'Saved' : (isSaving ? 'Saving...' : 'Save Set')}
                     </button>
                     <button onClick={() => { setMcqIndex(0); setMcqSelected(null); setMcqSubmitted(false); setMcqAnswers([]); setStep('mcq_quiz'); setSavedSetId(null); }}
-                        className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
+                        className="px-6 py-3.5 rounded-xl font-bold text-sm text-text-muted border border-border-main hover:bg-black/5 dark:bg-white/5 transition-all">
                         Retry Same Quiz
                     </button>
                 </div>
@@ -589,23 +589,23 @@ export default function PracticeView() {
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-black tracking-tight text-slate-100">
+                    <h2 className="text-3xl font-black tracking-tight text-text-main">
                         <span className="text-primary">✨</span> AI Practice Mode
                     </h2>
-                    <p className="text-slate-400">Generate custom Cambridge-style questions on any topic</p>
+                    <p className="text-text-muted">Generate custom Cambridge-style questions on any topic</p>
                 </div>
 
                 {/* Tab Controller */}
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full max-w-sm mx-auto">
+                <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl border border-border-main w-full max-w-sm mx-auto">
                     <button
                         onClick={() => setActiveTab('new')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'new' ? 'bg-primary text-background-dark shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'new' ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-text-main'}`}
                     >
                         New Practice
                     </button>
                     <button
                         onClick={() => setActiveTab('saved')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'saved' ? 'bg-primary text-background-dark shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'saved' ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-text-main'}`}
                     >
                         Saved Sets
                     </button>
@@ -614,20 +614,20 @@ export default function PracticeView() {
                 {activeTab === 'saved' ? (
                     <SavedPracticeView isEmbedded={true} />
                 ) : (
-                    <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-6">
+                    <div className="glass rounded-3xl p-6 md:p-8 border border-border-main space-y-6">
                         {/* Subject + Level */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subject</label>
+                                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Subject</label>
                                 <select value={subject} onChange={e => setSubject(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
                                     {SUBJECTS.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Level</label>
+                                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Level</label>
                                 <select value={level} onChange={e => setLevel(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
                                     {LEVELS.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
                                 </select>
                             </div>
@@ -635,29 +635,29 @@ export default function PracticeView() {
 
                         {/* Topic */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Topic</label>
+                            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Topic</label>
                             <input
                                 type="text" value={topic} onChange={e => setTopic(e.target.value)}
                                 placeholder="e.g. price elasticity of demand, SWOT analysis, organic chemistry..."
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
+                                className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
                             />
                         </div>
 
                         {/* Marks + Question Type */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
                                     {isMCQ ? 'Number of Questions' : 'Marks'}
                                 </label>
                                 <input type="number" value={marks} onChange={e => setMarks(parseInt(e.target.value) || 1)}
                                     min={1} max={isMCQ ? 20 : 30}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors" />
-                                {isMCQ && <p className="text-xs text-slate-500 mt-1">Each question = 1 mark with A, B, C, D options</p>}
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors" />
+                                {isMCQ && <p className="text-xs text-text-muted mt-1">Each question = 1 mark with A, B, C, D options</p>}
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Question Type</label>
+                                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Question Type</label>
                                 <select value={questionType} onChange={e => setQuestionType(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 font-medium focus:outline-none focus:border-primary/50 transition-colors">
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
                                     {QUESTION_TYPES.map(qt => <option key={qt} value={qt} className="bg-slate-900">{qt}</option>)}
                                 </select>
                             </div>
@@ -665,13 +665,13 @@ export default function PracticeView() {
 
                         {/* Difficulty Pills */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Difficulty</label>
+                            <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Difficulty</label>
                             <div className="flex gap-2">
                                 {DIFFICULTIES.map(d => (
                                     <button key={d} onClick={() => setDifficulty(d)}
                                         className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${difficulty === d
                                             ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-                                            : 'bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10'
+                                            : 'bg-black/5 dark:bg-white/5 text-text-muted hover:bg-black/10 dark:bg-white/10 border border-border-main'
                                             }`}>
                                         {d}
                                     </button>
@@ -715,22 +715,22 @@ export default function PracticeView() {
             <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                 {/* Back */}
                 <button onClick={() => setStep('configure')}
-                    className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors font-medium text-sm">
+                    className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm">
                     <span className="material-symbols-outlined text-base">arrow_back</span>
                     Back to settings
                 </button>
 
                 {/* Question Card */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-5">
+                <div className="glass rounded-3xl p-6 md:p-8 border border-border-main space-y-5">
                     {/* Chips */}
                     <div className="flex flex-wrap gap-2">
                         <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">
                             {subject}
                         </span>
-                        <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">
+                        <span className="bg-black/10 dark:bg-white/10 text-text-muted text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-border-main">
                             {level}
                         </span>
-                        <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">
+                        <span className="bg-black/10 dark:bg-white/10 text-text-muted text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-border-main">
                             {marks} marks
                         </span>
                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${difficulty === 'Easy' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
@@ -748,10 +748,10 @@ export default function PracticeView() {
 
                     {/* Question text */}
                     <div>
-                        <h3 className="text-lg font-bold text-slate-100 mb-3">Question</h3>
+                        <h3 className="text-lg font-bold text-text-main mb-3">Question</h3>
                         {/* Diagram image if present */}
                         {questionData?.diagramUrl && (
-                            <div className="rounded-xl overflow-hidden border border-white/10 bg-white mb-4">
+                            <div className="rounded-xl overflow-hidden border border-border-main bg-white mb-4">
                                 <img
                                     src={questionData.diagramUrl}
                                     alt="Question diagram"
@@ -759,28 +759,28 @@ export default function PracticeView() {
                                 />
                             </div>
                         )}
-                        <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-[15px]">
+                        <div className="text-text-muted leading-relaxed whitespace-pre-wrap text-[15px]">
                             {questionData?.question || 'No question generated.'}
                         </div>
                     </div>
 
                     {/* Mark Allocation */}
                     {questionData?.markAllocation && (
-                        <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mark Allocation</p>
-                            <p className="text-sm text-slate-300 whitespace-pre-wrap">{questionData.markAllocation}</p>
+                        <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 border border-border-main">
+                            <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Mark Allocation</p>
+                            <p className="text-sm text-text-muted whitespace-pre-wrap">{questionData.markAllocation}</p>
                         </div>
                     )}
                 </div>
 
                 {/* Answer Area */}
-                <div className="glass rounded-3xl p-6 md:p-8 border border-white/5 space-y-4">
-                    <h3 className="text-lg font-bold text-slate-100">Your Answer</h3>
+                <div className="glass rounded-3xl p-6 md:p-8 border border-border-main space-y-4">
+                    <h3 className="text-lg font-bold text-text-main">Your Answer</h3>
                     <textarea
                         value={answer} onChange={e => setAnswer(e.target.value)}
                         rows={8}
                         placeholder="Type your answer here..."
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors resize-y min-h-[200px] leading-relaxed"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main placeholder-slate-600 focus:outline-none focus:border-primary/50 transition-colors resize-y min-h-[200px] leading-relaxed"
                     />
 
                     {evalError && (
@@ -805,7 +805,7 @@ export default function PracticeView() {
                             )}
                         </button>
                         <button onClick={() => { setStep('configure'); setQuestionData(null); }}
-                            className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
+                            className="px-6 py-3.5 rounded-xl font-bold text-sm text-text-muted border border-border-main hover:bg-black/5 dark:bg-white/5 transition-all">
                             Generate Another
                         </button>
                     </div>
@@ -820,11 +820,11 @@ export default function PracticeView() {
     return (
         <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
             {/* Score Header */}
-            <div className="glass rounded-3xl p-6 md:p-8 border border-white/5">
+            <div className="glass rounded-3xl p-6 md:p-8 border border-border-main">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
                     <ScoreRing awarded={results?.marksAwarded || 0} total={results?.totalMarks || marks} />
                     <div className="text-center sm:text-left space-y-2">
-                        <h2 className="text-2xl font-black text-slate-100">Your Score</h2>
+                        <h2 className="text-2xl font-black text-text-main">Your Score</h2>
                         <div className="flex items-center gap-3 justify-center sm:justify-start">
                             <span className={`text-4xl font-black ${(results?.percentage || 0) >= 70 ? 'text-green-400' :
                                 (results?.percentage || 0) >= 40 ? 'text-amber-400' : 'text-red-400'
@@ -834,7 +834,7 @@ export default function PracticeView() {
                         </div>
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                             <span className="bg-primary/20 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-primary/30">{subject}</span>
-                            <span className="bg-white/10 text-slate-300 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-white/20">{topic}</span>
+                            <span className="bg-black/10 dark:bg-white/10 text-text-muted text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-border-main">{topic}</span>
                         </div>
                     </div>
                 </div>
@@ -861,7 +861,7 @@ export default function PracticeView() {
                     {savedSetId ? 'Saved' : (isSaving ? 'Saving...' : 'Save Set')}
                 </button>
                 <button onClick={() => { setStep('question'); setResults(null); setAnswer(''); setSavedSetId(null); }}
-                    className="px-6 py-3.5 rounded-xl font-bold text-sm text-slate-400 border border-white/10 hover:bg-white/5 transition-all">
+                    className="px-6 py-3.5 rounded-xl font-bold text-sm text-text-muted border border-border-main hover:bg-black/5 dark:bg-white/5 transition-all">
                     Try Again
                 </button>
             </div>

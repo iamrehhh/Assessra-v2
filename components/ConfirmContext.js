@@ -39,21 +39,21 @@ export function ConfirmProvider({ children }) {
         <ConfirmContext.Provider value={{ confirm }}>
             {children}
             {confirmState.isOpen && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-fade-in">
-                    <div className="glass rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-white/10 transform transition-all animate-scale-up">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-bg-base/80 backdrop-blur-sm animate-fade-in">
+                    <div className="glass rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl border border-border-main transform transition-all animate-scale-up">
                         <div className="flex items-center gap-4 mb-4">
                             <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 shrink-0">
                                 <span className="material-symbols-outlined text-red-500 text-2xl">warning</span>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-100">{confirmState.title}</h3>
+                            <h3 className="text-xl font-bold text-text-main">{confirmState.title}</h3>
                         </div>
-                        <p className="text-slate-300 text-sm leading-relaxed mb-8">
+                        <p className="text-text-muted text-sm leading-relaxed mb-8">
                             {confirmState.message}
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => handleAction(false)}
-                                className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                                className="px-5 py-2.5 rounded-xl font-bold text-sm text-text-muted hover:text-text-main hover:bg-black/5 dark:bg-white/5 transition-colors"
                             >
                                 Cancel
                             </button>

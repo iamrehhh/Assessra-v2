@@ -214,40 +214,40 @@ export default function PracticeSplitScreen({ paperId }) {
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-background-dark text-slate-100">
-                <div className="w-8 h-8 border-4 border-white/10 border-t-primary rounded-full animate-spin"></div>
+            <div className="flex h-screen items-center justify-center bg-bg-base text-text-main">
+                <div className="w-8 h-8 border-4 border-border-main border-t-primary rounded-full animate-spin"></div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-screen bg-background-dark text-slate-100 font-display overflow-hidden">
+        <div className="flex h-screen bg-bg-base text-text-main font-display overflow-hidden">
             {/* Split Container */}
             <div className="flex w-full h-full pb-0 pt-0">
 
                 {/* Left Panel: PDF Viewer */}
-                <div className="w-1/2 h-full flex flex-col border-r border-white/10 bg-[#1e1e1e]">
+                <div className="w-1/2 h-full flex flex-col border-r border-border-main bg-[#1e1e1e]">
                     {/* Header */}
-                    <div className="h-14 bg-background-dark border-b border-white/10 flex items-center justify-between px-4 shrink-0">
+                    <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-4 shrink-0">
                         <button onClick={() => {
                             window.location.hash = 'pastpapers';
                             router.push('/');
-                        }} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold">
+                        }} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold">
                             <span className="material-symbols-outlined text-base">arrow_back</span>
                             Exit
                         </button>
 
                         {insertFilename && (
-                            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+                            <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 border border-border-main">
                                 <button
                                     onClick={() => setShowInsert(false)}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
                                 >
                                     Paper
                                 </button>
                                 <button
                                     onClick={() => setShowInsert(true)}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
                                 >
                                     Insert
                                 </button>
@@ -267,9 +267,9 @@ export default function PracticeSplitScreen({ paperId }) {
                 </div>
 
                 {/* Right Panel: Workspace */}
-                <div className="w-1/2 h-full flex flex-col overflow-y-auto bg-background-dark relative">
-                    <div className="h-14 border-b border-white/10 sticky top-0 bg-background-dark/80 backdrop-blur-md z-10 flex items-center justify-between px-6 shrink-0">
-                        <h2 className="text-lg font-black text-slate-100 flex items-center gap-2">
+                <div className="w-1/2 h-full flex flex-col overflow-y-auto bg-bg-base relative">
+                    <div className="h-14 border-b border-border-main sticky top-0 bg-bg-base/80 backdrop-blur-md z-10 flex items-center justify-between px-6 shrink-0">
+                        <h2 className="text-lg font-black text-text-main flex items-center gap-2">
                             <span className="text-primary material-symbols-outlined text-xl">edit_square</span>
                             Practice Workspace
                         </h2>
@@ -278,7 +278,7 @@ export default function PracticeSplitScreen({ paperId }) {
                         {timerDuration && !timerVisible && (
                             <button
                                 onClick={() => setTimerVisible(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-all text-xs font-bold"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-border-main text-text-muted hover:text-text-main hover:border-border-main transition-all text-xs font-bold"
                             >
                                 <span className="material-symbols-outlined text-sm">timer</span>
                                 Start Timer
@@ -290,13 +290,13 @@ export default function PracticeSplitScreen({ paperId }) {
                             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${timerSeconds === 0 ? 'bg-red-500/20 border-red-500/30' :
                                 timerUrgent ? 'bg-red-500/10 border-red-500/30 animate-pulse' :
                                     timerWarning ? 'bg-amber-500/10 border-amber-500/20' :
-                                        'bg-white/5 border-white/10'
+                                        'bg-black/5 dark:bg-white/5 border-border-main'
                                 }`}>
                                 {/* Timer text */}
                                 <span className={`text-sm font-mono font-black tracking-wider ${timerSeconds === 0 ? 'text-red-400' :
                                     timerUrgent ? 'text-red-400' :
                                         timerWarning ? 'text-amber-400' :
-                                            'text-slate-100'
+                                            'text-text-main'
                                     }`}>
                                     {formatTime(timerSeconds)}
                                 </span>
@@ -320,7 +320,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                 {/* Reset */}
                                 <button
                                     onClick={resetTimer}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all"
                                     title="Reset timer"
                                 >
                                     <span className="material-symbols-outlined text-base">restart_alt</span>
@@ -329,7 +329,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                 {/* Close timer */}
                                 <button
                                     onClick={() => { setTimerVisible(false); setTimerRunning(false); clearInterval(timerRef.current); }}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all"
                                     title="Hide timer"
                                 >
                                     <span className="material-symbols-outlined text-sm">close</span>
@@ -342,7 +342,7 @@ export default function PracticeSplitScreen({ paperId }) {
                         {/* Questions automatically load here */}
 
                         {blocks.map((block, index) => (
-                            <div key={block.id} className="bg-[#18181b] rounded-3xl p-6 border border-white/10 shadow-2xl space-y-6">
+                            <div key={block.id} className="bg-[#18181b] rounded-3xl p-6 border border-border-main shadow-2xl space-y-6">
                                 {/* Top Row: Label, Marks, Close */}
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-xl font-black text-white w-24">
@@ -378,7 +378,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                     {/* Right: Close */}
                                     <div className="w-24 flex justify-end">
                                         {!block.prefilled && blocks.length > 1 && (
-                                            <button onClick={() => removeBlock(block.id)} className="text-slate-500 hover:text-white transition-colors">
+                                            <button onClick={() => removeBlock(block.id)} className="text-text-muted hover:text-text-main transition-colors">
                                                 <span className="material-symbols-outlined text-xl">close</span>
                                             </button>
                                         )}
@@ -386,7 +386,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                 </div>
 
                                 {/* Question Text Box */}
-                                <div className={`border rounded-xl p-4 min-h-[60px] ${block.prefilled ? 'border-white/20 bg-white/[0.02]' : 'border-white/80'}`}>
+                                <div className={`border rounded-xl p-4 min-h-[60px] ${block.prefilled ? 'border-border-main bg-white/[0.02]' : 'border-white/80'}`}>
                                     {block.prefilled ? (
                                         <p className="text-white font-bold leading-relaxed text-sm">
                                             {block.questionText}
@@ -409,7 +409,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                         onChange={(e) => updateBlock(block.id, 'answer', e.target.value)}
                                         rows={8}
                                         placeholder={`Type your answer for ${block.label || '1'} here...`}
-                                        className="w-full bg-transparent px-5 py-4 text-slate-100 placeholder-slate-500/80 focus:outline-none resize-y min-h-[200px]"
+                                        className="w-full bg-transparent px-5 py-4 text-text-main placeholder-slate-500/80 focus:outline-none resize-y min-h-[200px]"
                                         disabled={block.status === 'evaluating' || block.status === 'done'}
                                     />
                                 </div>
@@ -421,8 +421,8 @@ export default function PracticeSplitScreen({ paperId }) {
                                             onClick={() => handleSubmit(block.id)}
                                             disabled={block.status === 'evaluating' || !block.answer.trim()}
                                             className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
-                                                ? 'bg-[#18181b] text-slate-500 cursor-not-allowed border border-white/5'
-                                                : 'bg-[#27272a] text-slate-300 hover:bg-[#3f3f46] hover:text-white border border-white/5'
+                                                ? 'bg-[#18181b] text-text-muted cursor-not-allowed border border-border-main'
+                                                : 'bg-[#27272a] text-text-muted hover:bg-[#3f3f46] hover:text-text-main border border-border-main'
                                                 }`}
                                         >
                                             {block.status === 'evaluating' ? (
@@ -450,7 +450,7 @@ export default function PracticeSplitScreen({ paperId }) {
 
                         <button
                             onClick={addBlock}
-                            className="w-full py-4 rounded-3xl border-2 border-dashed border-white/10 text-slate-400 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all flex items-center justify-center gap-2 font-bold mb-12"
+                            className="w-full py-4 rounded-3xl border-2 border-dashed border-border-main text-text-muted hover:text-text-main hover:border-white/30 hover:bg-black/5 dark:bg-white/5 transition-all flex items-center justify-center gap-2 font-bold mb-12"
                         >
                             <span className="material-symbols-outlined">add</span>
                             Add Empty Answer Block
@@ -480,19 +480,19 @@ function FeedbackModal() {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-[#1e293b] w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/10 animate-slide-up">
+            <div className="bg-[#1e293b] w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-border-main animate-slide-up">
 
                 {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between shrink-0 bg-white/5">
+                <div className="px-6 py-4 border-b border-border-main flex items-center justify-between shrink-0 bg-black/5 dark:bg-white/5">
                     <div>
-                        <h2 className="text-xl font-black text-slate-100">{block.label} Feedback</h2>
+                        <h2 className="text-xl font-black text-text-main">{block.label} Feedback</h2>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/20">
                                 Score: {feedback.score}
                             </span>
                         </div>
                     </div>
-                    <button onClick={() => setBlock(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                    <button onClick={() => setBlock(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 dark:bg-white/10 text-text-muted hover:text-text-main transition-colors">
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -501,17 +501,17 @@ function FeedbackModal() {
                 <div className="p-6 overflow-y-auto space-y-6">
                     {/* Mark Breakdown */}
                     <div>
-                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span className="material-symbols-outlined text-base">fact_check</span> Requirements Met
                         </h3>
-                        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
+                        <div className="bg-black/5 dark:bg-white/5 border border-border-main rounded-2xl p-4 text-text-muted text-sm whitespace-pre-wrap leading-relaxed">
                             {feedback.breakdown || "No breakdown provided."}
                         </div>
                     </div>
 
                     {/* Examiner Feedback */}
                     <div>
-                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span className="material-symbols-outlined text-base">campaign</span> Examiner Feedback
                         </h3>
                         <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-amber-200/90 text-sm whitespace-pre-wrap leading-relaxed">
@@ -521,10 +521,10 @@ function FeedbackModal() {
 
                     {/* Model Answer */}
                     <div>
-                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span className="material-symbols-outlined text-base">workspace_premium</span> Model Answer
                         </h3>
-                        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-slate-200 text-sm whitespace-pre-wrap leading-relaxed">
+                        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-text-main text-sm whitespace-pre-wrap leading-relaxed">
                             {feedback.modelAnswer || "No model answer provided."}
                         </div>
                     </div>

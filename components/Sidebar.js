@@ -37,15 +37,15 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
     ];
 
     return (
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/5 flex flex-col bg-background-dark shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border-main flex flex-col bg-bg-card shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
                     <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
                         <img src="/logo.jpg" alt="Assessra Logo" className="w-full h-full object-cover" />
                     </div>
-                    <h1 className="text-xl font-black tracking-tighter uppercase italic text-slate-100 m-0 leading-none">Assessra</h1>
+                    <h1 className="text-xl font-black tracking-tighter uppercase italic text-text-main m-0 leading-none">Assessra</h1>
                 </div>
-                <button onClick={() => setIsMobileOpen(false)} className="lg:hidden text-slate-400 hover:text-white transition-colors">
+                <button onClick={() => setIsMobileOpen(false)} className="lg:hidden text-text-muted hover:text-text-main transition-colors">
                     <span className="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -59,7 +59,7 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
                             onClick={() => setView(item.id)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
                                 ? "bg-primary/10 text-primary border border-primary/20"
-                                : "text-slate-400 hover:bg-white/5 hover:text-white border border-transparent"
+                                : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-main border border-transparent"
                                 }`}
                         >
                             <span className="material-symbols-outlined">{item.icon}</span>
@@ -73,7 +73,7 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
                         onClick={() => setView('admin')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-4 ${view === 'admin'
                             ? "bg-red-500/10 text-red-500 border border-red-500/20"
-                            : "text-red-400/80 hover:bg-white/5 hover:text-red-400 border border-transparent"
+                            : "text-red-400/80 hover:bg-black/5 dark:hover:bg-white/5 hover:text-red-400 border border-transparent"
                             }`}
                     >
                         <span className="material-symbols-outlined">admin_panel_settings</span>

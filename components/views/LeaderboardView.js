@@ -44,7 +44,7 @@ export default function LeaderboardView() {
                 <h2 className="text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center justify-center gap-3">
                     <span className="text-primary text-5xl">🏆</span> Leaderboard
                 </h2>
-                <p className="text-slate-400 text-lg">Top students ranked by total marks earned</p>
+                <p className="text-text-muted text-lg">Top students ranked by total marks earned</p>
             </div>
 
             {/* Top 3 podium cards */}
@@ -77,13 +77,13 @@ export default function LeaderboardView() {
                                     )}
                                 </div>
 
-                                <div className="text-sm font-bold text-slate-200 mb-2 text-center w-full truncate px-1">
+                                <div className="text-sm font-bold text-text-main mb-2 text-center w-full truncate px-1">
                                     {displayName}
                                 </div>
 
                                 {/* Podium Bar */}
                                 <div className={`
-                                    w-full ${heights[i]} rounded-t-3xl flex flex-col items-center pt-5 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] relative overflow-hidden border-t border-x border-white/10
+                                    w-full ${heights[i]} rounded-t-3xl flex flex-col items-center pt-5 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] relative overflow-hidden border-t border-x border-border-main
                                     ${isMe ? 'bg-gradient-to-t from-primary/40 to-primary/20' : 'bg-gradient-to-t from-white/5 to-white/10'}
                                 `}>
                                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
@@ -97,9 +97,9 @@ export default function LeaderboardView() {
             )}
 
             {/* Full rankings table */}
-            <div className="glass rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+            <div className="glass rounded-3xl overflow-hidden border border-border-main shadow-2xl">
                 {/* Table header */}
-                <div className="grid grid-cols-[60px_1fr_120px_90px_90px] p-4 bg-white/5 border-b border-white/5 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <div className="grid grid-cols-[60px_1fr_120px_90px_90px] p-4 bg-black/5 dark:bg-white/5 border-b border-border-main text-xs font-bold text-text-muted uppercase tracking-widest">
                     <span className="text-center">Rank</span>
                     <span>Student</span>
                     <span className="text-right">Total Marks</span>
@@ -113,23 +113,23 @@ export default function LeaderboardView() {
                         const rank = idx + 1;
                         return (
                             <div key={player._id} className={`
-                                grid grid-cols-[60px_1fr_120px_90px_90px] p-4 items-center transition-colors hover:bg-white/5
+                                grid grid-cols-[60px_1fr_120px_90px_90px] p-4 items-center transition-colors hover:bg-black/5 dark:bg-white/5
                                 ${isMe ? 'bg-primary/5' : ''}
                             `}>
-                                <span className={`text-center font-black ${rank <= 3 ? 'text-xl' : 'text-slate-500'}`}>
+                                <span className={`text-center font-black ${rank <= 3 ? 'text-xl' : 'text-text-muted'}`}>
                                     {rank <= 3 ? medals[rank - 1] : rank}
                                 </span>
 
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-slate-300 border border-white/10"
+                                    <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-text-muted border border-border-main"
                                         style={{ background: player.image ? `url(${player.image}) center/cover` : 'rgba(255,255,255,0.05)' }}>
                                         {!player.image && (player.nickname ? player.nickname.charAt(0).toUpperCase() : player._id.charAt(0).toUpperCase())}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className={`font-bold ${isMe ? 'text-primary' : 'text-slate-100'}`}>
+                                        <div className={`font-bold ${isMe ? 'text-primary' : 'text-text-main'}`}>
                                             {player.nickname || player.name || player._id.split('@')[0]}
                                         </div>
-                                        {player.level && <span className="text-[10px] bg-white/10 text-slate-300 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border border-white/10">{player.level}</span>}
+                                        {player.level && <span className="text-[10px] bg-black/10 dark:bg-white/10 text-text-muted px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border border-border-main">{player.level}</span>}
                                     </div>
                                 </div>
 
@@ -146,7 +146,7 @@ export default function LeaderboardView() {
                                     </span>
                                 </div>
 
-                                <span className="text-right text-slate-400 font-medium">{player.totalAttempts}</span>
+                                <span className="text-right text-text-muted font-medium">{player.totalAttempts}</span>
                             </div>
                         );
                     })}
