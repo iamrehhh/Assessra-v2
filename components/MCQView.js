@@ -127,7 +127,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 </div>
 
                 {/* Right Panel: Answer Sheet */}
-                <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-[#1e1e1e]">
+                <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-bg-card dark:bg-[#1e1e1e]">
                     {submitted && score !== null && (
                         <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
                             <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || paper.questions || []).length)) * 100)}%</div>

@@ -37,7 +37,7 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
     ];
 
     return (
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border-main flex flex-col bg-bg-card shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border-main flex flex-col shrink-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ background: 'var(--sidebar-bg)' }}>
             <div className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
                     <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">

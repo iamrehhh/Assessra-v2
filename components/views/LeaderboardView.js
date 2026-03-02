@@ -41,7 +41,7 @@ export default function LeaderboardView() {
         <div className="space-y-10 animate-fade-in max-w-5xl mx-auto pb-12">
             {/* Header */}
             <div className="text-center space-y-2">
-                <h2 className="text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center justify-center gap-3">
+                <h2 className="text-4xl lg:text-5xl font-black tracking-tight text-text-main flex items-center justify-center gap-3">
                     <span className="text-primary text-5xl">🏆</span> Leaderboard
                 </h2>
                 <p className="text-text-muted text-lg">Top students ranked by total marks earned</p>
@@ -83,12 +83,12 @@ export default function LeaderboardView() {
 
                                 {/* Podium Bar */}
                                 <div className={`
-                                    w-full ${heights[i]} rounded-t-3xl flex flex-col items-center pt-5 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] relative overflow-hidden border-t border-x border-border-main
-                                    ${isMe ? 'bg-gradient-to-t from-primary/40 to-primary/20' : 'bg-gradient-to-t from-white/5 to-white/10'}
+                                    w-full ${heights[i]} rounded-t-3xl flex flex-col items-center pt-5 shadow-[0_-10px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-10px_20px_rgba(0,0,0,0.2)] relative overflow-hidden border-t border-x border-border-main
+                                    ${isMe ? 'bg-gradient-to-t from-primary/40 to-primary/20' : 'bg-gradient-to-t from-black/5 to-black/[0.02] dark:from-white/5 dark:to-white/10'}
                                 `}>
-                                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-black/10 dark:via-white/30 to-transparent"></div>
                                     <div className="text-3xl mb-1">{medals[realRank]}</div>
-                                    <div className="text-2xl font-black text-white">{player.totalScore}</div>
+                                    <div className="text-2xl font-black text-text-main">{player.totalScore}</div>
                                 </div>
                             </div>
                         );
@@ -107,13 +107,13 @@ export default function LeaderboardView() {
                     <span className="text-right">Attempts</span>
                 </div>
 
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border-main">
                     {board.map((player, idx) => {
                         const isMe = player._id === currentUser;
                         const rank = idx + 1;
                         return (
                             <div key={player._id} className={`
-                                grid grid-cols-[60px_1fr_120px_90px_90px] p-4 items-center transition-colors hover:bg-black/5 dark:bg-white/5
+                                grid grid-cols-[60px_1fr_120px_90px_90px] p-4 items-center transition-colors hover:bg-black/[0.03] dark:hover:bg-white/5
                                 ${isMe ? 'bg-primary/5' : ''}
                             `}>
                                 <span className={`text-center font-black ${rank <= 3 ? 'text-xl' : 'text-text-muted'}`}>

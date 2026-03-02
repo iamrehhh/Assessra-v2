@@ -226,7 +226,7 @@ export default function PracticeSplitScreen({ paperId }) {
             <div className="flex w-full h-full pb-0 pt-0">
 
                 {/* Left Panel: PDF Viewer */}
-                <div className="w-1/2 h-full flex flex-col border-r border-border-main bg-[#1e1e1e]">
+                <div className="w-1/2 h-full flex flex-col border-r border-border-main bg-bg-card dark:bg-[#1e1e1e]">
                     {/* Header */}
                     <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-4 shrink-0">
                         <button onClick={() => {
@@ -342,10 +342,10 @@ export default function PracticeSplitScreen({ paperId }) {
                         {/* Questions automatically load here */}
 
                         {blocks.map((block, index) => (
-                            <div key={block.id} className="bg-[#18181b] rounded-3xl p-6 border border-border-main shadow-2xl space-y-6">
+                            <div key={block.id} className="bg-bg-card dark:bg-[#18181b] rounded-3xl p-6 border border-border-main shadow-[var(--shadow-elevated)] dark:shadow-2xl space-y-6">
                                 {/* Top Row: Label, Marks, Close */}
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-xl font-black text-white w-24">
+                                    <h3 className="text-xl font-black text-text-main w-24">
                                         {block.prefilled ? (
                                             <span>{block.label}</span>
                                         ) : (
@@ -386,9 +386,9 @@ export default function PracticeSplitScreen({ paperId }) {
                                 </div>
 
                                 {/* Question Text Box */}
-                                <div className={`border rounded-xl p-4 min-h-[60px] ${block.prefilled ? 'border-border-main bg-white/[0.02]' : 'border-white/80'}`}>
+                                <div className={`border rounded-xl p-4 min-h-[60px] ${block.prefilled ? 'border-border-main bg-black/[0.02] dark:bg-white/[0.02]' : 'border-border-main dark:border-white/80'}`}>
                                     {block.prefilled ? (
-                                        <p className="text-white font-bold leading-relaxed text-sm">
+                                        <p className="text-text-main font-bold leading-relaxed text-sm">
                                             {block.questionText}
                                         </p>
                                     ) : (
@@ -397,7 +397,7 @@ export default function PracticeSplitScreen({ paperId }) {
                                             onChange={(e) => updateBlock(block.id, 'questionText', e.target.value)}
                                             rows={3}
                                             placeholder="Paste or type the exact question text here..."
-                                            className="w-full bg-transparent text-white font-bold placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
+                                            className="w-full bg-transparent text-text-main font-bold placeholder-text-muted/50 focus:outline-none resize-y leading-relaxed"
                                         />
                                     )}
                                 </div>
@@ -421,8 +421,8 @@ export default function PracticeSplitScreen({ paperId }) {
                                             onClick={() => handleSubmit(block.id)}
                                             disabled={block.status === 'evaluating' || !block.answer.trim()}
                                             className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${block.status === 'evaluating' || !block.answer.trim()
-                                                ? 'bg-[#18181b] text-text-muted cursor-not-allowed border border-border-main'
-                                                : 'bg-[#27272a] text-text-muted hover:bg-[#3f3f46] hover:text-text-main border border-border-main'
+                                                ? 'bg-bg-base dark:bg-[#18181b] text-text-muted cursor-not-allowed border border-border-main'
+                                                : 'bg-black/[0.03] dark:bg-[#27272a] text-text-muted hover:bg-black/[0.06] dark:hover:bg-[#3f3f46] hover:text-text-main border border-border-main'
                                                 }`}
                                         >
                                             {block.status === 'evaluating' ? (
@@ -480,7 +480,7 @@ function FeedbackModal() {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-[#1e293b] w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-border-main animate-slide-up">
+            <div className="bg-bg-card dark:bg-[#1e293b] w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-border-main animate-slide-up">
 
                 {/* Modal Header */}
                 <div className="px-6 py-4 border-b border-border-main flex items-center justify-between shrink-0 bg-black/5 dark:bg-white/5">
@@ -514,7 +514,7 @@ function FeedbackModal() {
                         <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span className="material-symbols-outlined text-base">campaign</span> Examiner Feedback
                         </h3>
-                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-amber-200/90 text-sm whitespace-pre-wrap leading-relaxed">
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-amber-700 dark:text-amber-200/90 text-sm whitespace-pre-wrap leading-relaxed">
                             {feedback.feedback || "No feedback provided."}
                         </div>
                     </div>
