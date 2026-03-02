@@ -12,7 +12,6 @@ import DefinitionsView from './views/DefinitionsView';
 import ScorecardView from './views/ScorecardView';
 import TipsView from './views/TipsView';
 import VocabView from './views/VocabView';
-import IdiomsView from './views/IdiomsView';
 import OnboardingView from './views/OnboardingView';
 import ProfileView from './views/ProfileView';
 import AdminView from './views/AdminView';
@@ -20,7 +19,7 @@ import PracticeView from './views/PracticeView';
 import PastPapersView from './views/PastPapersView';
 import ReportErrorModal from './ReportErrorModal';
 
-const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'idioms', 'tips', 'profile', 'admin'];
+const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'tips', 'profile', 'admin'];
 
 function getInitialView() {
     if (typeof window === 'undefined') return 'home';
@@ -137,8 +136,6 @@ export default function Dashboard() {
                 return <ScorecardView />;
             case 'vocab':
                 return <VocabView />;
-            case 'idioms':
-                return <IdiomsView />;
             case 'tips':
                 return <TipsView />;
             case 'profile':

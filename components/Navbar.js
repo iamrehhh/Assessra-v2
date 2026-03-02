@@ -27,7 +27,6 @@ export default function Navbar({ setView, userProfile, userEmail }) {
                 <button className="nav-btn" onClick={() => setView('definitions')}>Definitions</button>
                 <button className="nav-btn" onClick={() => setView('tips')}>Tips & Hacks</button>
                 <button className="nav-btn" onClick={() => setView('vocab')}>Vocab</button>
-                <button className="nav-btn" onClick={() => setView('idioms')}>Idioms</button>
                 {ADMIN_EMAILS.includes(userEmail) && (
                     <button className="nav-btn" onClick={() => setView('admin')} style={{ color: '#dc2626', fontWeight: 700 }}>
                         🛡️ Admin
