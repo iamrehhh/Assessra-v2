@@ -37,9 +37,14 @@
 
 @layer utilities {
     .glass {
-        background: rgba(23, 23, 23, 0.7);
+        background: rgba(255, 255, 255, 0.75);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .dark .glass {
+        background: rgba(23, 23, 23, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
@@ -3631,8 +3636,13 @@ textarea.expanded {
 
 /* ── Loading Screen Animations ── */
 @keyframes shimmer-slide {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(400%); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(400%);
+    }
 }
 
 .animate-shimmer {

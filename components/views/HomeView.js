@@ -252,7 +252,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                         onClick={() => dailyStory && setStoryModalOpen(true)}
                         className="relative group overflow-hidden rounded-[2rem] glass p-1 border border-border-main flex-shrink-0 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-border-main"
                     >
-                        <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+                        <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
                             {storyLoading ? (
                                 <div className="flex flex-col items-center justify-center gap-3">
                                     <div className="w-8 h-8 border-3 border-border-main border-t-primary rounded-full animate-spin"></div>
@@ -352,7 +352,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                         <div className="flex justify-center py-4">
                             <div className="relative flex items-center justify-center">
                                 <svg className="w-32 h-32 transform -rotate-90">
-                                    <circle className="text-white/5" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeWidth="8"></circle>
+                                    <circle className="text-black/5 dark:text-white/5" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeWidth="8"></circle>
                                     <circle
                                         className="text-primary transition-all duration-1000 ease-out"
                                         cx="64" cy="64" fill="transparent" r="58" stroke="currentColor"
@@ -393,7 +393,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                                         <span className={`text-xs font-bold w-4 text-center ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-text-muted' : index === 2 ? 'text-amber-600' : 'text-text-muted'}`}>
                                             {index + 1}
                                         </span>
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-800 text-xs font-bold ring-1 ring-white/10 shrink-0">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 dark:bg-slate-800 text-primary dark:text-white text-xs font-bold ring-1 ring-primary/20 dark:ring-white/10 shrink-0">
                                             {lbUser.nickname ? lbUser.nickname.charAt(0).toUpperCase() : '?'}
                                         </div>
                                         <span className="text-sm font-bold text-text-main truncate max-w-[100px]" title={lbUser.nickname}>
@@ -420,7 +420,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                     onClick={() => setStoryModalOpen(false)}
                 >
                     <div
-                        className="relative max-w-3xl w-full bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col"
+                        className="relative max-w-3xl w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -443,7 +443,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
                                 </div>
                             </div>
 
-                            <h2 className="text-3xl lg:text-4xl font-black text-white leading-tight font-serif italic mb-2">
+                            <h2 className="text-3xl lg:text-4xl font-black text-text-main dark:text-white leading-tight font-serif italic mb-2">
                                 {dailyStory.title}
                             </h2>
                             <p className="text-text-muted font-medium text-lg">
