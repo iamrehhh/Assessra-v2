@@ -17,9 +17,10 @@ import ProfileView from './views/ProfileView';
 import AdminView from './views/AdminView';
 import PracticeView from './views/PracticeView';
 import PastPapersView from './views/PastPapersView';
+import VocabIdiomsView from './views/VocabIdiomsView';
 import ReportErrorModal from './ReportErrorModal';
 
-const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'tips', 'profile', 'admin'];
+const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'tips', 'profile', 'admin'];
 
 function getInitialView() {
     if (typeof window === 'undefined') return 'home';
@@ -136,6 +137,8 @@ export default function Dashboard() {
                 return <ScorecardView />;
             case 'vocab':
                 return <VocabView />;
+            case 'vocab-idioms':
+                return <VocabIdiomsView />;
             case 'tips':
                 return <TipsView />;
             case 'profile':
