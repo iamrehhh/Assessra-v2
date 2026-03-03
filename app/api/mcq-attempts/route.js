@@ -19,13 +19,27 @@ export async function GET(request) {
             return Response.json({ error: 'paperId required' }, { status: 400 });
         }
 
-        const { data, error } = await supabase
+        // Try fetching with user_answers column first
+        let { data, error } = await supabase
             .from('scores')
-            .select('score, max_marks, percentage, submitted_at')
+            .select('score, max_marks, percentage, submitted_at, user_answers')
             .eq('username', session.user.email)
             .eq('paper_id', paperId)
             .order('submitted_at', { ascending: false })
             .limit(1);
+
+        // If user_answers column doesn't exist, retry without it
+        if (error && error.message && error.message.includes('user_answers')) {
+            const retryResult = await supabase
+                .from('scores')
+                .select('score, max_marks, percentage, submitted_at')
+                .eq('username', session.user.email)
+                .eq('paper_id', paperId)
+                .order('submitted_at', { ascending: false })
+                .limit(1);
+            data = retryResult.data;
+            error = retryResult.error;
+        }
 
         if (error) {
             console.error('MCQ attempt fetch error:', error);
@@ -39,6 +53,7 @@ export async function GET(request) {
                 maxMarks: data[0].max_marks,
                 percentage: data[0].percentage,
                 submittedAt: data[0].submitted_at,
+                userAnswers: data[0].user_answers || null,
             });
         }
 

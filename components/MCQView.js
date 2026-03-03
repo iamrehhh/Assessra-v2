@@ -39,6 +39,10 @@ export default function MCQView({ paperId, paperData, onBack }) {
             .then(r => r.json())
             .then(data => {
                 if (data.found) {
+                    // Restore user answers: prefer Supabase, fallback to localStorage
+                    if (data.userAnswers && typeof data.userAnswers === 'object') {
+                        setAnswers(data.userAnswers);
+                    }
                     setSubmitted(true);
                     setScore(data.score);
                     setTimeLeft(0);
@@ -119,8 +123,8 @@ export default function MCQView({ paperId, paperData, onBack }) {
         setSubmitted(true);
         // Save answers to localStorage for UI highlighting on reload
         try { localStorage.setItem(ANSWERS_KEY(paperId), JSON.stringify(answers)); } catch { }
-        // Save score to Supabase
-        if (session?.user?.email && correct !== null) {
+        // Save score and user answers to Supabase
+        if (session?.user?.email) {
             fetch('/api/scores/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -130,8 +134,9 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     paperTitle: `Economics MCQ — ${paperId}`,
                     subject: 'economics-p3',
                     questionNumber: 'all',
-                    score: correct,
+                    score: correct !== null ? correct : 0,
                     maxMarks: Math.max(1, totalQ),
+                    userAnswers: answers,
                 }),
             }).then(res => {
                 if (!res.ok) console.error('Score save failed:', res.status);

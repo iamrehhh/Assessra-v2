@@ -13,14 +13,14 @@ export async function POST(request) {
         }
 
         const body = await request.json();
-        const { paperId, paperTitle, subject, questionNumber, score, maxMarks } = body;
+        const { paperId, paperTitle, subject, questionNumber, score, maxMarks, userAnswers } = body;
         const username = session.user.email; // Force use of authenticated email
 
         if (!paperId || score === undefined || !maxMarks) {
             return Response.json({ error: 'Missing required fields.' }, { status: 400 });
         }
 
-        const { error } = await supabase.from('scores').insert({
+        const insertData = {
             username,
             paper_id: paperId,
             paper_title: paperTitle || paperId,
@@ -29,7 +29,22 @@ export async function POST(request) {
             score: Number(score),
             max_marks: Number(maxMarks),
             percentage: Math.round((score / maxMarks) * 100),
-        });
+        };
+
+        // Include user answers if provided (requires user_answers column in scores table)
+        if (userAnswers) {
+            insertData.user_answers = userAnswers;
+        }
+
+        let { error } = await supabase.from('scores').insert(insertData);
+
+        // If user_answers column doesn't exist, retry without it
+        if (error && error.message && error.message.includes('user_answers')) {
+            console.warn('user_answers column not found, saving without answers');
+            delete insertData.user_answers;
+            const retryResult = await supabase.from('scores').insert(insertData);
+            error = retryResult.error;
+        }
 
         if (error) {
             console.error('Score insert error:', error);

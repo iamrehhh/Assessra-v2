@@ -11,7 +11,7 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
-  serverExternalPackages: ['canvas'],
+  serverExternalPackages: ['canvas', 'pdf-parse', 'pdfjs-dist'],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.alias.canvas = false;
