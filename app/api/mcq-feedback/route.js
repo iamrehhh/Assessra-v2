@@ -40,12 +40,13 @@ You are an expert A-Level tutor.
 The student answered Question ${questionNumber}.
 They chose Option ${userAnswer}, and the official correct answer is Option ${correctAnswer}.
 
-Here is the text extracted from the MCQ paper (find Question ${questionNumber}):
+Here is the text extracted from the MCQ paper:
 \`\`\`
-${pdfText.substring(0, 15000)}
+${pdfText.substring(0, 80000)}
 \`\`\`
 
 Task:
+Find Question ${questionNumber} in the text above.
 Provide strictly targeted feedback. Briefly explain:
 1. Why ${correctAnswer} is the correct option.
 2. Why the other options (including the student's choice, if different) are incorrect.
@@ -58,12 +59,13 @@ You are an expert A-Level tutor.
 The student answered Question ${questionNumber}. They chose Option ${userAnswer}.
 There is no official answer key provided for this paper.
 
-Here is the text extracted from the MCQ paper (find Question ${questionNumber}):
+Here is the text extracted from the MCQ paper:
 \`\`\`
-${pdfText.substring(0, 15000)}
+${pdfText.substring(0, 80000)}
 \`\`\`
 
 Task:
+Find Question ${questionNumber} in the text above.
 First, determine the correct option (A, B, C, or D) for Question ${questionNumber} based on the text.
 Then, provide strictly targeted feedback explaining:
 1. Which option is correct and why it is correct.
