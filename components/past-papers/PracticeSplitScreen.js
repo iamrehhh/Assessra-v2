@@ -35,9 +35,10 @@ function formatTime(totalSeconds) {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function PracticeSplitScreen({ paperId }) {
+export default function PracticeSplitScreen({ paperId, backHash }) {
     const router = useRouter();
     const filename = decodeURIComponent(paperId);
+    const exitHash = backHash || '#pastpapers';
 
     // UI state
     const [pdfUrl, setPdfUrl] = useState('');
@@ -270,11 +271,11 @@ export default function PracticeSplitScreen({ paperId }) {
                         {/* Header */}
                         <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-4 shrink-0">
                             <button onClick={() => {
-                                window.location.hash = 'pastpapers';
+                                window.location.hash = exitHash.replace('#', '');
                                 router.push('/');
                             }} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold">
                                 <span className="material-symbols-outlined text-base">arrow_back</span>
-                                Exit
+                                Back to Papers
                             </button>
 
                             {insertFilename && (
@@ -313,11 +314,11 @@ export default function PracticeSplitScreen({ paperId }) {
                         <div className="flex items-center gap-4">
                             {isFullWidthMode && (
                                 <button onClick={() => {
-                                    window.location.hash = 'pastpapers';
+                                    window.location.hash = exitHash.replace('#', '');
                                     router.push('/');
                                 }} className="flex items-center gap-1 text-text-muted hover:text-text-main transition-colors text-sm font-bold border-r border-border-main pr-4">
                                     <span className="material-symbols-outlined text-base">arrow_back</span>
-                                    Exit
+                                    Back to Papers
                                 </button>
                             )}
                             <h2 className="text-lg font-black text-text-main flex items-center gap-2">

@@ -4,17 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ScorecardView from './ScorecardView';
 
-export default function PastPapersView() {
+export default function PastPapersView({ initialLevel, initialSubject, initialScorecard, setView }) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({ levels: [], subjectsByLevel: {}, documents: [] });
     const [error, setError] = useState('');
 
-    // Selection State
-    const [selectedLevel, setSelectedLevel] = useState(null);
-    const [selectedSubject, setSelectedSubject] = useState(null);
+    // Selection State — initialize from URL hash params
+    const [selectedLevel, setSelectedLevel] = useState(initialLevel || null);
+    const [selectedSubject, setSelectedSubject] = useState(initialSubject || null);
     const [selectedPaperTab, setSelectedPaperTab] = useState(null);
-    const [showScorecard, setShowScorecard] = useState(false);
+    const [showScorecard, setShowScorecard] = useState(initialScorecard || false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -31,6 +31,22 @@ export default function PastPapersView() {
         };
         fetchData();
     }, []);
+
+    // Sync internal state when props change (browser back/forward)
+    useEffect(() => {
+        setSelectedLevel(initialLevel || null);
+        setSelectedSubject(initialSubject || null);
+        setShowScorecard(initialScorecard || false);
+    }, [initialLevel, initialSubject, initialScorecard]);
+
+    // Helper to navigate and update URL hash
+    const navigate = (level, subject, extra) => {
+        const parts = ['pastpapers'];
+        if (level) parts.push(level);
+        if (subject) parts.push(subject);
+        if (extra) parts.push(extra);
+        setView(parts.join('/'));
+    };
 
     // Helper to format strings like 'alevel' to 'A Level'
     const formatLabel = (str) => {
@@ -82,7 +98,7 @@ export default function PastPapersView() {
                         return (
                             <button
                                 key={cat}
-                                onClick={() => isAvailable && setSelectedLevel(cat)}
+                                onClick={() => isAvailable && navigate(cat)}
                                 disabled={!isAvailable}
                                 className={`p-8 rounded-3xl border text-center transition-all ${isAvailable ? 'glass border-border-main hover:border-primary/50 hover:bg-black/5 dark:bg-white/5 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10' : 'bg-black/5 dark:bg-white/5 border-border-main opacity-50 cursor-not-allowed'}`}
                             >
@@ -113,7 +129,7 @@ export default function PastPapersView() {
 
         return (
             <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-                <button onClick={() => setSelectedLevel(null)} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm mb-6">
+                <button onClick={() => navigate(null)} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm mb-6">
                     <span className="material-symbols-outlined text-base">arrow_back</span>
                     Change Level
                 </button>
@@ -143,7 +159,7 @@ export default function PastPapersView() {
                             return (
                                 <button
                                     key={subject}
-                                    onClick={() => setSelectedSubject(subject)}
+                                    onClick={() => navigate(selectedLevel, subject)}
                                     className="glass p-6 rounded-2xl border border-border-main hover:border-primary/40 hover:bg-black/5 dark:bg-white/5 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 group"
                                 >
                                     <h3 className="text-lg font-bold text-text-main mb-2 group-hover:text-primary transition-colors">{formatLabel(subject)}</h3>
@@ -205,11 +221,11 @@ export default function PastPapersView() {
     return (
         <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
             <div className="flex items-center gap-4 text-text-muted font-medium text-sm mb-6 bg-black/5 dark:bg-white/5 border border-border-main w-fit rounded-xl p-1 px-3">
-                <button onClick={() => { setSelectedLevel(null); setSelectedSubject(null); setSelectedPaperTab(null); }} className="hover:text-text-main flex items-center transition-colors">
+                <button onClick={() => { navigate(null); }} className="hover:text-text-main flex items-center transition-colors">
                     Levels
                 </button>
                 <span className="material-symbols-outlined text-sm opacity-50">chevron_right</span>
-                <button onClick={() => { setSelectedSubject(null); setSelectedPaperTab(null); }} className="hover:text-text-main flex items-center transition-colors">
+                <button onClick={() => { navigate(selectedLevel); }} className="hover:text-text-main flex items-center transition-colors">
                     {formatLabel(selectedLevel)}
                 </button>
                 <span className="material-symbols-outlined text-sm opacity-50">chevron_right</span>
@@ -224,7 +240,7 @@ export default function PastPapersView() {
                     <p className="text-text-muted mt-2">Select a paper to start practicing in the split-screen view.</p>
                 </div>
                 <button
-                    onClick={() => setShowScorecard(true)}
+                    onClick={() => navigate(selectedLevel, selectedSubject, 'scorecard')}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-primary text-background-dark hover:bg-white hover:-translate-y-0.5 shadow-lg shadow-primary/10 transition-all"
                 >
                     <span className="material-symbols-outlined text-lg">bar_chart</span>
@@ -327,7 +343,7 @@ export default function PastPapersView() {
                 <div className="fixed inset-0 z-[9999] bg-bg-base overflow-y-auto p-6 lg:p-12 animate-fade-in">
                     <div className="max-w-4xl mx-auto bg-[#1e1e1e] rounded-3xl p-8 border border-border-main shadow-2xl relative">
                         <button
-                            onClick={() => setShowScorecard(false)}
+                            onClick={() => navigate(selectedLevel, selectedSubject)}
                             className="absolute top-6 right-6 flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold bg-black/5 dark:bg-white/5 w-fit px-4 py-2 rounded-xl"
                         >
                             <span className="material-symbols-outlined text-sm">close</span>

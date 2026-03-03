@@ -22,15 +22,24 @@ import ReportErrorModal from './ReportErrorModal';
 
 const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'tips', 'profile', 'admin'];
 
+function parseHash() {
+    if (typeof window === 'undefined') return { view: 'home', params: [] };
+    const raw = window.location.hash.replace('#', '');
+    if (!raw) return { view: 'home', params: [] };
+    const parts = raw.split('/');
+    const baseView = parts[0];
+    if (!VALID_VIEWS.includes(baseView)) return { view: 'home', params: [] };
+    return { view: baseView, params: parts.slice(1) };
+}
+
 function getInitialView() {
-    if (typeof window === 'undefined') return 'home';
-    const hash = window.location.hash.replace('#', '');
-    return VALID_VIEWS.includes(hash) ? hash : 'home';
+    return parseHash().view;
 }
 
 export default function Dashboard() {
     const { data: session } = useSession();
     const [view, setViewState] = useState(getInitialView);
+    const [hashParams, setHashParams] = useState(() => parseHash().params);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -38,15 +47,20 @@ export default function Dashboard() {
 
     // Wrap setView to also update the URL hash
     const setView = useCallback((newView) => {
-        setViewState(newView);
+        const parts = newView.split('/');
+        const baseView = parts[0];
+        const params = parts.slice(1);
+        setViewState(baseView);
+        setHashParams(params);
         window.location.hash = newView === 'home' ? '' : newView;
     }, []);
 
     // Listen for browser back/forward navigation
     useEffect(() => {
         const onHashChange = () => {
-            const hash = window.location.hash.replace('#', '');
-            setViewState(VALID_VIEWS.includes(hash) ? hash : 'home');
+            const { view: v, params: p } = parseHash();
+            setViewState(v);
+            setHashParams(p);
         };
         window.addEventListener('hashchange', onHashChange);
         return () => window.removeEventListener('hashchange', onHashChange);
@@ -152,7 +166,12 @@ export default function Dashboard() {
             case 'practice':
                 return <PracticeView />;
             case 'pastpapers':
-                return <PastPapersView />;
+                return <PastPapersView
+                    initialLevel={hashParams[0] || null}
+                    initialSubject={hashParams[1] || null}
+                    initialScorecard={hashParams[2] === 'scorecard'}
+                    setView={setView}
+                />;
             case 'scorecard':
                 return <ScorecardView />;
             case 'vocab':

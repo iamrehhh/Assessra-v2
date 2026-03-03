@@ -14,6 +14,20 @@ const MCQView = dynamic(
     { ssr: false }
 );
 
+// Infer the back URL from the paperId so we can return to the right subject
+function getBackHash(paperId) {
+    const decoded = decodeURIComponent(paperId);
+    // paperId format: "subject_season_year_variant"  e.g. "business_s24_qp_41"
+    // or "general_paper_s24_qp_11"
+    let subject = '';
+    if (decoded.startsWith('general_paper')) subject = 'general_paper';
+    else if (decoded.startsWith('economics')) subject = 'economics';
+    else if (decoded.startsWith('business')) subject = 'business';
+
+    if (subject) return `#pastpapers/alevel/${subject}`;
+    return '#pastpapers';
+}
+
 export default function PastPaperPracticePage() {
     const params = useParams();
     const router = useRouter();
@@ -21,16 +35,11 @@ export default function PastPaperPracticePage() {
     if (!params.paperId) return null;
 
     const paperId = decodeURIComponent(params.paperId);
-
-    console.log('--- DEBUG PastPaperPracticePage ---');
-    console.log('params.paperId:', params.paperId);
-    console.log('decoded paperId:', paperId);
-    console.log('allMCQData keys:', Object.keys(allMCQData));
-    console.log('is MCQ?', !!allMCQData[paperId]);
+    const backHash = getBackHash(params.paperId);
 
     if (allMCQData[paperId]) {
-        return <MCQView paperId={paperId} paperData={allMCQData} onBack={() => router.push('/#pastpapers')} />;
+        return <MCQView paperId={paperId} paperData={allMCQData} onBack={() => router.push('/' + backHash)} />;
     }
 
-    return <PracticeSplitScreen paperId={params.paperId} />;
+    return <PracticeSplitScreen paperId={params.paperId} backHash={backHash} />;
 }
