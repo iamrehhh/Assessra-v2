@@ -77,17 +77,37 @@ export default function Dashboard() {
 
     if (isLoading) {
         return (
-            <div className="fixed inset-0 bg-bg-base flex flex-col items-center justify-center z-50">
-                <div className="flex flex-col items-center gap-6 animate-fade-in">
-                    <div className="relative">
-                        <div className="absolute inset-0 w-14 h-14 rounded-2xl bg-primary/30 blur-xl animate-pulse" />
-                        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-border-main shadow-2xl">
-                            <img src="/logo.jpg" alt="Assessra" className="w-full h-full object-cover" />
+            <div className="fixed inset-0 bg-bg-base flex flex-col items-center justify-center z-50 overflow-hidden">
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    @keyframes fastShimmer {
+                        0% { transform: translateX(-150%); }
+                        100% { transform: translateX(150%); }
+                    }
+                `}} />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(var(--primary-rgb),0.05)_0%,transparent_100%)] pointer-events-none" />
+                <div className="flex flex-col items-center gap-8 animate-[fade-in_0.2s_ease-out] z-10 -mt-10">
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full animate-pulse" style={{ animationDuration: '2s' }} />
+                        <div className="absolute -inset-4 border border-primary/20 rounded-[2.5rem] animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+
+                        <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[2rem] bg-white/60 dark:bg-black/30 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-2xl flex items-center justify-center p-6 sm:p-7 transform transition-transform duration-500 hover:scale-105">
+                            <img
+                                src="/new-logo.png"
+                                alt="Assessra Logo"
+                                className="w-full h-full object-contain drop-shadow-xl animate-pulse"
+                                style={{ animationDuration: '1.5s' }}
+                            />
                         </div>
                     </div>
-                    <p className="text-sm font-bold text-text-muted tracking-wide">Loading your profile...</p>
-                    <div className="w-40 h-1 rounded-full bg-border-main overflow-hidden">
-                        <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer" />
+
+                    <div className="flex flex-col items-center gap-4">
+                        <p className="text-xs sm:text-sm font-black text-text-main tracking-[0.2em] uppercase opacity-90 animate-pulse" style={{ animationDuration: '1.5s' }}>
+                            Loading Profile
+                        </p>
+                        <div className="w-48 sm:w-56 h-1.5 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden relative isolate">
+                            <div className="absolute top-0 bottom-0 w-2/3 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent" style={{ animation: 'fastShimmer 1.2s infinite ease-in-out' }} />
+                        </div>
                     </div>
                 </div>
             </div>
