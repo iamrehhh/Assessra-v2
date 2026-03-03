@@ -77,13 +77,14 @@ Instructions:
 1. Provide a realistic mark score. ${totalMarks > 0 ? `It must be out of ${totalMarks} (e.g., "3/${totalMarks} Marks").` : `(e.g. "3/4 Marks"). Estimate total marks based on the context or question depth if not explicitly stated.`} Be strict as per Cambridge standards.
 2. Provide a breakdown of what they got right, referencing specific points in the mark scheme.
 3. Provide constructive examiner feedback on what was missing or poorly explained.
-4. Construct a perfect Model Answer that would obtain full marks.
+4. Construct a perfect Model Answer that would obtain full marks. CRITICAL: Use clear paragraph breaks (\\n\\n) for readability instead of a single wall of text.
+5. FOR CALCULATIONS: If the topic involves math or calculations, you MUST evaluate step-by-step. Award partial marks for correct workings (Own Figure Rule) even if the final answer is wrong. In your Model Answer, show the detailed step-by-step working clearly.
 
 Return the result STRICTLY as a JSON object with these exact keys:
 - "score" (string, e.g. "3/4 Marks")
-- "breakdown" (string paragraphs)
-- "feedback" (string paragraphs)
-- "modelAnswer" (string paragraphs)
+- "breakdown" (string paragraphs, use \\n\\n for breaks)
+- "feedback" (string paragraphs, use \\n\\n for breaks)
+- "modelAnswer" (string paragraphs, use \\n\\n for breaks)
 `;
 
         const response = await openai.chat.completions.create({
