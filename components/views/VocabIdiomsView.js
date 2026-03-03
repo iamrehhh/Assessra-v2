@@ -396,20 +396,25 @@ export default function VocabIdiomsView() {
                                 )}
                             </button>
                         ) : (
-                            <div className={`p - 5 rounded - 2xl border animate - fade -in ${evaluationData.correct ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'} `}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-2xl">{evaluationData.correct ? '✅' : '❌'}</span>
-                                    <span className={`font - bold text - lg ${evaluationData.correct ? 'text-green-500' : 'text-red-500'} `}>
+                            <div className={`p-6 sm:p-8 rounded-[2rem] border-2 shadow-sm animate-fade-in ${evaluationData.correct ? 'bg-green-500/5 border-green-500/30 shadow-green-500/5' : 'bg-red-500/5 border-red-500/30 shadow-red-500/5'} `}>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0 ${evaluationData.correct ? 'bg-green-500 shadow-md shadow-green-500/30' : 'bg-red-500 shadow-md shadow-red-500/30'}`}>
+                                        <span className="material-symbols-outlined text-lg">
+                                            {evaluationData.correct ? 'check' : 'close'}
+                                        </span>
+                                    </span>
+                                    <span className={`font-black tracking-tight text-xl ${evaluationData.correct ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} `}>
                                         {evaluationData.correct ? 'Well used!' : 'Needs improvement'}
                                     </span>
                                 </div>
-                                <p className="text-text-main text-sm">{evaluationData.feedback}</p>
+                                <p className="text-text-main text-base sm:text-lg leading-relaxed">{evaluationData.feedback}</p>
 
                                 <button
                                     onClick={nextMistake}
-                                    className="mt-6 w-full py-3.5 bg-text-main text-bg-base font-bold rounded-xl hover:opacity-90 transition-opacity"
+                                    className={`mt-8 w-full py-4 text-white font-bold rounded-2xl shadow-md hover:-translate-y-1 transition-all flex items-center justify-center gap-2 ${evaluationData.correct ? 'bg-green-600 hover:bg-green-500 shadow-green-600/30' : 'bg-red-600 hover:bg-red-500 shadow-red-600/30'}`}
                                 >
-                                    {currentMistakeIndex === mistakes.length - 1 ? 'Finish Review' : 'Next Item'}
+                                    <span>{currentMistakeIndex === mistakes.length - 1 ? 'Finish Review' : 'Next Item'}</span>
+                                    <span className="material-symbols-outlined text-sm">{currentMistakeIndex === mistakes.length - 1 ? 'done_all' : 'arrow_forward'}</span>
                                 </button>
                             </div>
                         )}
