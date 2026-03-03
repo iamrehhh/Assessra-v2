@@ -20,7 +20,7 @@ function getBackHash(paperId) {
     // paperId format: "subject_season_year_variant"  e.g. "business_s24_qp_41"
     // or "general_paper_s24_qp_11"
     let subject = '';
-    if (decoded.startsWith('general_paper')) subject = 'general_paper';
+    if (decoded.startsWith('general_paper') || decoded.startsWith('gp_')) subject = 'general_paper';
     else if (decoded.startsWith('economics')) subject = 'economics';
     else if (decoded.startsWith('business')) subject = 'business';
 

@@ -250,7 +250,7 @@ export default function PracticeSplitScreen({ paperId, backHash }) {
     const timerUrgent = timerDuration && timerSeconds < timerDuration * 0.1; // last 10%
     const timerWarning = timerDuration && timerSeconds < timerDuration * 0.25; // last 25%
 
-    const isFullWidthMode = filename.includes('general_paper');
+    const isFullWidthMode = filename.includes('general_paper') || filename.startsWith('gp_');
 
     if (loading) {
         return (
