@@ -70,8 +70,15 @@ export default function MCQView({ paperId, paperData, onBack }) {
             const data = await res.json();
             if (data.feedback) {
                 setFeedbacks(prev => ({ ...prev, [qIdx]: data.feedback }));
+            } else if (data.error) {
+                alert(`AI Explanation Error: ${data.error}`);
+            } else {
+                alert('AI Explanation failed to load. Please try again.');
             }
-        } catch (e) { console.error('Error fetching feedback', e); }
+        } catch (e) {
+            console.error('Error fetching feedback', e);
+            alert('Failed to connect to the server. Please try again or check your internet connection.');
+        }
         setLoadingFeedbacks(prev => ({ ...prev, [qIdx]: false }));
     };
 

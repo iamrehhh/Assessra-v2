@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 
+export const maxDuration = 60; // Prevent Vercel hobby 10s timeout on heavy PDF + LLM generation
+
 export async function POST(req) {
     let parser;
     try {
