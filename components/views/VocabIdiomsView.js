@@ -36,6 +36,7 @@ export default function VocabIdiomsView() {
     // Saved Sets
     const [savedSets, setSavedSets] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [viewingSet, setViewingSet] = useState(null);
 
     const loadSavedSets = async () => {
         try {
@@ -108,6 +109,16 @@ export default function VocabIdiomsView() {
             setMistakes(prev => [...prev, currentItem]);
         }
 
+        setCurrentSet(prev => {
+            const newSet = [...prev];
+            newSet[currentIndex] = {
+                ...newSet[currentIndex],
+                userAnswer: option,
+                isCorrect
+            };
+            return newSet;
+        });
+
         const term = activeTab === 'vocab' ? currentItem.word : currentItem.idiom;
         const meaning = currentItem.meaning;
 
@@ -121,6 +132,12 @@ export default function VocabIdiomsView() {
             if (res.ok) {
                 const data = await res.json();
                 setAiData(data);
+
+                setCurrentSet(prev => {
+                    const newSet = [...prev];
+                    newSet[currentIndex] = { ...newSet[currentIndex], aiData: data };
+                    return newSet;
+                });
             }
         } catch (error) {
             console.error(error);
@@ -204,6 +221,21 @@ export default function VocabIdiomsView() {
             if (res.ok) {
                 const data = await res.json();
                 setEvaluationData(data);
+
+                setCurrentSet(prev => {
+                    const newSet = [...prev];
+                    const itemIndex = newSet.findIndex(item =>
+                        (activeTab === 'vocab' ? item.word === currentMistake.word : item.idiom === currentMistake.idiom)
+                    );
+                    if (itemIndex !== -1) {
+                        newSet[itemIndex] = {
+                            ...newSet[itemIndex],
+                            userSentence: userSentence,
+                            sentenceEvaluation: data
+                        };
+                    }
+                    return newSet;
+                });
             }
         } catch (error) {
             console.error("Sentence evaluation failed", error);
@@ -284,58 +316,161 @@ export default function VocabIdiomsView() {
                     </div>
                 </div>
 
-                {renderTabs()}
-
-                {activeTab === 'saved' ? (
-                    <div className="space-y-4">
-                        {savedSets.length === 0 ? (
-                            <div className="glass p-10 rounded-3xl border border-border-main text-center">
-                                <p className="text-text-muted font-medium">No saved sets yet.</p>
-                                <p className="text-text-muted text-sm mt-1">Complete a practice session and click "Save Set" to see it here.</p>
+                {viewingSet ? (
+                    <div className="space-y-6 animate-fade-in relative">
+                        <div className="flex items-center justify-between mb-8">
+                            <button
+                                onClick={() => setViewingSet(null)}
+                                className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl"
+                            >
+                                <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                Back to Saved Sets
+                            </button>
+                            <div className="text-sm font-bold text-text-main tracking-widest uppercase">
+                                {viewingSet.score}/{viewingSet.max_marks} Score
                             </div>
-                        ) : (
-                            savedSets.map(set => (
-                                <div key={set.id} className="glass p-6 rounded-2xl border border-border-main flex items-center justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase tracking-wider">{set.subject}</span>
-                                            <span className="text-text-muted text-sm">{new Date(set.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                        <p className="font-bold text-text-main line-clamp-2 pr-4">
-                                            {set.practice_data && set.practice_data.map ? set.practice_data.map(i => i.word || i.idiom).join(', ') : 'Practice Set'}
-                                        </p>
+                        </div>
+
+                        {viewingSet.practice_data && viewingSet.practice_data.map((item, idx) => {
+                            const term = item.word || item.idiom;
+                            // For backward compatibility on old sets:
+                            const isCorrect = item.isCorrect !== undefined ? item.isCorrect : true;
+
+                            return (
+                                <div key={idx} className={`glass p-6 sm:p-8 rounded-[2rem] border-2 shadow-sm ${isCorrect ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                                    <div className="flex justify-between items-start gap-4 mb-6">
+                                        <h3 className="text-2xl font-black text-text-main font-serif italic">"{term}"</h3>
+                                        {item.isCorrect !== undefined && (
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shrink-0 ${isCorrect ? 'bg-green-500 shadow-sm shadow-green-500/30' : 'bg-red-500 shadow-sm shadow-red-500/30'}`}>
+                                                <span className="material-symbols-outlined text-sm">{isCorrect ? 'check' : 'close'}</span>
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <div className="text-xl font-black text-text-main">{set.score}/{set.max_marks}</div>
-                                        <div className="text-xs text-text-muted mt-1 uppercase tracking-widest font-bold">Score</div>
+
+                                    <div className="space-y-5">
+                                        <div>
+                                            <span className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1 block">Meaning</span>
+                                            <p className="text-text-main font-medium">{item.meaning}</p>
+                                        </div>
+
+                                        {item.userAnswer && (
+                                            <div>
+                                                <span className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1 block">Your Answer</span>
+                                                <p className={`font-medium ${isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{item.userAnswer}</p>
+                                            </div>
+                                        )}
+
+                                        {item.aiData && (
+                                            <div className="bg-black/5 dark:bg-white/5 rounded-xl p-5 space-y-4">
+                                                <div>
+                                                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-xs">format_quote</span>
+                                                        Example
+                                                    </span>
+                                                    <p className="text-text-main italic">"{item.aiData.example}"</p>
+                                                </div>
+                                                {item.aiData.synonyms && (
+                                                    <div>
+                                                        <span className="text-xs font-bold text-text-muted uppercase tracking-widest mb-2 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-xs">link</span>
+                                                            Synonyms
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {item.aiData.synonyms.map((syn, synIdx) => (
+                                                                <span key={synIdx} className="px-3 py-1 bg-white/50 dark:bg-black/20 border border-border-main rounded-lg text-xs font-semibold text-text-main shadow-sm">
+                                                                    {syn}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {item.userSentence && (
+                                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 space-y-3">
+                                                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest block flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-xs">edit_note</span>
+                                                    Your Practice Sentence
+                                                </span>
+                                                <p className="text-text-main italic">"{item.userSentence}"</p>
+
+                                                {item.sentenceEvaluation && (
+                                                    <div className={`mt-3 pt-3 border-t border-amber-500/20 flex items-start gap-2 ${item.sentenceEvaluation.correct ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                        <span className="material-symbols-outlined text-sm mt-0.5">{item.sentenceEvaluation.correct ? 'check_circle' : 'cancel'}</span>
+                                                        <p className="text-sm font-medium">{item.sentenceEvaluation.feedback}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            ))
-                        )}
+                            );
+                        })}
                     </div>
                 ) : (
-                    <div className="glass p-10 rounded-3xl border border-border-main text-center shadow-sm">
-                        <div className="w-20 h-20 bg-primary/10 text-primary mx-auto rounded-full flex items-center justify-center mb-6 ring-8 ring-primary/5">
-                            <span className="material-symbols-outlined text-4xl">
-                                {activeTab === 'vocab' ? 'spellcheck' : 'forum'}
-                            </span>
-                        </div>
-                        <h2 className="text-2xl font-bold text-text-main mb-3">
-                            {activeTab === 'vocab' ? 'Vocabulary Practice' : 'Idioms Practice'}
-                        </h2>
-                        <ul className="text-text-muted max-w-lg mx-auto mb-8 leading-relaxed list-disc text-left pl-10 space-y-2">
-                            <li>5 Multiple Choice Questions.</li>
-                            <li>AI generates examples and synonyms for every word.</li>
-                            <li>If you make a mistake, you'll need to construct a sentence using the word to reinforce learning.</li>
-                        </ul>
-                        <button
-                            onClick={startPractice}
-                            className="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_12px_25px_rgba(34,197,94,0.4)] hover:-translate-y-1 transition-all flex items-center gap-2 mx-auto"
-                        >
-                            <span>Start Practice</span>
-                            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                        </button>
-                    </div>
+                    <>
+                        {renderTabs()}
+
+                        {activeTab === 'saved' ? (
+                            <div className="space-y-4">
+                                {savedSets.length === 0 ? (
+                                    <div className="glass p-10 rounded-3xl border border-border-main text-center">
+                                        <p className="text-text-muted font-medium">No saved sets yet.</p>
+                                        <p className="text-text-muted text-sm mt-1">Complete a practice session and click "Save Set" to see it here.</p>
+                                    </div>
+                                ) : (
+                                    savedSets.map(set => (
+                                        <div key={set.id} className="glass p-6 rounded-2xl border border-border-main flex items-center justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase tracking-wider">{set.subject}</span>
+                                                    <span className="text-text-muted text-sm">{new Date(set.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="font-bold text-text-main line-clamp-2 pr-4">
+                                                    {set.practice_data && set.practice_data.map ? set.practice_data.map(i => i.word || i.idiom).join(', ') : 'Practice Set'}
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <div className="text-xl font-black text-text-main">{set.score}/{set.max_marks}</div>
+                                                <div className="flex gap-2 items-center justify-end mt-2">
+                                                    <button
+                                                        onClick={() => setViewingSet(set)}
+                                                        className="px-4 py-1.5 bg-text-main text-bg-base text-xs font-bold rounded-lg hover:opacity-90 transition-opacity"
+                                                    >
+                                                        View
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : (
+                            <div className="glass p-10 rounded-3xl border border-border-main text-center shadow-sm">
+                                <div className="w-20 h-20 bg-primary/10 text-primary mx-auto rounded-full flex items-center justify-center mb-6 ring-8 ring-primary/5">
+                                    <span className="material-symbols-outlined text-4xl">
+                                        {activeTab === 'vocab' ? 'spellcheck' : 'forum'}
+                                    </span>
+                                </div>
+                                <h2 className="text-2xl font-bold text-text-main mb-3">
+                                    {activeTab === 'vocab' ? 'Vocabulary Practice' : 'Idioms Practice'}
+                                </h2>
+                                <ul className="text-text-muted max-w-lg mx-auto mb-8 leading-relaxed list-disc text-left pl-10 space-y-2">
+                                    <li>5 Multiple Choice Questions.</li>
+                                    <li>AI generates examples and synonyms for every word.</li>
+                                    <li>If you make a mistake, you'll need to construct a sentence using the word to reinforce learning.</li>
+                                </ul>
+                                <button
+                                    onClick={startPractice}
+                                    className="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_12px_25px_rgba(34,197,94,0.4)] hover:-translate-y-1 transition-all flex items-center gap-2 mx-auto"
+                                >
+                                    <span>Start Practice</span>
+                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         );
