@@ -4,12 +4,11 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { callLLM } from '@/lib/llm';
 import fs from 'fs';
 import path from 'path';
-import { PDFParse } from 'pdf-parse';
+import { extractText, getDocumentProxy } from 'unpdf';
 
 export const maxDuration = 60; // Prevent Vercel hobby 10s timeout on heavy PDF + LLM generation
 
 export async function POST(req) {
-    let parser;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -30,10 +29,10 @@ export async function POST(req) {
             return NextResponse.json({ error: `PDF not found at path: ${decodedPdfPath}` }, { status: 404 });
         }
 
-        const dataBuffer = fs.readFileSync(safePath);
-        parser = new PDFParse({ data: dataBuffer });
-        const data = await parser.getText();
-        const pdfText = data.text;
+        const dataBuffer = new Uint8Array(fs.readFileSync(safePath));
+        const pdf = await getDocumentProxy(dataBuffer);
+        const { text } = await extractText(pdf);
+        const pdfText = String(text);
 
         let prompt = '';
         if (correctAnswer) {
@@ -85,9 +84,5 @@ Do NOT provide a full model answer for the paper. Be concise, direct, and clear.
     } catch (e) {
         console.error('MCQ Feedback Error:', e);
         return NextResponse.json({ error: 'Failed to generate feedback' }, { status: 500 });
-    } finally {
-        if (parser) {
-            await parser.destroy();
-        }
     }
 }
