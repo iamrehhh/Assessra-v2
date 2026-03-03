@@ -27,7 +27,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     pdfPath: paper.pdf,
                     questionNumber: qIdx + 1,
                     userAnswer: userAnswer || 'None left blank',
-                    correctAnswer
+                    correctAnswer: correctAnswer || null
                 })
             });
             const data = await res.json();
@@ -70,14 +70,15 @@ export default function MCQView({ paperId, paperData, onBack }) {
         clearInterval(timerRef.current);
         const ansList = paper.answers || [];
         const totalQ = ansList.length || (paper.questions ? paper.questions.length : 0);
-        let correct = 0;
+        let correct = null;
         if (ansList.length > 0) {
+            correct = 0;
             ansList.forEach((ans, i) => { if (answers[i] === ans) correct++; });
+            setScore(correct);
         }
-        setScore(correct);
         setSubmitted(true);
         // Silently save to MongoDB
-        if (session?.user?.email) {
+        if (session?.user?.email && correct !== null) {
             fetch('/api/scores/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -111,7 +112,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 </div>
                 <div className={`flex items-center gap-2 text-xl font-bold font-mono ${submitted ? 'text-green-500' : (timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-text-main')}`}>
                     <span className="material-symbols-outlined text-sm">schedule</span>
-                    {submitted ? `✓ ${score}/${(paper.answers || paper.questions || []).length}` : timerStr}
+                    {submitted ? (paper.answers && paper.answers.length > 0 ? `✓ ${score}/${paper.answers.length}` : '✓ Finished') : timerStr}
                 </div>
             </div>
 
@@ -130,8 +131,14 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 <div className="flex-[4.5] h-full overflow-y-auto p-6 bg-bg-card dark:bg-[#1e1e1e]">
                     {submitted && score !== null && (
                         <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
-                            <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || paper.questions || []).length)) * 100)}%</div>
-                            <div className="text-lg text-text-muted font-bold">Score: {score} / {(paper.answers || paper.questions || []).length}</div>
+                            <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || []).length)) * 100)}%</div>
+                            <div className="text-lg text-text-muted font-bold">Score: {score} / {(paper.answers || []).length}</div>
+                        </div>
+                    )}
+                    {submitted && (!paper.answers || paper.answers.length === 0) && (
+                        <div className="text-center p-6 bg-purple-500/10 border border-purple-500/30 rounded-2xl mb-8">
+                            <div className="text-2xl font-black text-purple-400 mb-2">Practice Submitted</div>
+                            <div className="text-sm font-bold text-purple-400/80">No official marking scheme is available for this paper.<br />Use the AI Solution buttons below to verify your answers!</div>
                         </div>
                     )}
 
@@ -174,13 +181,13 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                                     );
                                                 })}
                                             </div>
-                                            {submitted && !isCorrect && correctAns && (
+                                            {submitted && (
                                                 <button
                                                     onClick={() => getFeedback(i, correctAns, userAns)}
-                                                    className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 w-20"
+                                                    className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 whitespace-nowrap"
                                                     disabled={loadingFeedbacks[i]}
                                                 >
-                                                    {loadingFeedbacks[i] ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span> : '✨ Why?'}
+                                                    {loadingFeedbacks[i] ? <span className="material-symbols-outlined text-sm animate-spin">refresh</span> : (correctAns && isCorrect ? '✨ AI Explanation' : (correctAns ? '✨ Why?' : '✨ AI Solution'))}
                                                 </button>
                                             )}
                                         </div>
