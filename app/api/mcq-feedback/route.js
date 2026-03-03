@@ -4,9 +4,10 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { callLLM } from '@/lib/llm';
 import fs from 'fs';
 import path from 'path';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 export async function POST(req) {
+    let parser;
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -28,7 +29,8 @@ export async function POST(req) {
         }
 
         const dataBuffer = fs.readFileSync(safePath);
-        const data = await pdfParse(dataBuffer);
+        parser = new PDFParse({ data: dataBuffer });
+        const data = await parser.getText();
         const pdfText = data.text;
 
         let prompt = '';
@@ -79,5 +81,9 @@ Do NOT provide a full model answer for the paper. Be concise, direct, and clear.
     } catch (e) {
         console.error('MCQ Feedback Error:', e);
         return NextResponse.json({ error: 'Failed to generate feedback' }, { status: 500 });
+    } finally {
+        if (parser) {
+            await parser.destroy();
+        }
     }
 }
