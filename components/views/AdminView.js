@@ -10,6 +10,7 @@ export default function AdminView() {
     const [practiceLogs, setPracticeLogs] = useState([]);
     const [activeUsersList, setActiveUsersList] = useState([]);
     const [reports, setReports] = useState([]);
+    const [bookCompletions, setBookCompletions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +32,7 @@ export default function AdminView() {
         else if (tab === 'practice') fetchPracticeLogs();
         else if (tab === 'active') fetchActiveUsers();
         else if (tab === 'reports') fetchReports();
+        else if (tab === 'book') fetchBookCompletions();
         fetchNotification();
     }, [tab]);
 
@@ -119,6 +121,16 @@ export default function AdminView() {
             const data = await res.json();
             setReports(data.reports || []);
         } catch { setReports([]); }
+        setLoading(false);
+    };
+
+    const fetchBookCompletions = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/book-completions');
+            const data = await res.json();
+            setBookCompletions(data.completions || []);
+        } catch { setBookCompletions([]); }
         setLoading(false);
     };
 
@@ -391,6 +403,9 @@ export default function AdminView() {
                 </button>
                 <button style={styles.tab(tab === 'reports')} onClick={() => { setTab('reports'); setSearchTerm(''); }}>
                     🚨 Reports
+                </button>
+                <button style={styles.tab(tab === 'book')} onClick={() => { setTab('book'); setSearchTerm(''); }}>
+                    📖 Book Club
                 </button>
             </div>
 
@@ -757,6 +772,48 @@ export default function AdminView() {
                     </div>
                 )
             ) : null}
+
+            {/* Book Completions Tab */}
+            {tab === 'book' && !loading && (
+                bookCompletions.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <p style={{ fontSize: '2rem', marginBottom: '8px' }}>📖</p>
+                        <p style={{ fontWeight: 600 }}>No one has completed the book yet</p>
+                        <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '8px' }}>Users who finish reading the current book will appear here.</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <div style={{ marginBottom: '16px', padding: '16px 20px', background: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                            <span style={{ fontWeight: 700, color: '#166534' }}>🎉 {bookCompletions.length} user{bookCompletions.length > 1 ? 's have' : ' has'} completed the book!</span>
+                            <span style={{ color: '#4ade80', marginLeft: '8px', fontSize: '0.85rem' }}>You can now upload a new book for them.</span>
+                        </div>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>User Email</th>
+                                    <th style={styles.th}>Book</th>
+                                    <th style={styles.th}>Completed At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {bookCompletions.map((c, i) => (
+                                    <tr key={i} style={{ transition: 'background 0.15s' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                        <td style={{ ...styles.td, fontWeight: 600 }}>{c.user_email}</td>
+                                        <td style={styles.td}>
+                                            <span style={styles.pill('green')}>{c.book_title || 'Nexus'}</span>
+                                        </td>
+                                        <td style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>
+                                            {c.completed_at ? new Date(c.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' at ' + new Date(c.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )
+            )}
 
             {/* Practice Drill-down Modal */}
             {practiceModalOpen && selectedUserLogs && (

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import bookData from '@/data/book/nexus.json';
 
 export default function HomeView({ setView, setSelectedSubject }) {
     const { data: session } = useSession();
@@ -17,10 +18,17 @@ export default function HomeView({ setView, setSelectedSubject }) {
     });
     const [activeUsers, setActiveUsers] = useState(1);
 
-    // Daily Story State
-    const [dailyStory, setDailyStory] = useState(null);
-    const [storyLoading, setStoryLoading] = useState(true);
-    const [storyModalOpen, setStoryModalOpen] = useState(false);
+    // Book Reader State
+    const [bookChapterIndex, setBookChapterIndex] = useState(0);
+    const [bookLoading, setBookLoading] = useState(true);
+    const [bookModalOpen, setBookModalOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [wordPopup, setWordPopup] = useState(null); // { word, definition, contextMeaning, x, y }
+    const [wordLoading, setWordLoading] = useState(false);
+    const [completingChapter, setCompletingChapter] = useState(false);
+    const [bookCompleted, setBookCompleted] = useState(false);
+    const readerRef = useRef(null);
+    const PAGE_SIZE = 2200; // characters per page
 
     const user = session?.user?.name || 'Student';
     const firstName = user.split(' ')[0] || 'Student';
@@ -132,24 +140,27 @@ export default function HomeView({ setView, setSelectedSubject }) {
             }
         };
 
-        const fetchDailyStory = async () => {
+        const fetchBookProgress = async () => {
             try {
-                const res = await fetch('/api/daily-story');
+                const email = session?.user?.email;
+                if (!email) return;
+                const res = await fetch(`/api/book-progress?email=${encodeURIComponent(email)}`);
                 if (res.ok) {
                     const data = await res.json();
-                    setDailyStory(data);
+                    setBookChapterIndex(data.chapterIndex ?? 0);
+                    if (data.chapterIndex >= bookData.totalChapters) setBookCompleted(true);
                 }
             } catch (err) {
-                console.error('Failed to load daily story:', err);
+                console.error('Failed to load book progress:', err);
             } finally {
-                setStoryLoading(false);
+                setBookLoading(false);
             }
         };
 
         if (session?.user) {
             fetchDashboardData();
             fetchQuote();
-            fetchDailyStory();
+            fetchBookProgress();
         }
     }, [session]);
 
@@ -247,61 +258,14 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 {/* Main Left Column */}
                 <div className="col-span-12 lg:col-span-8 space-y-6 flex flex-col">
 
-                    {/* Daily Short Story Widget */}
-                    <div
-                        onClick={() => dailyStory && setStoryModalOpen(true)}
-                        className="relative group overflow-hidden rounded-[2rem] glass p-1 border border-border-main flex-shrink-0 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-border-main"
-                    >
-                        <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-                            {storyLoading ? (
-                                <div className="flex flex-col items-center justify-center gap-3">
-                                    <div className="w-8 h-8 border-3 border-border-main border-t-primary rounded-full animate-spin"></div>
-                                    <p className="text-sm font-medium text-text-muted">Finding today's story...</p>
-                                </div>
-                            ) : dailyStory ? (
-                                <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-between">
-                                    {/* Top Row: Badge + Expand icon */}
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-2">
-                                            <div className="backdrop-blur-md px-3 py-1.5 rounded-xl border border-border-main flex items-center gap-2" style={{ backgroundColor: `${dailyStory.genreColor}15` }}>
-                                                <span className="material-symbols-outlined text-sm" style={{ color: dailyStory.genreColor }}>auto_stories</span>
-                                                <span className="text-[10px] uppercase font-bold tracking-widest text-text-main">Daily Read</span>
-                                            </div>
-                                            <div className="px-2.5 py-1 rounded-lg border border-border-main bg-black/5 dark:bg-white/5">
-                                                <span className="text-[10px] uppercase font-bold tracking-widest" style={{ color: dailyStory.genreColor }}>{dailyStory.genre}</span>
-                                            </div>
-                                        </div>
-                                        <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 backdrop-blur-md flex items-center justify-center border border-border-main opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <span className="material-symbols-outlined text-white text-xl">open_in_full</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Center/Bottom: Title, Author, Preview */}
-                                    <div className="space-y-3 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                                        <div>
-                                            <h3 className="text-2xl md:text-3xl font-black text-white leading-tight font-serif italic">
-                                                {dailyStory.title}
-                                            </h3>
-                                            <p className="text-text-muted font-medium text-sm mt-1.5">
-                                                by <span className="text-text-main">{dailyStory.author}</span>
-                                                {dailyStory.year && <span className="text-text-muted mx-2">•</span>}
-                                                {dailyStory.year && <span className="text-text-muted">{dailyStory.year}</span>}
-                                            </p>
-                                        </div>
-                                        <p className="text-text-muted/80 text-sm leading-relaxed line-clamp-2 max-w-xl">
-                                            {dailyStory.story.split('\n')[0]}
-                                        </p>
-                                        <div className="flex items-center gap-2 pt-1">
-                                            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: dailyStory.genreColor }}>Read the full story</span>
-                                            <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1" style={{ color: dailyStory.genreColor }}>arrow_forward</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-text-muted font-medium z-10">Failed to load today's story.</div>
-                            )}
-                        </div>
-                    </div>
+                    {/* Book Reader Widget */}
+                    <BookReaderCard
+                        bookData={bookData}
+                        chapterIndex={bookChapterIndex}
+                        loading={bookLoading}
+                        completed={bookCompleted}
+                        onOpen={() => { setBookModalOpen(true); setCurrentPage(0); setWordPopup(null); }}
+                    />
 
                     {/* Progress Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
@@ -413,73 +377,51 @@ export default function HomeView({ setView, setSelectedSubject }) {
                 </div>
             </div>
 
-            {/* Daily Story Modal */}
-            {storyModalOpen && dailyStory && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in"
-                    onClick={() => setStoryModalOpen(false)}
-                >
-                    <div
-                        className="relative max-w-3xl w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Header */}
-                        <div className="p-8 md:p-10 pb-0 shrink-0">
-                            <button
-                                onClick={() => setStoryModalOpen(false)}
-                                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-border-main flex items-center justify-center text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-colors z-10"
-                            >
-                                <span className="material-symbols-outlined">close</span>
-                            </button>
-
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="px-3 py-1.5 rounded-full border border-border-main flex items-center gap-2" style={{ backgroundColor: `${dailyStory.genreColor}15` }}>
-                                    <span className="material-symbols-outlined text-sm" style={{ color: dailyStory.genreColor }}>auto_stories</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: dailyStory.genreColor }}>{dailyStory.genre}</span>
-                                </div>
-                                <div className="px-3 py-1.5 rounded-full border border-border-main bg-black/5 dark:bg-white/5 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm text-text-muted">schedule</span>
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Daily Read</span>
-                                </div>
-                            </div>
-
-                            <h2 className="text-3xl lg:text-4xl font-black text-text-main dark:text-white leading-tight font-serif italic mb-2">
-                                {dailyStory.title}
-                            </h2>
-                            <p className="text-text-muted font-medium text-lg">
-                                by <span className="text-text-main">{dailyStory.author}</span>
-                                {dailyStory.year && <span className="text-text-muted mx-2">•</span>}
-                                {dailyStory.year && <span className="text-text-muted">{dailyStory.year}</span>}
-                            </p>
-
-                            <div className="h-px w-full bg-black/5 dark:bg-white/5 mt-6"></div>
-                        </div>
-
-                        {/* Story Body — Scrollable */}
-                        <div className="p-8 md:p-10 pt-6 overflow-y-auto flex-1 custom-scrollbar">
-                            <div className="prose prose-invert max-w-none">
-                                {dailyStory.story.split('\n').filter(p => p.trim()).map((paragraph, i) => (
-                                    <p key={i} className="text-text-muted text-[17px] leading-[1.9] mb-5 font-[400]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-                                        {paragraph}
-                                    </p>
-                                ))}
-                            </div>
-
-                            {dailyStory.moral && (
-                                <div className="mt-8 p-5 rounded-2xl border border-border-main bg-white/[0.02]">
-                                    <p className="text-xs text-text-muted uppercase tracking-widest font-bold mb-2">Moral</p>
-                                    <p className="text-text-main text-base italic font-medium leading-relaxed" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
-                                        "{dailyStory.moral}"
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="mt-8 text-center">
-                                <p className="text-xs text-text-muted uppercase tracking-widest font-bold">A new story awaits you tomorrow</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {/* Book Reader Modal */}
+            {bookModalOpen && !bookLoading && (
+                <BookReaderModal
+                    bookData={bookData}
+                    chapterIndex={bookChapterIndex}
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    pageSize={PAGE_SIZE}
+                    wordPopup={wordPopup}
+                    setWordPopup={setWordPopup}
+                    wordLoading={wordLoading}
+                    setWordLoading={setWordLoading}
+                    completingChapter={completingChapter}
+                    bookCompleted={bookCompleted}
+                    onClose={() => { setBookModalOpen(false); setWordPopup(null); }}
+                    onCompleteChapter={async () => {
+                        setCompletingChapter(true);
+                        try {
+                            const res = await fetch('/api/book-progress', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    email: session?.user?.email,
+                                    chapterIndex: bookChapterIndex,
+                                    totalChapters: bookData.totalChapters,
+                                    bookTitle: bookData.bookTitle,
+                                }),
+                            });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.bookCompleted) {
+                                    setBookCompleted(true);
+                                } else {
+                                    setBookChapterIndex(data.newChapterIndex);
+                                    setCurrentPage(0);
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Failed to complete chapter:', err);
+                        } finally {
+                            setCompletingChapter(false);
+                        }
+                    }}
+                    readerRef={readerRef}
+                />
             )}
 
             {/* Subjects Quick Links Removed per user request */}
@@ -498,6 +440,348 @@ function SubjectCard({ icon, title, desc, onClick }) {
             </span>
             <p className="font-bold text-sm text-text-main">{title}</p>
             <p className="text-[10px] text-text-muted uppercase font-bold mt-1 tracking-wider">{desc}</p>
+        </div>
+    );
+}
+
+// ── Book Reader Card (Homepage Widget) ──────────────────────────
+function BookReaderCard({ bookData, chapterIndex, loading, completed, onOpen }) {
+    const chapter = bookData.chapters[chapterIndex];
+    const progress = Math.round(((chapterIndex) / bookData.totalChapters) * 100);
+
+    return (
+        <div
+            onClick={() => !loading && !completed && onOpen()}
+            className="relative group overflow-hidden rounded-[2rem] glass p-1 border border-border-main flex-shrink-0 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-border-main"
+        >
+            <div className="relative h-[240px] md:h-[300px] overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-emerald-900 via-slate-800 to-slate-900 dark:from-emerald-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="w-8 h-8 border-3 border-border-main border-t-primary rounded-full animate-spin"></div>
+                        <p className="text-sm font-medium text-text-muted">Loading your book...</p>
+                    </div>
+                ) : completed ? (
+                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4">
+                        <span className="material-symbols-outlined text-5xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_stories</span>
+                        <h3 className="text-2xl font-black text-white">Book Completed!</h3>
+                        <p className="text-text-muted text-sm max-w-md">You've finished reading <span className="text-white font-bold">{bookData.bookTitle}</span>. A new book will be available soon.</p>
+                    </div>
+                ) : chapter ? (
+                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-between">
+                        {/* Top Row */}
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                                <div className="backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2 bg-emerald-500/10">
+                                    <span className="material-symbols-outlined text-sm text-emerald-400">auto_stories</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-300">Book Club</span>
+                                </div>
+                                <div className="px-2.5 py-1 rounded-lg border border-white/10 bg-white/5">
+                                    <span className="text-[10px] uppercase font-bold tracking-widest text-slate-300">
+                                        {chapterIndex + 1} / {bookData.totalChapters}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span className="material-symbols-outlined text-white text-xl">open_in_full</span>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="space-y-3 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                            {chapter.part && (
+                                <p className="text-emerald-400/80 text-xs font-bold uppercase tracking-widest">{chapter.part}</p>
+                            )}
+                            <h3 className="text-2xl md:text-3xl font-black text-white leading-tight font-serif italic">
+                                {chapter.title}
+                            </h3>
+                            <p className="text-slate-400 font-medium text-sm">
+                                by <span className="text-white">{bookData.author}</span>
+                                <span className="text-slate-500 mx-2">•</span>
+                                <span className="text-slate-500">{bookData.year}</span>
+                            </p>
+
+                            {/* Progress Bar */}
+                            <div className="flex items-center gap-3 pt-1">
+                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-400 rounded-full transition-all duration-700" style={{ width: `${progress}%` }}></div>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-400">{progress}%</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Continue Reading</span>
+                                <span className="material-symbols-outlined text-sm text-emerald-400 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
+// ── Utility: split chapter content into pages ───────────────────
+function splitIntoPages(content, pageSize) {
+    if (!content) return [''];
+    const pages = [];
+    let remaining = content;
+
+    while (remaining.length > 0) {
+        if (remaining.length <= pageSize) {
+            pages.push(remaining.trim());
+            break;
+        }
+        // Find best breakpoint near pageSize (paragraph break, sentence end, or word boundary)
+        let breakAt = pageSize;
+        const paragraphBreak = remaining.lastIndexOf('\n\n', pageSize);
+        if (paragraphBreak > pageSize * 0.6) {
+            breakAt = paragraphBreak;
+        } else {
+            const sentenceEnd = remaining.lastIndexOf('. ', pageSize);
+            if (sentenceEnd > pageSize * 0.6) {
+                breakAt = sentenceEnd + 1;
+            } else {
+                const wordBoundary = remaining.lastIndexOf(' ', pageSize);
+                if (wordBoundary > pageSize * 0.5) breakAt = wordBoundary;
+            }
+        }
+        pages.push(remaining.slice(0, breakAt).trim());
+        remaining = remaining.slice(breakAt).trim();
+    }
+
+    return pages.length > 0 ? pages : [''];
+}
+
+// ── Book Reader Modal (Full Reading Experience) ─────────────────
+function BookReaderModal({
+    bookData, chapterIndex, currentPage, setCurrentPage, pageSize,
+    wordPopup, setWordPopup, wordLoading, setWordLoading,
+    completingChapter, bookCompleted, onClose, onCompleteChapter, readerRef,
+}) {
+    const chapter = bookData.chapters[chapterIndex];
+    if (!chapter) return null;
+
+    const pages = splitIntoPages(chapter.content, pageSize);
+    const totalPages = pages.length;
+    const isLastPage = currentPage >= totalPages - 1;
+    const pageText = pages[currentPage] || '';
+
+    // Handle word click
+    const handleWordClick = async (word, e) => {
+        const cleanWord = word.replace(/[^a-zA-Z'-]/g, '');
+        if (!cleanWord || cleanWord.length < 2) return;
+
+        // Get surrounding context (nearby text)
+        const contentWords = pageText.split(/\s+/);
+        const wordIdx = contentWords.findIndex(w => w.includes(cleanWord));
+        const contextStart = Math.max(0, wordIdx - 15);
+        const contextEnd = Math.min(contentWords.length, wordIdx + 15);
+        const context = contentWords.slice(contextStart, contextEnd).join(' ');
+
+        // Position the popup
+        const rect = e.target.getBoundingClientRect();
+        const modalRect = readerRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+        const x = rect.left - modalRect.left + rect.width / 2;
+        const y = rect.top - modalRect.top;
+
+        setWordPopup({ word: cleanWord, definition: null, contextMeaning: null, x, y, loading: true });
+        setWordLoading(true);
+
+        try {
+            const res = await fetch('/api/define-word', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: cleanWord, context }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setWordPopup(prev => prev?.word === cleanWord ? { ...prev, ...data, loading: false } : prev);
+            } else {
+                setWordPopup(prev => prev?.word === cleanWord ? { ...prev, definition: 'Could not fetch definition.', loading: false } : prev);
+            }
+        } catch {
+            setWordPopup(prev => prev?.word === cleanWord ? { ...prev, definition: 'Network error.', loading: false } : prev);
+        } finally {
+            setWordLoading(false);
+        }
+    };
+
+    // Render text with clickable words
+    const renderText = (text) => {
+        const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+        return paragraphs.map((para, pi) => (
+            <p key={pi} className="text-text-muted text-[16px] md:text-[17px] leading-[1.95] mb-5 font-[400] select-text" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                {para.split(/(\s+)/).map((token, ti) => {
+                    if (/^\s+$/.test(token)) return token;
+                    return (
+                        <span
+                            key={ti}
+                            onClick={(e) => { e.stopPropagation(); handleWordClick(token, e); }}
+                            className="cursor-pointer hover:bg-emerald-500/15 hover:text-emerald-300 rounded px-[1px] transition-colors duration-150"
+                        >
+                            {token}
+                        </span>
+                    );
+                })}
+            </p>
+        ));
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in"
+            onClick={() => { setWordPopup(null); onClose(); }}
+        >
+            <div
+                ref={readerRef}
+                className="relative max-w-3xl w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col"
+                onClick={e => { e.stopPropagation(); setWordPopup(null); }}
+            >
+                {/* Header */}
+                <div className="p-6 md:p-8 pb-0 shrink-0">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-5 right-5 w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 border border-border-main flex items-center justify-center text-text-muted hover:text-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors z-10"
+                    >
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                        <div className="px-3 py-1.5 rounded-full border border-border-main flex items-center gap-2 bg-emerald-500/10">
+                            <span className="material-symbols-outlined text-sm text-emerald-400">auto_stories</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Book Club</span>
+                        </div>
+                        {chapter.part && (
+                            <div className="px-3 py-1.5 rounded-full border border-border-main bg-black/5 dark:bg-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{chapter.part}</span>
+                            </div>
+                        )}
+                        <div className="px-3 py-1.5 rounded-full border border-border-main bg-black/5 dark:bg-white/5">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                                Chapter {chapterIndex + 1} of {bookData.totalChapters}
+                            </span>
+                        </div>
+                    </div>
+
+                    <h2 className="text-2xl lg:text-3xl font-black text-text-main dark:text-white leading-tight font-serif italic mb-1 pr-12">
+                        {chapter.title}
+                    </h2>
+                    <p className="text-text-muted font-medium text-sm">
+                        by <span className="text-text-main">{bookData.author}</span>
+                    </p>
+
+                    <div className="h-px w-full bg-black/5 dark:bg-white/5 mt-4"></div>
+                </div>
+
+                {/* Reading Body */}
+                <div className="p-6 md:p-8 pt-4 overflow-y-auto flex-1 custom-scrollbar relative" onClick={(e) => e.stopPropagation()}>
+                    {/* Tip banner — only on first page of first chapter */}
+                    {currentPage === 0 && chapterIndex === 0 && (
+                        <div className="mb-5 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-emerald-400 text-base">touch_app</span>
+                            <p className="text-xs text-emerald-400 font-medium">Tap any word to see its definition and meaning in context</p>
+                        </div>
+                    )}
+
+                    <div className="prose prose-invert max-w-none">
+                        {renderText(pageText)}
+                    </div>
+
+                    {/* Word Definition Popup */}
+                    {wordPopup && (
+                        <div
+                            className="absolute z-50 w-72 bg-bg-card dark:bg-slate-800 border border-border-main rounded-2xl shadow-2xl p-4 animate-fade-in"
+                            style={{
+                                left: Math.min(Math.max(wordPopup.x - 136, 8), 280),
+                                top: Math.max(wordPopup.y - 10, 8),
+                                transform: 'translateY(-100%)',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-black text-text-main text-base capitalize">{wordPopup.word}</h4>
+                                <button onClick={() => setWordPopup(null)} className="text-text-muted hover:text-text-main">
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                </button>
+                            </div>
+                            {wordPopup.loading ? (
+                                <div className="flex items-center gap-2 py-2">
+                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-xs text-text-muted">Looking up definition...</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-2.5">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">Definition</p>
+                                        <p className="text-sm text-text-muted leading-relaxed">{wordPopup.definition}</p>
+                                    </div>
+                                    {wordPopup.contextMeaning && (
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">In this context</p>
+                                            <p className="text-sm text-text-muted leading-relaxed italic">{wordPopup.contextMeaning}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {/* Arrow pointing down */}
+                            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-bg-card dark:bg-slate-800 border-r border-b border-border-main rotate-45"></div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer: Pagination + Complete */}
+                <div className="p-4 md:p-6 pt-0 shrink-0">
+                    <div className="h-px bg-black/5 dark:bg-white/5 mb-4"></div>
+                    <div className="flex items-center justify-between gap-3">
+                        {/* Prev */}
+                        <button
+                            onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); setWordPopup(null); }}
+                            disabled={currentPage === 0}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${currentPage === 0
+                                    ? 'text-text-muted/40 cursor-not-allowed'
+                                    : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
+                        >
+                            <span className="material-symbols-outlined text-base">chevron_left</span>
+                            Prev
+                        </button>
+
+                        {/* Page indicator */}
+                        <span className="text-xs font-bold text-text-muted">
+                            Page {currentPage + 1} of {totalPages}
+                        </span>
+
+                        {/* Next or Complete */}
+                        {isLastPage ? (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onCompleteChapter(); }}
+                                disabled={completingChapter}
+                                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+                            >
+                                {completingChapter ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                        {chapterIndex < bookData.totalChapters - 1 ? 'Complete & Next Chapter' : 'Finish Book'}
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => { setCurrentPage(p => Math.min(totalPages - 1, p + 1)); setWordPopup(null); }}
+                                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                            >
+                                Next
+                                <span className="material-symbols-outlined text-base">chevron_right</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
