@@ -37,11 +37,24 @@ export default function VocabIdiomsView() {
     const [savedSets, setSavedSets] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    const loadSavedSets = async () => {
+        try {
+            const res = await fetch('/api/user/saved-practices');
+            if (res.ok) {
+                const data = await res.json();
+                const vocabIdiomSets = data.savedPractices.filter(set => set.subject === 'vocab' || set.subject === 'idioms');
+                setSavedSets(vocabIdiomSets);
+            }
+        } catch (error) {
+            console.error('Failed to load saved sets', error);
+        }
+    };
+
     useEffect(() => {
-        // Load saved sets from local storage on mount
-        const localSets = JSON.parse(localStorage.getItem('assessra_vocab_saved_sets') || '[]');
-        setSavedSets(localSets);
-    }, []);
+        if (session?.user) {
+            loadSavedSets();
+        }
+    }, [session]);
 
     // Helper to shuffle an array
     const shuffle = (array) => {
@@ -138,33 +151,33 @@ export default function VocabIdiomsView() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    paperId: \`vocab_idioms_${Date.now()}\`,
-                    paperTitle: \`Review - ${activeTab === 'vocab' ? 'Vocabulary' : 'Idioms'}\`,
+                    paperId: `vocab_idioms_${Date.now()}`,
+                    paperTitle: `Review - ${activeTab === 'vocab' ? 'Vocabulary' : 'Idioms'}`,
                     subject: activeTab,
                     questionNumber: 'all',
                     score: finalScore,
                     maxMarks: currentSet.length
                 })
-            }).catch(() => {});
+            }).catch(() => { });
         }
 
         if (mistakes.length > 0 || (!isAnswered && !selectedOption)) {
-             // Handle case where last item was wrong directly
-             const allMistakes = [...mistakes];
-             if (selectedOption && selectedOption !== currentSet[currentIndex].meaning) {
-                 if(!mistakes.includes(currentSet[currentIndex])) allMistakes.push(currentSet[currentIndex]);
-             }
-             
-             if(allMistakes.length > 0) {
-                 setMistakes(allMistakes);
-                 setCurrentMistakeIndex(0);
-                 setUserSentence('');
-                 setEvaluationData(null);
-                 setPracticeState('error-practice');
-                 return;
-             }
+            // Handle case where last item was wrong directly
+            const allMistakes = [...mistakes];
+            if (selectedOption && selectedOption !== currentSet[currentIndex].meaning) {
+                if (!mistakes.includes(currentSet[currentIndex])) allMistakes.push(currentSet[currentIndex]);
+            }
+
+            if (allMistakes.length > 0) {
+                setMistakes(allMistakes);
+                setCurrentMistakeIndex(0);
+                setUserSentence('');
+                setEvaluationData(null);
+                setPracticeState('error-practice');
+                return;
+            }
         }
-        
+
         setPracticeState('results');
     };
 
@@ -181,7 +194,7 @@ export default function VocabIdiomsView() {
             const res = await fetch('/api/evaluate-sentence', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     sentence: userSentence,
                     term: term,
                     meaning: currentMistake.meaning
@@ -209,43 +222,51 @@ export default function VocabIdiomsView() {
         }
     };
 
-    const saveCurrentSet = () => {
+    const saveCurrentSet = async () => {
         setIsSaving(true);
-        const newSet = {
-            id: Date.now(),
-            date: new Date().toISOString(),
-            type: activeTab,
-            items: currentSet,
-            score: score,
-            total: currentSet.length
-        };
-        const updated = [newSet, ...savedSets];
-        setSavedSets(updated);
-        localStorage.setItem('assessra_vocab_saved_sets', JSON.stringify(updated));
-        
-        setTimeout(() => setIsSaving(false), 800);
+        try {
+            const res = await fetch('/api/user/saved-practices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subject: activeTab,
+                    topic: 'Practice Set',
+                    is_mcq: true,
+                    score: score,
+                    max_marks: currentSet.length,
+                    practice_data: currentSet
+                })
+            });
+            if (res.ok) {
+                loadSavedSets();
+            }
+        } catch (error) {
+            console.error('Failed to save set', error);
+        } finally {
+            setTimeout(() => setIsSaving(false), 800);
+        }
     };
 
     const renderTabs = () => (
         <div className="flex bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl w-full max-w-lg mx-auto mb-8">
-            <button 
+            <button
                 onClick={() => setActiveTab('vocab')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${ activeTab === 'vocab' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${activeTab === 'vocab' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
                 Vocabulary
             </button>
-            <button 
+            <button
                 onClick={() => setActiveTab('idioms')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${ activeTab === 'idioms' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'} `}
+                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${activeTab === 'idioms' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'} `}
             >
                 Idioms
             </button>
-            <button 
+            <button
                 onClick={() => setActiveTab('saved')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all flex items - center justify - center gap - 1 ${ activeTab === 'saved' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5' } `}
+                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all flex items - center justify - center gap - 1 ${activeTab === 'saved' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'} `}
             >
                 <span className="material-symbols-outlined text-sm">bookmark</span>
-                Saved 
+                Saved
             </button>
         </div>
     );
@@ -277,15 +298,15 @@ export default function VocabIdiomsView() {
                                 <div key={set.id} className="glass p-6 rounded-2xl border border-border-main flex items-center justify-between">
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase tracking-wider">{set.type}</span>
-                                            <span className="text-text-muted text-sm">{new Date(set.date).toLocaleDateString()}</span>
+                                            <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg uppercase tracking-wider">{set.subject}</span>
+                                            <span className="text-text-muted text-sm">{new Date(set.created_at).toLocaleDateString()}</span>
                                         </div>
-                                        <p className="font-bold text-text-main">
-                                            {set.items.map(i => i.word || i.idiom).join(', ')}
+                                        <p className="font-bold text-text-main line-clamp-2 pr-4">
+                                            {set.practice_data && set.practice_data.map ? set.practice_data.map(i => i.word || i.idiom).join(', ') : 'Practice Set'}
                                         </p>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-black text-text-main">{set.score}/{set.total}</div>
+                                    <div className="text-right shrink-0">
+                                        <div className="text-xl font-black text-text-main">{set.score}/{set.max_marks}</div>
                                         <div className="text-xs text-text-muted mt-1 uppercase tracking-widest font-bold">Score</div>
                                     </div>
                                 </div>
@@ -307,7 +328,7 @@ export default function VocabIdiomsView() {
                             <li>AI generates examples and synonyms for every word.</li>
                             <li>If you make a mistake, you'll need to construct a sentence using the word to reinforce learning.</li>
                         </ul>
-                        <button 
+                        <button
                             onClick={startPractice}
                             className="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_12px_25px_rgba(34,197,94,0.4)] hover:-translate-y-1 transition-all flex items-center gap-2 mx-auto"
                         >
@@ -334,7 +355,7 @@ export default function VocabIdiomsView() {
                     <h2 className="text-3xl font-black text-text-main mb-2">Let's Fix Those Mistakes!</h2>
                     <p className="text-text-muted">Construct a sentence applying the correct meaning.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-bold text-text-muted tracking-widest uppercase">
                         Review {currentMistakeIndex + 1} of {mistakes.length}
@@ -342,7 +363,7 @@ export default function VocabIdiomsView() {
                 </div>
 
                 <div className="h-2 w-full bg-border-main rounded-full overflow-hidden mb-10">
-                    <div className="h-full bg-amber-500 transition-all duration-500 ease-out" style={{ width: \`\${Math.max(5, progressPercent)}%\` }}></div>
+                    <div className="h-full bg-amber-500 transition-all duration-500 ease-out" style={{ width: `${Math.max(5, progressPercent)}%` }}></div>
                 </div>
 
                 <div className="glass p-8 md:p-10 rounded-[2rem] border border-border-main shadow-lg">
@@ -361,9 +382,9 @@ export default function VocabIdiomsView() {
                             disabled={evaluationData !== null}
                             className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main focus:outline-none focus:border-amber-500/50 transition-colors resize-none"
                         />
-                        
+
                         {!evaluationData ? (
-                            <button 
+                            <button
                                 onClick={submitSentence}
                                 disabled={evaluating || !userSentence.trim()}
                                 className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
@@ -375,15 +396,15 @@ export default function VocabIdiomsView() {
                                 )}
                             </button>
                         ) : (
-                            <div className={`p - 5 rounded - 2xl border animate - fade -in ${ evaluationData.correct ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30' } `}>
+                            <div className={`p - 5 rounded - 2xl border animate - fade -in ${evaluationData.correct ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'} `}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-2xl">{evaluationData.correct ? '✅' : '❌'}</span>
-                                    <span className={`font - bold text - lg ${ evaluationData.correct ? 'text-green-500' : 'text-red-500' } `}>
+                                    <span className={`font - bold text - lg ${evaluationData.correct ? 'text-green-500' : 'text-red-500'} `}>
                                         {evaluationData.correct ? 'Well used!' : 'Needs improvement'}
                                     </span>
                                 </div>
                                 <p className="text-text-main text-sm">{evaluationData.feedback}</p>
-                                
+
                                 <button
                                     onClick={nextMistake}
                                     className="mt-6 w-full py-3.5 bg-text-main text-bg-base font-bold rounded-xl hover:opacity-90 transition-opacity"
@@ -403,7 +424,7 @@ export default function VocabIdiomsView() {
     // ─────────────────────────────────────────────────────────────────
     if (practiceState === 'results') {
         const finalScore = mistakes.length > 0 ? currentSet.length - mistakes.length : currentSet.length;
-        
+
         return (
             <div className="max-w-4xl mx-auto space-y-8 animate-fade-in text-center py-10">
                 <div className="text-7xl mb-6 animate-bounce">🎉</div>
@@ -412,15 +433,15 @@ export default function VocabIdiomsView() {
                 <p className="text-text-muted text-lg max-w-md mx-auto mb-10">
                     {finalScore === currentSet.length ? 'Perfect score! You mastered all the words perfectly.' : 'Great effort! You reviewed your mistakes to build stronger memory hooks.'}
                 </p>
-                
+
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button 
+                    <button
                         onClick={() => setPracticeState('idle')}
                         className="w-full sm:w-auto px-8 py-4 bg-black/5 dark:bg-white/5 text-text-main font-bold rounded-2xl border border-border-main hover:bg-black/10 transition-colors"
                     >
                         Return Home
                     </button>
-                    <button 
+                    <button
                         onClick={saveCurrentSet}
                         disabled={isSaving}
                         className="w-full sm:w-auto px-8 py-4 bg-blue-500 text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(59,130,246,0.3)] hover:-translate-y-1 transition-all flex items-center gap-2 justify-center disabled:opacity-70"
@@ -428,7 +449,7 @@ export default function VocabIdiomsView() {
                         <span className="material-symbols-outlined text-sm">{isSaving ? 'check' : 'bookmark_add'}</span>
                         <span>{isSaving ? 'Saved!' : 'Save This Set'}</span>
                     </button>
-                    <button 
+                    <button
                         onClick={startPractice}
                         className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:-translate-y-1 transition-all flex items-center gap-2 justify-center"
                     >
@@ -449,9 +470,9 @@ export default function VocabIdiomsView() {
 
     return (
         <div className="max-w-3xl mx-auto animate-fade-in py-8 pt-2">
-            
+
             <div className="flex items-center justify-between mb-8">
-                <button 
+                <button
                     onClick={() => setPracticeState('idle')}
                     className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors font-medium text-sm bg-black/5 dark:bg-white/5 px-4 py-2 rounded-xl"
                 >
@@ -464,7 +485,7 @@ export default function VocabIdiomsView() {
             </div>
 
             <div className="h-2 w-full bg-border-main rounded-full overflow-hidden mb-8">
-                <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: \`\${Math.max(5, progressPercent)}%\` }}></div>
+                <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${Math.max(5, progressPercent)}%` }}></div>
             </div>
 
             <div className="glass p-6 md:p-10 rounded-[2rem] border border-border-main shadow-lg relative overflow-hidden transition-all duration-300">
@@ -475,7 +496,7 @@ export default function VocabIdiomsView() {
                 <div className="space-y-3">
                     {options.map((opt, idx) => {
                         let btnStyle = 'bg-black/5 dark:bg-white/5 border-border-main text-text-main hover:bg-black/10 dark:hover:bg-white/10';
-                        
+
                         if (isAnswered) {
                             if (opt === currentItem.meaning) {
                                 btnStyle = 'bg-green-500/20 border-green-500/50 text-green-700 dark:text-green-300';
@@ -491,9 +512,9 @@ export default function VocabIdiomsView() {
                                 key={idx}
                                 onClick={() => handleOptionClick(opt)}
                                 disabled={isAnswered}
-                                className={`w - full text - left p - 5 rounded - xl border - 2 transition - all font - medium flex items - center gap - 4 ${ btnStyle } `}
+                                className={`w - full text - left p - 5 rounded - xl border - 2 transition - all font - medium flex items - center gap - 4 ${btnStyle} `}
                             >
-                                <span className={`w - 8 h - 8 rounded - full border - 2 flex items - center justify - center font - bold text - sm shrink - 0 ${ isAnswered && opt === currentItem.meaning ? 'border-green-500 bg-green-500 text-white' : isAnswered && opt === selectedOption ? 'border-red-500 bg-red-500 text-white' : 'border-border-main' } `}>
+                                <span className={`w - 8 h - 8 rounded - full border - 2 flex items - center justify - center font - bold text - sm shrink - 0 ${isAnswered && opt === currentItem.meaning ? 'border-green-500 bg-green-500 text-white' : isAnswered && opt === selectedOption ? 'border-red-500 bg-red-500 text-white' : 'border-border-main'} `}>
                                     {isAnswered && opt === currentItem.meaning ? '✓' : isAnswered && opt === selectedOption ? '✕' : String.fromCharCode(65 + idx)}
                                 </span>
                                 {opt}
@@ -539,7 +560,7 @@ export default function VocabIdiomsView() {
                         ) : null}
 
                         <div className="flex justify-end pt-2">
-                            <button 
+                            <button
                                 onClick={nextItem}
                                 className="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-[0_8px_20px_rgba(34,197,94,0.3)] hover:-translate-y-1 transition-all flex items-center gap-2 w-full md:w-auto justify-center"
                             >
