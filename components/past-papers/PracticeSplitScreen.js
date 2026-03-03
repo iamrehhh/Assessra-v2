@@ -455,15 +455,19 @@ export default function PracticeSplitScreen({ paperId }) {
                                 </div>
 
                                 {/* Answer Box (Green Outline) */}
-                                <div className="border border-primary rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+                                <div className="border border-primary rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all relative">
                                     <textarea
                                         value={block.answer}
                                         onChange={(e) => updateBlock(block.id, 'answer', e.target.value)}
                                         rows={8}
                                         placeholder={`Type your answer for ${block.label || '1'} here...`}
-                                        className="w-full bg-transparent px-5 py-4 text-text-main placeholder-slate-500/80 focus:outline-none resize-y min-h-[200px]"
+                                        className="w-full bg-transparent px-5 py-4 pb-8 text-text-main placeholder-slate-500/80 focus:outline-none resize-y min-h-[200px]"
                                         disabled={block.status === 'evaluating' || block.status === 'done'}
                                     />
+                                    {/* Word Count Indicator */}
+                                    <div className="absolute bottom-2 right-4 text-xs font-bold text-text-muted/60 bg-bg-card/80 px-2 py-0.5 rounded backdrop-blur-sm pointer-events-none">
+                                        {block.answer.trim().split(/\s+/).filter(w => w.length > 0).length} words
+                                    </div>
                                 </div>
 
                                 {/* Action Buttons */}
