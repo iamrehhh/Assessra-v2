@@ -75,7 +75,7 @@ export default function ScorecardView({ filterSubject }) {
                 setLoading(false);
             })
             .catch(() => { setError('Failed to load scores.'); setLoading(false); });
-    }, [user, filterSubject]);
+    }, [userEmail, filterSubject]);
 
     if (loading) return <div style={{ textAlign: 'center', padding: '60px', color: '#aaa' }}>⏳ Loading your scorecard...</div>;
     if (error) return <div style={{ textAlign: 'center', padding: '60px', color: '#ef4444' }}>{error}</div>;
