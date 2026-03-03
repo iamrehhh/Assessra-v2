@@ -249,6 +249,8 @@ export default function PracticeSplitScreen({ paperId }) {
     const timerUrgent = timerDuration && timerSeconds < timerDuration * 0.1; // last 10%
     const timerWarning = timerDuration && timerSeconds < timerDuration * 0.25; // last 25%
 
+    const isFullWidthMode = filename.includes('general_paper');
+
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center bg-bg-base text-text-main">
@@ -263,53 +265,66 @@ export default function PracticeSplitScreen({ paperId }) {
             <div className="flex w-full h-full pb-0 pt-0">
 
                 {/* Left Panel: PDF Viewer */}
-                <div className="w-1/2 h-full flex flex-col border-r border-border-main bg-bg-card dark:bg-[#1e1e1e]">
-                    {/* Header */}
-                    <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-4 shrink-0">
-                        <button onClick={() => {
-                            window.location.hash = 'pastpapers';
-                            router.push('/');
-                        }} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold">
-                            <span className="material-symbols-outlined text-base">arrow_back</span>
-                            Exit
-                        </button>
+                {!isFullWidthMode && (
+                    <div className="w-1/2 h-full flex flex-col border-r border-border-main bg-bg-card dark:bg-[#1e1e1e]">
+                        {/* Header */}
+                        <div className="h-14 bg-bg-base border-b border-border-main flex items-center justify-between px-4 shrink-0">
+                            <button onClick={() => {
+                                window.location.hash = 'pastpapers';
+                                router.push('/');
+                            }} className="flex items-center gap-2 text-text-muted hover:text-text-main transition-colors text-sm font-bold">
+                                <span className="material-symbols-outlined text-base">arrow_back</span>
+                                Exit
+                            </button>
 
-                        {insertFilename && (
-                            <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 border border-border-main">
-                                <button
-                                    onClick={() => setShowInsert(false)}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-                                >
-                                    Paper
-                                </button>
-                                <button
-                                    onClick={() => setShowInsert(true)}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
-                                >
-                                    Insert
-                                </button>
-                            </div>
-                        )}
-                        <div className="w-16"></div> {/* Spacer to center toggle */}
-                    </div>
+                            {insertFilename && (
+                                <div className="flex bg-black/5 dark:bg-white/5 rounded-lg p-1 border border-border-main">
+                                    <button
+                                        onClick={() => setShowInsert(false)}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+                                    >
+                                        Paper
+                                    </button>
+                                    <button
+                                        onClick={() => setShowInsert(true)}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${showInsert ? 'bg-primary text-background-dark shadow-sm' : 'text-text-muted hover:text-text-main'}`}
+                                    >
+                                        Insert
+                                    </button>
+                                </div>
+                            )}
+                            <div className="w-16"></div> {/* Spacer to center toggle */}
+                        </div>
 
-                    {/* Iframe Viewer */}
-                    <div className="flex-1 w-full bg-[#323639]">
-                        <iframe
-                            src={(showInsert && insertFilename ? pdfUrl.replace(filename, insertFilename) : pdfUrl) + '#toolbar=0&navpanes=0&scrollbar=0'}
-                            className="w-full h-full border-none"
-                            title="PDF Viewer"
-                        />
+                        {/* Iframe Viewer */}
+                        <div className="flex-1 w-full bg-[#323639]">
+                            <iframe
+                                src={(showInsert && insertFilename ? pdfUrl.replace(filename, insertFilename) : pdfUrl) + '#toolbar=0&navpanes=0&scrollbar=0'}
+                                className="w-full h-full border-none"
+                                title="PDF Viewer"
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Right Panel: Workspace */}
-                <div className="w-1/2 h-full flex flex-col overflow-y-auto bg-bg-base relative">
+                <div className={`${isFullWidthMode ? 'w-full max-w-5xl mx-auto border-x border-border-main' : 'w-1/2'} h-full flex flex-col overflow-y-auto bg-bg-base relative`}>
                     <div className="h-14 border-b border-border-main sticky top-0 bg-bg-base/80 backdrop-blur-md z-10 flex items-center justify-between px-6 shrink-0">
-                        <h2 className="text-lg font-black text-text-main flex items-center gap-2">
-                            <span className="text-primary material-symbols-outlined text-xl">edit_square</span>
-                            Practice Workspace
-                        </h2>
+                        <div className="flex items-center gap-4">
+                            {isFullWidthMode && (
+                                <button onClick={() => {
+                                    window.location.hash = 'pastpapers';
+                                    router.push('/');
+                                }} className="flex items-center gap-1 text-text-muted hover:text-text-main transition-colors text-sm font-bold border-r border-border-main pr-4">
+                                    <span className="material-symbols-outlined text-base">arrow_back</span>
+                                    Exit
+                                </button>
+                            )}
+                            <h2 className="text-lg font-black text-text-main flex items-center gap-2">
+                                <span className="text-primary material-symbols-outlined text-xl">edit_square</span>
+                                Practice Workspace
+                            </h2>
+                        </div>
 
                         {/* Timer Toggle Button */}
                         {timerDuration && !timerVisible && (
@@ -494,10 +509,10 @@ export default function PracticeSplitScreen({ paperId }) {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
 
             <FeedbackModal />
-        </div>
+        </div >
     );
 }
 

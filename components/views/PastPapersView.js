@@ -165,20 +165,24 @@ export default function PastPapersView() {
 
     const groupedPapers = {};
     papers.forEach(paper => {
-        const filename = paper.filename;
-        const parts = filename.replace('.pdf', '').split('_');
+        const rawFilename = paper.filename.replace('.pdf', '');
+
+        // Strip the subject prefix to normalize parsing
+        const prefix = selectedSubject + '_';
+        const suffix = rawFilename.startsWith(prefix) ? rawFilename.substring(prefix.length) : rawFilename;
+        const parts = suffix.split('_');
 
         let paperNum = 'Other';
         let season = 'Unknown Season';
         let year = paper.year ? paper.year.toString() : 'Unknown Year';
 
-        if (parts.length >= 4) {
-            const seasonCode = parts[1][0].toLowerCase();
+        if (parts.length >= 3) {
+            const seasonCode = parts[0][0].toLowerCase();
             if (seasonCode === 's') season = 'May-June';
             else if (seasonCode === 'w') season = 'Oct-Nov';
             else if (seasonCode === 'm') season = 'Feb-March';
 
-            const paperCode = parts[3];
+            const paperCode = parts[2];
             if (paperCode && paperCode.length > 0 && !isNaN(paperCode[0])) {
                 paperNum = `Paper ${paperCode[0]}`;
             }
