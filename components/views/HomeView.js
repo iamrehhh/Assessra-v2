@@ -488,6 +488,7 @@ function BookReaderCard({ bookData, chapterIndex, loading, completed, onOpen }) 
 
                         {/* Content */}
                         <div className="space-y-3 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                            <p className="text-emerald-400/60 text-[11px] font-bold uppercase tracking-[0.15em]">{bookData.bookTitle}</p>
                             {chapter.part && (
                                 <p className="text-emerald-400/80 text-xs font-bold uppercase tracking-widest">{chapter.part}</p>
                             )}
@@ -738,8 +739,8 @@ function BookReaderModal({
                             onClick={() => { setCurrentPage(p => Math.max(0, p - 1)); setWordPopup(null); }}
                             disabled={currentPage === 0}
                             className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${currentPage === 0
-                                    ? 'text-text-muted/40 cursor-not-allowed'
-                                    : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'
+                                ? 'text-text-muted/40 cursor-not-allowed'
+                                : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-base">chevron_left</span>
