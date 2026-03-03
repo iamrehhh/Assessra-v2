@@ -251,19 +251,19 @@ export default function VocabIdiomsView() {
         <div className="flex bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl w-full max-w-lg mx-auto mb-8">
             <button
                 onClick={() => setActiveTab('vocab')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${activeTab === 'vocab' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'vocab' ? 'bg-primary text-white shadow-md' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
                 Vocabulary
             </button>
             <button
                 onClick={() => setActiveTab('idioms')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all ${activeTab === 'idioms' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'} `}
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === 'idioms' ? 'bg-primary text-white shadow-md' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
                 Idioms
             </button>
             <button
                 onClick={() => setActiveTab('saved')}
-                className={`flex - 1 py - 3 text - sm font - bold rounded - xl transition - all flex items - center justify - center gap - 1 ${activeTab === 'saved' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'} `}
+                className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-primary text-white shadow-md' : 'text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
                 <span className="material-symbols-outlined text-sm">bookmark</span>
                 Saved
@@ -495,13 +495,13 @@ export default function VocabIdiomsView() {
 
                 <div className="space-y-3">
                     {options.map((opt, idx) => {
-                        let btnStyle = 'bg-black/5 dark:bg-white/5 border-border-main text-text-main hover:bg-black/10 dark:hover:bg-white/10';
+                        let btnStyle = 'bg-black/5 dark:bg-white/5 border-border-main text-text-main hover:bg-black/10 dark:hover:bg-white/10 hover:border-black/20 dark:hover:border-white/20 hover:-translate-y-1 hover:shadow-sm';
 
                         if (isAnswered) {
                             if (opt === currentItem.meaning) {
-                                btnStyle = 'bg-green-500/20 border-green-500/50 text-green-700 dark:text-green-300';
+                                btnStyle = 'bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-300';
                             } else if (opt === selectedOption) {
-                                btnStyle = 'bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-300';
+                                btnStyle = 'bg-red-500/10 border-red-500/50 text-red-700 dark:text-red-300';
                             } else {
                                 btnStyle = 'bg-black/5 border-border-main text-text-muted opacity-50';
                             }
@@ -512,12 +512,12 @@ export default function VocabIdiomsView() {
                                 key={idx}
                                 onClick={() => handleOptionClick(opt)}
                                 disabled={isAnswered}
-                                className={`w - full text - left p - 5 rounded - xl border - 2 transition - all font - medium flex items - center gap - 4 ${btnStyle} `}
+                                className={`w-full text-left p-4 sm:p-5 rounded-xl border-2 transition-all duration-300 font-medium flex items-center gap-4 ${btnStyle}`}
                             >
-                                <span className={`w - 8 h - 8 rounded - full border - 2 flex items - center justify - center font - bold text - sm shrink - 0 ${isAnswered && opt === currentItem.meaning ? 'border-green-500 bg-green-500 text-white' : isAnswered && opt === selectedOption ? 'border-red-500 bg-red-500 text-white' : 'border-border-main'} `}>
+                                <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${isAnswered && opt === currentItem.meaning ? 'border-green-500 bg-green-500 text-white' : isAnswered && opt === selectedOption ? 'border-red-500 bg-red-500 text-white' : 'border-border-main bg-white dark:bg-black shadow-sm'}`}>
                                     {isAnswered && opt === currentItem.meaning ? '✓' : isAnswered && opt === selectedOption ? '✕' : String.fromCharCode(65 + idx)}
                                 </span>
-                                {opt}
+                                <span className="leading-relaxed text-sm sm:text-base">{opt}</span>
                             </button>
                         );
                     })}
