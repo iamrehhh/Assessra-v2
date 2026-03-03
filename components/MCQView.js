@@ -4,17 +4,50 @@ import { useState, useEffect, useRef } from 'react';
 import { useConfirm } from '@/components/ConfirmContext';
 import { useSession } from 'next-auth/react';
 
+const ANSWERS_KEY = (id) => `mcq_answers_${id}`;
+
 export default function MCQView({ paperId, paperData, onBack }) {
     const confirmDialog = useConfirm();
     const paper = paperData[paperId];
-    const { data: session } = useSession();
-    const [answers, setAnswers] = useState({});
+    const { data: session, status: sessionStatus } = useSession();
+
+    // Load saved answers from localStorage (for UI highlighting)
+    const savedAnswers = (() => {
+        if (typeof window === 'undefined') return {};
+        try {
+            const raw = localStorage.getItem(ANSWERS_KEY(paperId));
+            return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
+    })();
+
+    const [answers, setAnswers] = useState(savedAnswers);
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(null);
     const [timeLeft, setTimeLeft] = useState(75 * 60);
     const [feedbacks, setFeedbacks] = useState({});
     const [loadingFeedbacks, setLoadingFeedbacks] = useState({});
+    const [loadingAttempt, setLoadingAttempt] = useState(true);
     const timerRef = useRef(null);
+
+    // On mount: check Supabase for existing attempt
+    useEffect(() => {
+        if (sessionStatus !== 'authenticated' || !session?.user?.email) {
+            setLoadingAttempt(false);
+            return;
+        }
+        fetch(`/api/mcq-attempts?paperId=${encodeURIComponent(paperId)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.found) {
+                    setSubmitted(true);
+                    setScore(data.score);
+                    setTimeLeft(0);
+                    clearInterval(timerRef.current);
+                }
+            })
+            .catch(err => console.error('Failed to load MCQ attempt:', err))
+            .finally(() => setLoadingAttempt(false));
+    }, [paperId, sessionStatus]);
 
     const getFeedback = async (qIdx, correctAnswer, userAnswer) => {
         if (loadingFeedbacks[qIdx] || feedbacks[qIdx]) return;
@@ -39,7 +72,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
     };
 
     useEffect(() => {
-        if (submitted) { clearInterval(timerRef.current); return; }
+        if (loadingAttempt || submitted) { clearInterval(timerRef.current); return; }
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) { clearInterval(timerRef.current); handleSubmit(true); return 0; }
@@ -47,7 +80,14 @@ export default function MCQView({ paperId, paperData, onBack }) {
             });
         }, 1000);
         return () => clearInterval(timerRef.current);
-    }, [submitted]);
+    }, [submitted, loadingAttempt]);
+
+    if (loadingAttempt) return (
+        <div style={{ textAlign: 'center', padding: '60px', color: '#aaa' }}>
+            <div className="w-8 h-8 border-4 border-border-main border-t-primary rounded-full animate-spin mx-auto mb-4" />
+            <p>Loading your attempt...</p>
+        </div>
+    );
 
     if (!paper) return (
         <div style={{ textAlign: 'center', padding: '60px', color: '#aaa' }}>
@@ -77,7 +117,9 @@ export default function MCQView({ paperId, paperData, onBack }) {
             setScore(correct);
         }
         setSubmitted(true);
-        // Silently save to MongoDB
+        // Save answers to localStorage for UI highlighting on reload
+        try { localStorage.setItem(ANSWERS_KEY(paperId), JSON.stringify(answers)); } catch { }
+        // Save score to Supabase
         if (session?.user?.email && correct !== null) {
             fetch('/api/scores/save', {
                 method: 'POST',
@@ -91,7 +133,9 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     score: correct,
                     maxMarks: Math.max(1, totalQ),
                 }),
-            }).catch(() => { });
+            }).then(res => {
+                if (!res.ok) console.error('Score save failed:', res.status);
+            }).catch(err => console.error('Score save error:', err));
         }
     }
 

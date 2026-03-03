@@ -4,7 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { callLLM } from '@/lib/llm';
 import fs from 'fs';
 import path from 'path';
-import { PDFParse as pdfParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 
 export async function POST(req) {
     try {
@@ -20,9 +20,11 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const safePath = path.join(process.cwd(), 'public', pdfPath);
+        const decodedPdfPath = decodeURIComponent(pdfPath);
+        const safePath = path.join(process.cwd(), 'public', decodedPdfPath);
         if (!fs.existsSync(safePath)) {
-            return NextResponse.json({ error: 'PDF not found' }, { status: 404 });
+            console.error('PDF not found at path:', safePath);
+            return NextResponse.json({ error: `PDF not found at path: ${decodedPdfPath}` }, { status: 404 });
         }
 
         const dataBuffer = fs.readFileSync(safePath);
