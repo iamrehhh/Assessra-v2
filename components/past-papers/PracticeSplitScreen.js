@@ -92,7 +92,37 @@ export default function PracticeSplitScreen({ paperId }) {
                             feedback: null,
                             prefilled: true
                         }));
-                        setBlocks(newBlocks);
+
+                        // Check if we have saved progress in localStorage
+                        const savedProgress = localStorage.getItem(`assessra_paper_blocks_${filename}`);
+                        if (savedProgress) {
+                            try {
+                                const parsedBlocks = JSON.parse(savedProgress);
+                                if (Array.isArray(parsedBlocks) && parsedBlocks.length > 0) {
+                                    setBlocks(parsedBlocks);
+                                } else {
+                                    setBlocks(newBlocks);
+                                }
+                            } catch (err) {
+                                console.error('Failed to parse saved progress', err);
+                                setBlocks(newBlocks);
+                            }
+                        } else {
+                            setBlocks(newBlocks);
+                        }
+                    } else {
+                        // If no predefined questions but we have saved progress for an empty start
+                        const savedProgress = localStorage.getItem(`assessra_paper_blocks_${filename}`);
+                        if (savedProgress) {
+                            try {
+                                const parsedBlocks = JSON.parse(savedProgress);
+                                if (Array.isArray(parsedBlocks) && parsedBlocks.length > 0) {
+                                    setBlocks(parsedBlocks);
+                                }
+                            } catch (err) {
+                                console.error('Failed to parse saved progress', err);
+                            }
+                        }
                     }
                 } else {
                     console.error('Failed to get paper info:', data.error);
@@ -105,6 +135,13 @@ export default function PracticeSplitScreen({ paperId }) {
         };
         init();
     }, [filename]);
+
+    // Auto-save blocks to localStorage whenever they change
+    useEffect(() => {
+        if (!loading && blocks.length > 0) {
+            localStorage.setItem(`assessra_paper_blocks_${filename}`, JSON.stringify(blocks));
+        }
+    }, [blocks, filename, loading]);
 
     // Timer tick effect
     useEffect(() => {
