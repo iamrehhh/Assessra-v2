@@ -37,6 +37,20 @@ export default function AdminView() {
         fetchNotification();
     }, [tab]);
 
+    // Background poll for active users so the stat card is always up to date
+    useEffect(() => {
+        const fetchActiveUsersSilent = async () => {
+            try {
+                const res = await fetch('/api/admin/active-users');
+                const data = await res.json();
+                setActiveUsersList(data.activeUsers || []);
+            } catch { }
+        };
+        fetchActiveUsersSilent();
+        const interval = setInterval(fetchActiveUsersSilent, 30000); // every 30s
+        return () => clearInterval(interval);
+    }, []);
+
     const fetchNotification = async () => {
         try {
             const res = await fetch('/api/notification');
