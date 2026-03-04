@@ -5,7 +5,7 @@ import PaperUpload from '@/components/admin/PaperUpload';
 
 export default function AdminView() {
     const [tab, setTab] = useState('users');
-    const [scoreTab, setScoreTab] = useState('pyp'); // 'pyp' or 'vocab'
+    const [scoreTab, setScoreTab] = useState('pyp'); // 'pyp' | 'vocab' | 'ai_practice'
     const [users, setUsers] = useState([]);
     const [scores, setScores] = useState([]);
     const [practiceLogs, setPracticeLogs] = useState([]);
@@ -30,8 +30,7 @@ export default function AdminView() {
 
     useEffect(() => {
         if (tab === 'users') fetchUsers();
-        else if (tab === 'scores') fetchScores();
-        else if (tab === 'practice') fetchPracticeLogs();
+        else if (tab === 'scores') { fetchScores(); fetchPracticeLogs(); }
         else if (tab === 'active') fetchActiveUsers();
         else if (tab === 'reports') fetchReports();
         else if (tab === 'book') fetchBookCompletions();
@@ -399,9 +398,6 @@ export default function AdminView() {
                 <button style={styles.tab(tab === 'scores')} onClick={() => { setTab('scores'); setSearchTerm(''); }}>
                     📊 Scores
                 </button>
-                <button style={styles.tab(tab === 'practice')} onClick={() => { setTab('practice'); setSearchTerm(''); }}>
-                    🧠 AI Practice
-                </button>
                 <button style={styles.tab(tab === 'upload')} onClick={() => { setTab('upload'); setSearchTerm(''); }}>
                     📄 Upload Papers
                 </button>
@@ -461,6 +457,23 @@ export default function AdminView() {
                         }}
                     >
                         🗣️ Vocab & Idioms
+                    </button>
+                    <button
+                        onClick={() => setScoreTab('ai_practice')}
+                        style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: scoreTab === 'ai_practice' ? '#1e293b' : '#f1f5f9',
+                            color: scoreTab === 'ai_practice' ? 'white' : '#64748b',
+                            boxShadow: scoreTab === 'ai_practice' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                    >
+                        🧠 AI Practice
                     </button>
                 </div>
             )}
@@ -540,8 +553,8 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
-            ) : tab === 'scores' ? (
-                /* Scores Table */
+            ) : tab === 'scores' && scoreTab !== 'ai_practice' ? (
+                /* Scores Table (PYP / Vocab) */
                 filteredScores.length === 0 ? (
                     <div style={styles.emptyState}>
                         <p style={{ fontSize: '2rem', marginBottom: '8px' }}>📊</p>
@@ -610,8 +623,8 @@ export default function AdminView() {
                         </table>
                     </div>
                 )
-            ) : tab === 'practice' ? (
-                /* AI Practice Table */
+            ) : tab === 'scores' && scoreTab === 'ai_practice' ? (
+                /* AI Practice Table (inside Scores tab) */
                 filteredPractice.length === 0 ? (
                     <div style={styles.emptyState}>
                         <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🧠</p>
