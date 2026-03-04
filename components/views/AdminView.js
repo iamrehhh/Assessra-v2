@@ -1086,15 +1086,15 @@ export default function AdminView() {
             {/* Report Detail / Reply Modal */}
             {selectedReport && (
                 <div style={styles.modalOverlay} onClick={() => setSelectedReport(null)}>
-                    <div style={{ ...styles.modalContent, maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
-                        <div style={styles.modalHeader}>
+                    <div style={{ ...styles.modalContent, maxWidth: '600px', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ ...styles.modalHeader, flexShrink: 0 }}>
                             <div>
                                 <h3 style={styles.modalTitle}>Report from {selectedReport.user_name}</h3>
                                 <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '4px 0 0 0' }}>{selectedReport.user_email}</p>
                             </div>
                             <button style={styles.modalClose} onClick={() => setSelectedReport(null)}>✕</button>
                         </div>
-                        <div style={{ padding: '24px', overflowY: 'auto', maxHeight: '60vh' }}>
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                             {/* Report Info */}
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                                 <span style={styles.pill(selectedReport.category === 'bug' ? 'orange' : 'gray')}>
@@ -1106,14 +1106,8 @@ export default function AdminView() {
                                 </span>
                             </div>
 
-                            {/* Description */}
-                            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-                                <p style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>User's Description</p>
-                                <p style={{ margin: 0, color: '#334155', fontSize: '0.95rem', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{selectedReport.description}</p>
-                            </div>
-
                             {/* Status Select */}
-                            <div style={{ marginBottom: '16px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Status</label>
                                 <select
                                     value={reportStatus}
@@ -1126,19 +1120,77 @@ export default function AdminView() {
                                 </select>
                             </div>
 
-                            {/* Reply Textarea */}
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Reply to User</label>
-                                <textarea
-                                    value={reportReply}
-                                    onChange={e => setReportReply(e.target.value)}
-                                    rows={4}
-                                    placeholder="Type your reply to the user here..."
-                                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '0.95rem', color: '#1e293b', background: 'white', outline: 'none', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
-                                />
+                            {/* Screenshot (if available) */}
+                            {selectedReport.screenshot_url && (
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Screenshot Attachment</label>
+                                    <div style={{ background: '#0f172a', padding: '12px', borderRadius: '12px', border: '1px solid #1e293b', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+                                        <a href={selectedReport.screenshot_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', maxWidth: '100%', cursor: 'zoom-in' }}>
+                                            <img
+                                                src={selectedReport.screenshot_url}
+                                                alt="Report attachment"
+                                                style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            />
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Conversation Thread */}
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>Conversation</label>
+
+                                <div style={{ flex: 1, background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', marginBottom: '16px', minHeight: '200px' }}>
+                                    {(() => {
+                                        const messages = selectedReport.messages || [
+                                            { sender: 'user', text: selectedReport.description, created_at: selectedReport.created_at },
+                                            ...(selectedReport.admin_reply ? [{ sender: 'admin', text: selectedReport.admin_reply, created_at: selectedReport.updated_at || selectedReport.created_at }] : [])
+                                        ];
+
+                                        return messages.map((msg, idx) => {
+                                            const isAdmin = msg.sender === 'admin';
+                                            return (
+                                                <div key={idx} style={{ display: 'flex', justifyContent: isAdmin ? 'flex-end' : 'flex-start' }}>
+                                                    <div style={{
+                                                        maxWidth: '85%',
+                                                        padding: '12px 16px',
+                                                        borderRadius: '16px',
+                                                        borderTopLeftRadius: isAdmin ? '16px' : '4px',
+                                                        borderTopRightRadius: isAdmin ? '4px' : '16px',
+                                                        background: isAdmin ? 'var(--lime-primary)' : 'white',
+                                                        color: isAdmin ? 'white' : '#334155',
+                                                        border: isAdmin ? 'none' : '1px solid #e2e8f0',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                    }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: 700, opacity: isAdmin ? 0.9 : 0.6, marginBottom: '4px', textTransform: 'uppercase' }}>
+                                                            {isAdmin ? 'You (Admin)' : selectedReport.user_name}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.95rem', lineHeight: '1.5', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                            {msg.text}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.7rem', opacity: isAdmin ? 0.8 : 0.5, marginTop: '6px', textAlign: 'right' }}>
+                                                            {msg.created_at ? new Date(msg.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+
+                                {/* Reply Input */}
+                                <div>
+                                    <textarea
+                                        value={reportReply}
+                                        onChange={e => setReportReply(e.target.value)}
+                                        rows={3}
+                                        placeholder="Type your reply to the user here..."
+                                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '0.95rem', color: '#1e293b', background: 'white', outline: 'none', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }}
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div style={{ ...styles.modalFooter, justifyContent: 'space-between' }}>
+                        <div style={{ ...styles.modalFooter, justifyContent: 'space-between', flexShrink: 0 }}>
                             <div>
                                 <button
                                     style={{ ...styles.modalDanger, opacity: deletingReport ? 0.6 : 1 }}

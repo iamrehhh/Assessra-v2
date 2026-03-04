@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 
 const CATEGORIES = [
@@ -26,13 +26,21 @@ export default function ReportErrorModal({ currentView }) {
     const [category, setCategory] = useState('bug');
     const [page, setPage] = useState('');
     const [description, setDescription] = useState('');
+    const [screenshotFile, setScreenshotFile] = useState(null);
+    const [screenshotPreview, setScreenshotPreview] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const fileInputRef = useRef(null);
 
     // History state
     const [myReports, setMyReports] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [hasUnreadReply, setHasUnreadReply] = useState(false);
+
+    // Reply state
+    const [activeReportId, setActiveReportId] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [sendingReply, setSendingReply] = useState(false);
 
     // Listen for open event
     useEffect(() => {
@@ -47,7 +55,6 @@ export default function ReportErrorModal({ currentView }) {
             setPage(currentView || 'home');
             setSubmitted(false);
             fetchMyReports();
-            // Auto-switch to history tab if there are unread replies
             if (hasUnreadReply) {
                 setTab('history');
             }
@@ -84,26 +91,78 @@ export default function ReportErrorModal({ currentView }) {
                 const newSeen = [...new Set([...seen, ...(data.reports || []).filter(r => r.admin_reply).map(r => r.id)])];
                 localStorage.setItem('assessra_seen_replies', JSON.stringify(newSeen));
                 setHasUnreadReply(false);
-                // Notify TopHeader that replies have been read
                 window.dispatchEvent(new CustomEvent('report-replies-read'));
             }
         } catch (e) { console.error('Failed to fetch reports', e); }
         setLoadingHistory(false);
     };
 
+    const handleFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            alert('Image must be less than 5MB');
+            return;
+        }
+
+        setScreenshotFile(file);
+
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setScreenshotPreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const clearScreenshot = () => {
+        setScreenshotFile(null);
+        setScreenshotPreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
     const handleSubmit = async () => {
         if (!description.trim()) return;
         setSubmitting(true);
         try {
+            let screenshot_url = null;
+
+            // Upload screenshot if present
+            if (screenshotFile) {
+                const formData = new FormData();
+                formData.append('file', screenshotFile);
+
+                const uploadRes = await fetch('/api/upload-screenshot', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    screenshot_url = uploadData.url;
+                } else {
+                    console.error('Failed to upload screenshot');
+                    // Continue with report submission even if screenshot fails
+                }
+            }
+
             const res = await fetch('/api/reports', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category, page, description }),
+                body: JSON.stringify({ category, page, description, screenshot_url }),
             });
+
             if (res.ok) {
                 setSubmitted(true);
                 setDescription('');
                 setCategory('bug');
+                clearScreenshot();
                 fetchMyReports();
             }
         } catch (e) {
@@ -113,14 +172,50 @@ export default function ReportErrorModal({ currentView }) {
         setSubmitting(false);
     };
 
+    const handleSendReply = async (reportId) => {
+        if (!replyText.trim()) return;
+        setSendingReply(true);
+        try {
+            const res = await fetch('/api/reports', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: reportId,
+                    new_message: replyText
+                })
+            });
+
+            if (res.ok) {
+                setReplyText('');
+                // Update local state by refetching
+                fetchMyReports();
+            } else {
+                alert('Failed to send reply. Please try again.');
+            }
+        } catch (e) {
+            console.error('Reply submit error', e);
+            alert('Network error while sending reply.');
+        }
+        setSendingReply(false);
+    };
+
+    const toggleThread = (reportId) => {
+        if (activeReportId === reportId) {
+            setActiveReportId(null);
+        } else {
+            setActiveReportId(reportId);
+            setReplyText('');
+        }
+    };
+
     const close = () => {
         setOpen(false);
         setTab('new');
         setSubmitted(false);
+        setActiveReportId(null);
     };
 
     if (!open) {
-        // Expose unread badge state via custom event
         if (typeof window !== 'undefined') {
             window.__reportHasUnread = hasUnreadReply;
         }
@@ -128,7 +223,7 @@ export default function ReportErrorModal({ currentView }) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={close}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={close}>
             <div
                 className="bg-[#0f172a] w-full max-w-lg max-h-[85vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/10"
                 style={{ animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -148,7 +243,7 @@ export default function ReportErrorModal({ currentView }) {
                 </div>
 
                 {/* Tab Switcher */}
-                <div className="px-6 pt-4 flex gap-1 bg-white/[0.02]">
+                <div className="px-6 pt-4 flex gap-1 bg-white/[0.02] shrink-0">
                     <button
                         onClick={() => setTab('new')}
                         className={`px-4 py-2 rounded-t-xl text-xs font-bold transition-all ${tab === 'new' ? 'bg-white/10 text-white border-b-2 border-primary' : 'text-slate-500 hover:text-slate-300'}`}
@@ -183,7 +278,7 @@ export default function ReportErrorModal({ currentView }) {
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-100">Report Submitted!</h3>
                                 <p className="text-sm text-slate-400 max-w-xs">
-                                    Thank you for helping us improve. We&apos;ll review your report and get back to you.
+                                    Thank you for helping us improve. We'll review your report and get back to you.
                                 </p>
                                 <div className="flex gap-3 pt-2">
                                     <button onClick={() => setSubmitted(false)} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm font-bold hover:bg-white/10 transition-all">
@@ -241,11 +336,49 @@ export default function ReportErrorModal({ currentView }) {
                                     />
                                 </div>
 
+                                {/* Screenshot Upload */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Screenshot (Optional)</label>
+
+                                    {!screenshotPreview ? (
+                                        <div
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full bg-white/5 border border-white/10 border-dashed rounded-xl px-4 py-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/10 transition-colors group"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary/20 group-hover:text-primary transition-colors text-slate-400">
+                                                <span className="material-symbols-outlined">add_photo_alternate</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-slate-300">Click to upload screenshot</p>
+                                            <p className="text-xs text-slate-500">Max 5MB (PNG, JPG)</p>
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleFileSelect}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="relative rounded-xl border border-white/10 overflow-hidden bg-black/40 group">
+                                            <img src={screenshotPreview} alt="Screenshot preview" className="w-full max-h-48 object-contain" />
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button
+                                                    onClick={clearScreenshot}
+                                                    className="flex items-center gap-2 bg-red-500/80 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors backdrop-blur-sm"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Submit */}
                                 <button
                                     onClick={handleSubmit}
                                     disabled={submitting || !description.trim()}
-                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${submitting || !description.trim()
+                                    className={`w-full flex items-center justify-center gap-2 py-3 mt-2 rounded-xl font-bold text-sm transition-all ${submitting || !description.trim()
                                         ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
                                         : 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
                                         }`}
@@ -273,44 +406,126 @@ export default function ReportErrorModal({ currentView }) {
                                 <p className="text-xs text-slate-600">Submit a report and it will appear here</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {myReports.map(report => {
                                     const st = STATUS_COLORS[report.status] || STATUS_COLORS.open;
                                     const seen = JSON.parse(localStorage.getItem('assessra_seen_replies') || '[]');
                                     const isNewReply = report.admin_reply && !seen.includes(report.id);
+                                    const messages = report.messages || [
+                                        { sender: 'user', text: report.description, created_at: report.created_at },
+                                        ...(report.admin_reply ? [{ sender: 'admin', text: report.admin_reply, created_at: report.updated_at || report.created_at }] : [])
+                                    ];
+                                    const isActive = activeReportId === report.id;
+
                                     return (
-                                        <div key={report.id} className={`bg-white/[0.03] border rounded-2xl p-4 space-y-3 transition-all ${isNewReply ? 'border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.15)]' : 'border-white/5'}`}>
-                                            {/* Header row */}
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${st.bg} ${st.text} ${st.border}`}>
-                                                        {st.label}
-                                                    </span>
-                                                    <span className="text-[10px] text-slate-500 uppercase font-bold">{report.category?.replace('_', ' ')}</span>
+                                        <div key={report.id} className={`bg-white/[0.03] border rounded-2xl overflow-hidden transition-all ${isNewReply ? 'border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.15)]' : isActive ? 'border-primary/30' : 'border-white/5'}`}>
+                                            {/* Header row (clickable to expand) */}
+                                            <div
+                                                className="p-4 cursor-pointer hover:bg-white/[0.02] flex items-center justify-between"
+                                                onClick={() => toggleThread(report.id)}
+                                            >
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${st.bg} ${st.text} ${st.border}`}>
+                                                            {st.label}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500 uppercase font-bold">{report.category?.replace('_', ' ')}</span>
+                                                        {report.screenshot_url && (
+                                                            <span className="material-symbols-outlined text-slate-500 text-xs" title="Has Screenshot">image</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-slate-200 font-medium truncate max-w-[280px]">
+                                                        {report.description}
+                                                    </p>
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-col items-end gap-2">
                                                     {isNewReply && (
                                                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
                                                             NEW REPLY
                                                         </span>
                                                     )}
-                                                    <span className="text-[10px] text-slate-600">
-                                                        {new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                                    <span className="material-symbols-outlined text-slate-500 transition-transform duration-300" style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0)' }}>
+                                                        expand_more
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            {/* Description */}
-                                            <p className="text-sm text-slate-300 leading-relaxed">{report.description}</p>
+                                            {/* Expanded Thread */}
+                                            {isActive && (
+                                                <div className="border-t border-white/5 bg-black/20 p-4">
+                                                    {/* Screenshot if available */}
+                                                    {report.screenshot_url && (
+                                                        <div className="mb-4 rounded-xl overflow-hidden border border-white/10 max-w-sm">
+                                                            <a href={report.screenshot_url} target="_blank" rel="noopener noreferrer" className="block relative group">
+                                                                <img src={report.screenshot_url} alt="Attached screenshot" className="w-full h-auto object-cover" />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                    <span className="text-white text-xs font-bold px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-sm flex items-center gap-1">
+                                                                        <span className="material-symbols-outlined text-sm">open_in_new</span> Expand
+                                                                    </span>
+                                                                </div>
+                                                            </a>
+                                                        </div>
+                                                    )}
 
-                                            {/* Admin Reply */}
-                                            {report.admin_reply && (
-                                                <div className={`border rounded-xl p-3 space-y-1 ${isNewReply ? 'bg-primary/10 border-primary/20' : 'bg-primary/5 border-primary/10'}`}>
-                                                    <p className="text-[10px] text-primary font-bold uppercase tracking-wider flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-xs">support_agent</span>
-                                                        Admin Reply
-                                                    </p>
-                                                    <p className="text-sm text-slate-300 leading-relaxed">{report.admin_reply}</p>
+                                                    {/* Messages List */}
+                                                    <div className="space-y-3 mb-4">
+                                                        {messages.map((msg, idx) => {
+                                                            const isUser = msg.sender === 'user';
+                                                            return (
+                                                                <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                                    <div className={`max-w-[85%] rounded-2xl p-3 ${isUser ? 'bg-white/10 text-slate-200 rounded-tr-sm' : 'bg-primary/20 border border-primary/20 text-emerald-50 rounded-tl-sm'}`}>
+                                                                        {!isUser && (
+                                                                            <p className="text-[10px] text-primary font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+                                                                                <span className="material-symbols-outlined text-xs">support_agent</span>
+                                                                                Admin Support
+                                                                            </p>
+                                                                        )}
+                                                                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                                                        <div className={`text-[9px] mt-1.5 opacity-60 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                                            {msg.created_at && new Date(msg.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {/* Reply Input */}
+                                                    {report.status !== 'resolved' && (
+                                                        <div className="flex items-end gap-2 mt-2">
+                                                            <div className="flex-1 bg-white/5 border border-white/10 rounded-xl overflow-hidden focus-within:border-primary/40 focus-within:bg-white/10 transition-colors">
+                                                                <textarea
+                                                                    value={replyText}
+                                                                    onChange={e => setReplyText(e.target.value)}
+                                                                    placeholder="Reply to admin..."
+                                                                    className="w-full bg-transparent p-3 text-sm text-slate-200 placeholder-slate-500 outline-none resize-none max-h-32 min-h-[44px]"
+                                                                    rows={1}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                                            e.preventDefault();
+                                                                            handleSendReply(report.id);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleSendReply(report.id)}
+                                                                disabled={!replyText.trim() || sendingReply}
+                                                                className={`p-3 rounded-xl flex items-center justify-center transition-colors shrink-0 ${!replyText.trim() || sendingReply ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-primary/20 text-primary hover:bg-primary/30 border border-primary/20'}`}
+                                                            >
+                                                                {sendingReply ? (
+                                                                    <div className="w-5 h-5 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+                                                                ) : (
+                                                                    <span className="material-symbols-outlined text-xl leading-none">send</span>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {report.status === 'resolved' && (
+                                                        <div className="text-center p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                                            <p className="text-xs text-emerald-400 font-medium">This issue is marked as resolved.</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

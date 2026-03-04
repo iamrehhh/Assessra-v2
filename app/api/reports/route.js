@@ -45,11 +45,17 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { category, page, description } = body;
+        const { category, page, description, screenshot_url } = body;
 
         if (!description || !description.trim()) {
             return NextResponse.json({ error: 'Description is required' }, { status: 400 });
         }
+
+        const initialMessage = {
+            sender: 'user',
+            text: description.trim(),
+            created_at: new Date().toISOString()
+        };
 
         const { data, error } = await supabase
             .from('reports')
@@ -58,7 +64,9 @@ export async function POST(req) {
                 user_name: session.user.name || session.user.email,
                 category: category || 'other',
                 page: page || 'unknown',
-                description: description.trim(),
+                description: description.trim(), // keeping for compatibility, but mainly use messages array now
+                messages: [initialMessage],
+                screenshot_url: screenshot_url || null,
                 status: 'open',
             })
             .select()
@@ -73,24 +81,63 @@ export async function POST(req) {
     }
 }
 
-// PATCH — update report status/reply (admin only)
+// PATCH — update report status/reply
 export async function PATCH(req) {
     try {
         const session = await getServerSession();
-        if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const isAdmin = ADMIN_EMAILS.includes(session.user.email);
         const body = await req.json();
-        const { id, status, admin_reply } = body;
+        const { id, status, new_message } = body;
 
         if (!id) {
             return NextResponse.json({ error: 'Report ID is required' }, { status: 400 });
         }
 
+        // Fetch current report to append messages
+        const { data: currentReport, error: fetchError } = await supabase
+            .from('reports')
+            .select('messages, user_email')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !currentReport) {
+            return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        }
+
+        // Ensure users can only reply to their own reports
+        if (!isAdmin && currentReport.user_email !== session.user.email) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
         const updates = {};
-        if (status) updates.status = status;
-        if (admin_reply !== undefined) updates.admin_reply = admin_reply;
+
+        // Only admins can change status
+        if (isAdmin && status) {
+            updates.status = status;
+        }
+
+        if (new_message && new_message.trim()) {
+            const messages = currentReport.messages || [];
+            messages.push({
+                sender: isAdmin ? 'admin' : 'user',
+                text: new_message.trim(),
+                created_at: new Date().toISOString()
+            });
+            updates.messages = messages;
+
+            // Legacy field for easy unread check in TopHeader.js
+            if (isAdmin) {
+                updates.admin_reply = new_message.trim();
+            }
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ error: 'No updates provided' }, { status: 400 });
+        }
 
         const { data, error } = await supabase
             .from('reports')
