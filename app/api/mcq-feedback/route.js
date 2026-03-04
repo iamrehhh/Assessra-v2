@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { callLLM } from '@/lib/llm';
+import { retrieveRelevantContent } from '@/lib/rag';
 import fs from 'fs';
 import path from 'path';
 import { extractText, getDocumentProxy } from 'unpdf';
@@ -39,6 +40,21 @@ export async function POST(req) {
             ? `The exact question text is: "${questionText}"`
             : `Find Question ${questionNumber} in the extracted paper text below.`;
 
+        // RAG: Retrieve relevant economics context from textbooks/notes
+        let ragContext = '';
+        try {
+            const ragQuery = questionText
+                ? `Economics A-Level: ${questionText}`
+                : `Economics A-Level Question ${questionNumber}`;
+            ragContext = await retrieveRelevantContent(ragQuery, 'economics', 'alevel', 4);
+        } catch (ragErr) {
+            console.warn('[MCQ Feedback] RAG retrieval failed (non-fatal):', ragErr.message);
+        }
+
+        const ragSection = ragContext
+            ? `\n\n**Relevant economics reference material from textbooks/notes:**\n\`\`\`\n${ragContext.substring(0, 6000)}\n\`\`\`\n\nUse the above reference material to provide deeper, more accurate economic reasoning in your explanation.`
+            : '';
+
         let prompt = '';
         if (correctAnswer) {
             prompt = `
@@ -52,6 +68,7 @@ Here is the full paper text for reference:
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
+${ragSection}
 
 **Your task — provide a thorough, high-quality explanation:**
 
@@ -81,6 +98,7 @@ Here is the full paper text for reference:
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
+${ragSection}
 
 **Your task — determine the correct answer and provide a thorough explanation:**
 
@@ -101,7 +119,7 @@ ${pdfText.substring(0, 80000)}
         }
 
         const systemPrompt = "You are a world-class A-Level Economics tutor. You provide clear, thorough, and insightful explanations that help students truly understand concepts — not just memorize answers. Always respond in clean, well-structured markdown. Never use LaTeX notation. When explaining, first identify the exact question being asked, then give a deep but accessible explanation with real economic reasoning.";
-        const feedback = await callLLM(prompt, null, 800, systemPrompt, 'gpt-4o');
+        const feedback = await callLLM(prompt, null, 800, systemPrompt);
 
         return NextResponse.json({ feedback }, { status: 200 });
 
