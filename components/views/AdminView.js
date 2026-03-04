@@ -1142,7 +1142,7 @@ export default function AdminView() {
 
                                 <div style={{ flex: 1, background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', marginBottom: '16px', minHeight: '200px' }}>
                                     {(() => {
-                                        const messages = selectedReport.messages || [
+                                        const messages = selectedReport.messages && selectedReport.messages.length > 0 ? selectedReport.messages : [
                                             { sender: 'user', text: selectedReport.description, created_at: selectedReport.created_at },
                                             ...(selectedReport.admin_reply ? [{ sender: 'admin', text: selectedReport.admin_reply, created_at: selectedReport.updated_at || selectedReport.created_at }] : [])
                                         ];

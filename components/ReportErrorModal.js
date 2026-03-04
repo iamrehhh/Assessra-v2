@@ -147,8 +147,11 @@ export default function ReportErrorModal({ currentView }) {
                     const uploadData = await uploadRes.json();
                     screenshot_url = uploadData.url;
                 } else {
-                    console.error('Failed to upload screenshot');
-                    // Continue with report submission even if screenshot fails
+                    const errorText = await uploadRes.text();
+                    console.error('Failed to upload screenshot', errorText);
+                    alert(`Screenshot upload failed: ${errorText}. Please share this exact error message with the AI assistant.`);
+                    setSubmitting(false);
+                    return;
                 }
             }
 
@@ -411,7 +414,7 @@ export default function ReportErrorModal({ currentView }) {
                                     const st = STATUS_COLORS[report.status] || STATUS_COLORS.open;
                                     const seen = JSON.parse(localStorage.getItem('assessra_seen_replies') || '[]');
                                     const isNewReply = report.admin_reply && !seen.includes(report.id);
-                                    const messages = report.messages || [
+                                    const messages = report.messages && report.messages.length > 0 ? report.messages : [
                                         { sender: 'user', text: report.description, created_at: report.created_at },
                                         ...(report.admin_reply ? [{ sender: 'admin', text: report.admin_reply, created_at: report.updated_at || report.created_at }] : [])
                                     ];
