@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import supabase from '@/lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 export async function POST(request) {
     try {
@@ -19,13 +19,13 @@ export async function POST(request) {
 
         // Generate a unique filename
         const fileExt = file.name.split('.').pop() || 'png';
-        const fileName = `${uuidv4()}.${fileExt}`;
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
         const buffer = await file.arrayBuffer();
 
         // Upload to the 'report_screenshots' bucket
         const { data, error } = await supabase.storage
             .from('report_screenshots')
-            .upload(`public/${fileName}`, buffer, {
+            .upload(fileName, buffer, {
                 contentType: file.type || 'image/png',
                 upsert: false
             });
@@ -38,7 +38,7 @@ export async function POST(request) {
         // Get the public URL
         const { data: publicUrlData } = supabase.storage
             .from('report_screenshots')
-            .getPublicUrl(data.path);
+            .getPublicUrl(fileName);
 
         return NextResponse.json({
             success: true,

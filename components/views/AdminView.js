@@ -164,7 +164,7 @@ export default function AdminView() {
                 body: JSON.stringify({
                     id: selectedReport.id,
                     status: reportStatus,
-                    admin_reply: reportReply
+                    new_message: reportReply
                 })
             });
             if (res.ok) {
