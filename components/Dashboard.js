@@ -84,6 +84,10 @@ export default function Dashboard() {
 
         if (session?.user) {
             fetchProfile();
+            const interval = setInterval(() => {
+                fetchProfile();
+            }, 60000);
+            return () => clearInterval(interval);
         } else {
             setIsLoading(false);
         }
