@@ -621,14 +621,14 @@ export default function PracticeView() {
                                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Subject</label>
                                 <select value={subject} onChange={e => setSubject(e.target.value)}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                    {SUBJECTS.map(s => <option key={s} value={s} className="bg-slate-900">{s}</option>)}
+                                    {SUBJECTS.map(s => <option key={s} value={s} className="bg-white dark:bg-slate-900">{s}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Level</label>
                                 <select value={level} onChange={e => setLevel(e.target.value)}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                    {LEVELS.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
+                                    {LEVELS.map(l => <option key={l} value={l} className="bg-white dark:bg-slate-900">{l}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -658,7 +658,7 @@ export default function PracticeView() {
                                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Question Type</label>
                                 <select value={questionType} onChange={e => setQuestionType(e.target.value)}
                                     className="w-full bg-black/5 dark:bg-white/5 border border-border-main rounded-xl px-4 py-3 text-text-main font-medium focus:outline-none focus:border-primary/50 transition-colors">
-                                    {QUESTION_TYPES.map(qt => <option key={qt} value={qt} className="bg-slate-900">{qt}</option>)}
+                                    {QUESTION_TYPES.map(qt => <option key={qt} value={qt} className="bg-white dark:bg-slate-900">{qt}</option>)}
                                 </select>
                             </div>
                         </div>
