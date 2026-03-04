@@ -17,7 +17,7 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { pdfPath, questionNumber, userAnswer, correctAnswer, questionText, allAnswers } = body;
+        const { pdfPath, questionNumber, userAnswer, correctAnswer, questionText, allAnswers, allQuestions } = body;
 
         if (!pdfPath || questionNumber === undefined || !userAnswer) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -40,6 +40,15 @@ export async function POST(req) {
         let answerKeyStr = '';
         if (allAnswers && Array.isArray(allAnswers)) {
             answerKeyStr = allAnswers.map((a, idx) => `Q${idx + 1}: ${a}`).join(', ');
+        }
+
+        // Build a clean questions context string if available
+        let questionsContextStr = '';
+        if (allQuestions && Array.isArray(allQuestions)) {
+            const validQ = allQuestions.filter(q => q && typeof q === 'object' && q.t);
+            if (validQ.length > 0) {
+                questionsContextStr = validQ.map(q => `Q${q.n}: ${q.t}`).join('\n\n');
+            }
         }
 
         // RAG: Retrieve relevant economics context from textbooks/notes
@@ -67,9 +76,11 @@ You are explaining Question ${questionNumber} from a Cambridge A-Level Economics
 - The student selected: **${userAnswer}**
 - The student was ${userAnswer === correctAnswer ? 'CORRECT ✓' : 'INCORRECT ✗'}
 ${answerKeyStr ? `\nFull answer key for this paper: ${answerKeyStr}` : ''}
-${questionText ? `\nThe question text is: "${questionText}"` : ''}
+${questionText ? `\nThe SPECIFIC text for Question ${questionNumber} is: "${questionText}". Rely on THIS text primarily. If it refers to a diagram, try to infer the context, but know the extraction might fail on the image.` : ''}
 
-**EXTRACTED PAPER TEXT** (use this to find Question ${questionNumber} and its options A, B, C, D):
+${questionsContextStr ? `**CLEAN QUESTION TEXTS** (Use this instead of the PDF text to read the exact wording of the questions!):\n\`\`\`\n${questionsContextStr}\n\`\`\`\n` : ''}
+
+**EXTRACTED PAPER TEXT (FALLBACK)** (use this to find the options A, B, C, D if they are not clear, but be aware diagrams and tables extract as garbled text):
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
@@ -105,9 +116,11 @@ You are explaining Question ${questionNumber} from a Cambridge A-Level Economics
 
 - The student selected: **${userAnswer}**
 - No official answer key is available for this paper.
-${questionText ? `\nThe question text is: "${questionText}"` : ''}
+${questionText ? `\nThe SPECIFIC text for Question ${questionNumber} is: "${questionText}". Rely on THIS text primarily.` : ''}
 
-**EXTRACTED PAPER TEXT** (use this to find Question ${questionNumber} and its options A, B, C, D):
+${questionsContextStr ? `**CLEAN QUESTION TEXTS** (Use this instead of the PDF text to read the exact wording of the questions!):\n\`\`\`\n${questionsContextStr}\n\`\`\`\n` : ''}
+
+**EXTRACTED PAPER TEXT (FALLBACK)** (use this to find the options A, B, C, D if they are not clear):
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
