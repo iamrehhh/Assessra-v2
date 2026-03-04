@@ -223,7 +223,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                     {submitted && (!paper.answers || paper.answers.length === 0) && (
                         <div className="text-center p-6 bg-purple-500/10 border border-purple-500/30 rounded-2xl mb-8">
                             <div className="text-2xl font-black text-purple-400 mb-2">Practice Submitted</div>
-                            <div className="text-sm font-bold text-purple-400/80">No official marking scheme is available for this paper.<br />Use the AI Solution buttons below to verify your answers!</div>
+                            <div className="text-sm font-bold text-purple-400/80">No official marking scheme is available for this paper.<br />(AI Explanations are currently disabled)</div>
                             <button
                                 onClick={handleReset}
                                 className="mt-4 px-5 py-2 text-sm font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-xl transition-colors hover:bg-orange-500/20 cursor-pointer flex items-center gap-2 mx-auto"
@@ -273,7 +273,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                                     );
                                                 })}
                                             </div>
-                                            {submitted && (
+                                            {false && submitted && (
                                                 <button
                                                     onClick={() => getFeedback(i, correctAns, userAns, qItem.n || i + 1, qItem.t || null, paper.answers || null, paper.questions || null)}
                                                     className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 whitespace-nowrap"
