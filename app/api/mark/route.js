@@ -2,6 +2,7 @@
 // Direct OpenAI GPT-4o-mini marking — mirrors the logic from the original app.py
 
 import { callLLM } from '@/lib/llm';
+import { retrieveRelevantContent } from '@/lib/rag';
 
 function getSubject(pdf, paperTitle) {
     const p = (pdf || '').toLowerCase();
@@ -194,6 +195,29 @@ export async function POST(request) {
         const rubric = buildRubric(pdf, marksInt);
         const modelAnswerInstruction = buildModelAnswerInstruction(pdf, marksInt);
 
+        // RAG: Retrieve relevant textbook content + marking scheme context
+        let ragTextbook = '';
+        let ragMarkscheme = '';
+        try {
+            const ragQuery = `${subject || 'economics'} A-Level: ${question}`;
+            // Retrieve textbook theory
+            ragTextbook = await retrieveRelevantContent(ragQuery, subject || 'economics', 'alevel', 4);
+            // Retrieve marking scheme context
+            ragMarkscheme = await retrieveRelevantContent(
+                `marking scheme ${question}`,
+                subject || 'economics',
+                'alevel',
+                3
+            );
+        } catch (ragErr) {
+            console.warn('[Mark API] RAG retrieval failed (non-fatal):', ragErr.message);
+        }
+
+        const ragSection = [
+            ragTextbook ? `\nRELEVANT TEXTBOOK REFERENCE MATERIAL:\n${ragTextbook.substring(0, 5000)}` : '',
+            ragMarkscheme ? `\nRELEVANT MARKING SCHEME EXCERPTS:\n${ragMarkscheme.substring(0, 3000)}` : '',
+        ].filter(Boolean).join('\n\n---\n');
+
         const userPrompt = `
 QUESTION: ${question}
 MARKS AVAILABLE: ${marksInt}
@@ -206,10 +230,13 @@ ${answer}
 ---
 MARKING RUBRIC:
 ${rubric}
+${ragSection}
 
 ---
 MODEL ANSWER INSTRUCTION (generate after marking):
 ${modelAnswerInstruction}
+
+Use the textbook reference material and marking scheme excerpts above (if available) to provide more accurate marking and a stronger model answer grounded in real subject content.
 
 ---
 ADDITIONAL CONTEXT:
