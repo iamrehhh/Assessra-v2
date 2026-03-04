@@ -63,3 +63,35 @@ export async function GET(request) {
         return Response.json({ error: 'Internal error' }, { status: 500 });
     }
 }
+
+export async function DELETE(request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.email) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const paperId = searchParams.get('paperId');
+
+        if (!paperId) {
+            return Response.json({ error: 'paperId required' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('scores')
+            .delete()
+            .eq('username', session.user.email)
+            .eq('paper_id', paperId);
+
+        if (error) {
+            console.error('MCQ attempt delete error:', error);
+            return Response.json({ error: 'Failed to delete attempt' }, { status: 500 });
+        }
+
+        return Response.json({ success: true });
+    } catch (err) {
+        console.error('MCQ attempt delete error:', err);
+        return Response.json({ error: 'Internal error' }, { status: 500 });
+    }
+}

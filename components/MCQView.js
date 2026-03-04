@@ -153,6 +153,24 @@ export default function MCQView({ paperId, paperData, onBack }) {
         }
     }
 
+    const handleReset = async () => {
+        const isConfirmed = await confirmDialog('Reset Attempt', 'Are you sure you want to reset? Your current score and answers will be erased and you can re-attempt this paper.');
+        if (!isConfirmed) return;
+        // Clear localStorage
+        try { localStorage.removeItem(ANSWERS_KEY(paperId)); } catch { }
+        // Delete from Supabase
+        try {
+            await fetch(`/api/mcq-attempts?paperId=${encodeURIComponent(paperId)}`, { method: 'DELETE' });
+        } catch (err) { console.error('Failed to delete attempt:', err); }
+        // Reset all state
+        setAnswers({});
+        setSubmitted(false);
+        setScore(null);
+        setFeedbacks({});
+        setLoadingFeedbacks({});
+        setTimeLeft(75 * 60);
+    };
+
     const h = Math.floor(timeLeft / 3600);
     const m = Math.floor((timeLeft % 3600) / 60);
     const s = timeLeft % 60;
@@ -191,12 +209,26 @@ export default function MCQView({ paperId, paperData, onBack }) {
                         <div className="text-center p-6 bg-green-500/10 border border-green-500/30 rounded-2xl mb-8">
                             <div className="text-4xl font-black text-green-400 mb-1">{Math.round((score / Math.max(1, (paper.answers || []).length)) * 100)}%</div>
                             <div className="text-lg text-text-muted font-bold">Score: {score} / {(paper.answers || []).length}</div>
+                            <button
+                                onClick={handleReset}
+                                className="mt-4 px-5 py-2 text-sm font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-xl transition-colors hover:bg-orange-500/20 cursor-pointer flex items-center gap-2 mx-auto"
+                            >
+                                <span className="material-symbols-outlined text-base">restart_alt</span>
+                                Reset & Re-attempt
+                            </button>
                         </div>
                     )}
                     {submitted && (!paper.answers || paper.answers.length === 0) && (
                         <div className="text-center p-6 bg-purple-500/10 border border-purple-500/30 rounded-2xl mb-8">
                             <div className="text-2xl font-black text-purple-400 mb-2">Practice Submitted</div>
                             <div className="text-sm font-bold text-purple-400/80">No official marking scheme is available for this paper.<br />Use the AI Solution buttons below to verify your answers!</div>
+                            <button
+                                onClick={handleReset}
+                                className="mt-4 px-5 py-2 text-sm font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30 rounded-xl transition-colors hover:bg-orange-500/20 cursor-pointer flex items-center gap-2 mx-auto"
+                            >
+                                <span className="material-symbols-outlined text-base">restart_alt</span>
+                                Reset & Re-attempt
+                            </button>
                         </div>
                     )}
 
