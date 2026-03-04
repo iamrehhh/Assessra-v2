@@ -46,20 +46,31 @@ export default function TopHeader({ setView, userProfile, setIsMobileOpen }) {
                     const data = await res.json();
                     setNotification(data);
                     const seenMsg = localStorage.getItem('assessra_seen_notification');
-                    setHasUnread(data.active && data.message && data.message !== seenMsg);
+                    setHasUnread(
+                        (data.active && data.message && data.message !== seenMsg) ||
+                        !!userProfile?.admin_message
+                    );
                 }
             } catch (err) { console.error('Notification error', err); }
         };
 
         fetchNotification();
-    }, [session]);
+    }, [session, userProfile?.admin_message]);
 
     const handleOpenPanel = () => {
         setShowPanel(!showPanel);
-        if (!showPanel && notification.active && notification.message) {
-            // Mark as read
-            setHasUnread(false);
-            localStorage.setItem('assessra_seen_notification', notification.message);
+        if (!showPanel) {
+            if (notification.active && notification.message) {
+                // Mark global notification as read
+                setHasUnread(prev => prev && !!userProfile?.admin_message);
+                localStorage.setItem('assessra_seen_notification', notification.message);
+            }
+            if (userProfile?.admin_message) {
+                // Clear personal admin message from DB so it doesn't show on next load
+                setHasUnread(prev => prev && (notification.active && notification.message && notification.message !== localStorage.getItem('assessra_seen_notification')));
+                fetch('/api/user/clear-message', { method: 'POST' }).catch(console.error);
+                // The message will stay visible while the panel is open because userProfile hasn't mutated yet
+            }
         }
     };
 
@@ -144,21 +155,36 @@ export default function TopHeader({ setView, userProfile, setIsMobileOpen }) {
                             </div>
 
                             {/* Body */}
-                            <div className="p-5">
-                                {notification.active && notification.message ? (
+                            <div className="p-5 flex flex-col gap-4">
+                                {userProfile?.admin_message && (
+                                    <div className="flex items-start gap-3 bg-red-500/5 p-3 rounded-xl border border-red-500/20">
+                                        <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                                            <span className="material-symbols-outlined text-red-500 text-lg">mail</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-text-main mb-1">Personal Message</p>
+                                            <p className="text-sm text-text-main leading-relaxed">{userProfile.admin_message}</p>
+                                            <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block"></span>
+                                                From Admin Team
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {notification.active && notification.message && (
                                     <div className="flex items-start gap-3">
                                         <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
                                             <span className="material-symbols-outlined text-primary text-lg">campaign</span>
                                         </div>
                                         <div>
+                                            <p className="text-sm font-semibold text-text-main mb-1">Global Announcement</p>
                                             <p className="text-sm text-text-main leading-relaxed">{notification.message}</p>
-                                            <p className="text-xs text-text-muted mt-2 flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-                                                From Admin Team
-                                            </p>
                                         </div>
                                     </div>
-                                ) : (
+                                )}
+
+                                {(!notification.active || !notification.message) && !userProfile?.admin_message && (
                                     <div className="text-center py-4">
                                         <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
                                             <span className="material-symbols-outlined text-text-muted text-2xl">notifications_off</span>

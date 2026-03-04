@@ -67,6 +67,9 @@ export default function AdminView() {
     const [scoreModalOpen, setScoreModalOpen] = useState(false);
     const [selectedUserScores, setSelectedUserScores] = useState(null);
 
+    const [editUserModal, setEditUserModal] = useState({ open: false, userId: null, nickname: '' });
+    const [messageUserModal, setMessageUserModal] = useState({ open: false, userId: null, name: '', message: '' });
+
     const showAlert = useCallback((title, message) => {
         setModal({ open: true, type: 'alert', title, message, onConfirm: null });
     }, []);
@@ -170,6 +173,45 @@ export default function AdminView() {
                 fetchReports();
             } else {
                 showAlert('Error', 'Failed to update report.');
+            }
+        } catch { showAlert('Error', 'Network error.'); }
+        setSavingReport(false);
+    };
+
+    const handleEditUser = async () => {
+        if (!editUserModal.userId) return;
+        setSavingReport(true);
+        try {
+            const res = await fetch('/api/admin/users/edit', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: editUserModal.userId, nickname: editUserModal.nickname })
+            });
+            if (res.ok) {
+                showAlert('Success', 'User nickname updated!');
+                setEditUserModal({ open: false, userId: null, nickname: '' });
+                fetchUsers();
+            } else {
+                showAlert('Error', 'Failed to update nickname.');
+            }
+        } catch { showAlert('Error', 'Network error.'); }
+        setSavingReport(false);
+    };
+
+    const handleMessageUser = async () => {
+        if (!messageUserModal.userId) return;
+        setSavingReport(true);
+        try {
+            const res = await fetch('/api/admin/users/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: messageUserModal.userId, message: messageUserModal.message })
+            });
+            if (res.ok) {
+                showAlert('Success', 'Message sent to user!');
+                setMessageUserModal({ open: false, userId: null, name: '', message: '' });
+            } else {
+                showAlert('Error', 'Failed to send message.');
             }
         } catch { showAlert('Error', 'Network error.'); }
         setSavingReport(false);
@@ -551,15 +593,33 @@ export default function AdminView() {
                                         </td>
                                         <td style={styles.td}>
                                             {!['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'].includes(user.email) ? (
-                                                <button
-                                                    style={{ ...styles.dangerBtn, opacity: actionLoading === user.id ? 0.5 : 1 }}
-                                                    disabled={actionLoading === user.id}
-                                                    onClick={() => deleteUser(user.id, user.email)}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
-                                                >
-                                                    {actionLoading === user.id ? 'Deleting...' : 'Remove'}
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#fef3c7', color: '#d97706', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onClick={() => setEditUserModal({ open: true, userId: user.id, nickname: user.nickname || '' })}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fde68a'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fef3c7'; }}
+                                                    >
+                                                        Edit Nickname
+                                                    </button>
+                                                    <button
+                                                        style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f3e8ff', color: '#9333ea', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onClick={() => setMessageUserModal({ open: true, userId: user.id, name: user.name || user.email, message: '' })}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#e9d5ff'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f3e8ff'; }}
+                                                    >
+                                                        Message
+                                                    </button>
+                                                    <button
+                                                        style={{ ...styles.dangerBtn, opacity: actionLoading === user.id ? 0.5 : 1 }}
+                                                        disabled={actionLoading === user.id}
+                                                        onClick={() => deleteUser(user.id, user.email)}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
+                                                    >
+                                                        {actionLoading === user.id ? 'Deleting...' : 'Remove'}
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 <span style={styles.pill('green')}>Admin</span>
                                             )}
@@ -1152,6 +1212,82 @@ export default function AdminView() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit User Modal */}
+            {editUserModal.open && (
+                <div style={styles.modalOverlay} onClick={() => setEditUserModal({ open: false, userId: null, nickname: '' })}>
+                    <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <h3 style={styles.modalTitle}>Edit Nickname</h3>
+                            <button style={styles.modalClose} onClick={() => setEditUserModal({ open: false, userId: null, nickname: '' })}>✕</button>
+                        </div>
+                        <div style={styles.modalBody}>
+                            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '8px' }}>User Nickname</label>
+                            <input
+                                type="text"
+                                value={editUserModal.nickname}
+                                onChange={(e) => setEditUserModal(prev => ({ ...prev, nickname: e.target.value }))}
+                                placeholder="Enter a new nickname..."
+                                style={{
+                                    width: '100%', padding: '12px 14px', borderRadius: '10px',
+                                    border: '2px solid #e2e8f0', fontSize: '0.95rem',
+                                    color: '#1e293b', background: 'white', outline: 'none'
+                                }}
+                            />
+                        </div>
+                        <div style={{ ...styles.modalFooter, justifyContent: 'flex-end' }}>
+                            <button style={styles.modalCancel} onClick={() => setEditUserModal({ open: false, userId: null, nickname: '' })}>Cancel</button>
+                            <button
+                                style={{ ...styles.modalPrimary, opacity: savingReport ? 0.6 : 1 }}
+                                onClick={handleEditUser}
+                                disabled={savingReport}
+                            >
+                                {savingReport ? 'Saving...' : 'Save Nickname'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Message User Modal */}
+            {messageUserModal.open && (
+                <div style={styles.modalOverlay} onClick={() => setMessageUserModal({ open: false, userId: null, name: '', message: '' })}>
+                    <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <h3 style={styles.modalTitle}>Message {messageUserModal.name}</h3>
+                            <button style={styles.modalClose} onClick={() => setMessageUserModal({ open: false, userId: null, name: '', message: '' })}>✕</button>
+                        </div>
+                        <div style={styles.modalBody}>
+                            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Direct Admin Message</label>
+                            <textarea
+                                value={messageUserModal.message}
+                                onChange={(e) => setMessageUserModal(prev => ({ ...prev, message: e.target.value }))}
+                                rows={4}
+                                placeholder="Type a message to send directly to this user..."
+                                style={{
+                                    width: '100%', padding: '12px 14px', borderRadius: '10px',
+                                    border: '2px solid #e2e8f0', fontSize: '0.95rem',
+                                    color: '#1e293b', background: 'white', outline: 'none',
+                                    resize: 'vertical', minHeight: '80px', fontFamily: 'inherit'
+                                }}
+                            />
+                            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '8px' }}>
+                                This message will appear in the user's notification bell until they open their notifications tray.
+                            </p>
+                        </div>
+                        <div style={{ ...styles.modalFooter, justifyContent: 'flex-end' }}>
+                            <button style={styles.modalCancel} onClick={() => setMessageUserModal({ open: false, userId: null, name: '', message: '' })}>Cancel</button>
+                            <button
+                                style={{ ...styles.modalPrimary, opacity: savingReport ? 0.6 : 1 }}
+                                onClick={handleMessageUser}
+                                disabled={savingReport}
+                            >
+                                {savingReport ? 'Sending...' : 'Send Message'}
+                            </button>
                         </div>
                     </div>
                 </div>
