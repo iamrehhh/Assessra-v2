@@ -26,7 +26,13 @@ export default function SavedPracticeView({ isEmbedded = false }) {
             const res = await fetch('/api/user/saved-practices');
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to fetch saved practices');
-            setSavedSets(data.savedPractices || []);
+
+            // Filter out 'vocab' and 'idioms' since they belong in the VocabIdiomsView
+            const aiPractices = (data.savedPractices || []).filter(
+                set => set.subject !== 'vocab' && set.subject !== 'idioms'
+            );
+
+            setSavedSets(aiPractices);
         } catch (err) {
             console.error(err);
             setError(err.message);
