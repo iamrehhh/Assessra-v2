@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { extractText, getDocumentProxy } from 'unpdf';
 
-export const maxDuration = 60; // Prevent Vercel hobby 10s timeout on heavy PDF + LLM generation
+export const maxDuration = 60;
 
 export async function POST(req) {
     try {
@@ -17,7 +17,7 @@ export async function POST(req) {
         }
 
         const body = await req.json();
-        const { pdfPath, questionNumber, userAnswer, correctAnswer, questionText } = body;
+        const { pdfPath, questionNumber, userAnswer, correctAnswer, questionText, allAnswers } = body;
 
         if (!pdfPath || questionNumber === undefined || !userAnswer) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -30,96 +30,115 @@ export async function POST(req) {
             return NextResponse.json({ error: `PDF not found at path: ${decodedPdfPath}` }, { status: 404 });
         }
 
+        // Extract PDF text for question context
         const dataBuffer = new Uint8Array(fs.readFileSync(safePath));
         const pdf = await getDocumentProxy(dataBuffer);
         const { text } = await extractText(pdf);
         const pdfText = String(text);
 
-        // Build question context — use provided text if available for precise targeting
-        const questionContext = questionText
-            ? `The exact question text is: "${questionText}"`
-            : `Find Question ${questionNumber} in the extracted paper text below.`;
+        // Build full answer key string for additional context
+        let answerKeyStr = '';
+        if (allAnswers && Array.isArray(allAnswers)) {
+            answerKeyStr = allAnswers.map((a, idx) => `Q${idx + 1}: ${a}`).join(', ');
+        }
 
         // RAG: Retrieve relevant economics context from textbooks/notes
         let ragContext = '';
         try {
             const ragQuery = questionText
                 ? `Economics A-Level: ${questionText}`
-                : `Economics A-Level Question ${questionNumber}`;
+                : `Economics A-Level MCQ Question ${questionNumber} concepts`;
             ragContext = await retrieveRelevantContent(ragQuery, 'economics', 'alevel', 4);
         } catch (ragErr) {
             console.warn('[MCQ Feedback] RAG retrieval failed (non-fatal):', ragErr.message);
         }
 
         const ragSection = ragContext
-            ? `\n\n**Relevant economics reference material from textbooks/notes:**\n\`\`\`\n${ragContext.substring(0, 6000)}\n\`\`\`\n\nUse the above reference material to provide deeper, more accurate economic reasoning in your explanation.`
+            ? `\n\n**REFERENCE MATERIAL FROM ECONOMICS TEXTBOOKS:**\n\`\`\`\n${ragContext.substring(0, 6000)}\n\`\`\`\nUse this textbook material to ground your explanation in accurate economic theory.`
             : '';
 
         let prompt = '';
         if (correctAnswer) {
             prompt = `
-You are an expert A-Level Economics tutor with deep subject knowledge.
+You are explaining Question ${questionNumber} from a Cambridge A-Level Economics MCQ paper.
 
-**Question ${questionNumber}**: ${questionContext}
-- The student chose: **${userAnswer}**
-- The correct answer is: **${correctAnswer}**
+**CRITICAL FACTS (these are DEFINITIVE — do NOT contradict them):**
+- The OFFICIAL correct answer to Question ${questionNumber} is: **${correctAnswer}**
+- The student selected: **${userAnswer}**
+- The student was ${userAnswer === correctAnswer ? 'CORRECT ✓' : 'INCORRECT ✗'}
+${answerKeyStr ? `\nFull answer key for this paper: ${answerKeyStr}` : ''}
+${questionText ? `\nThe question text is: "${questionText}"` : ''}
 
-Here is the full paper text for reference:
+**EXTRACTED PAPER TEXT** (use this to find Question ${questionNumber} and its options A, B, C, D):
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
 ${ragSection}
 
-**Your task — provide a thorough, high-quality explanation:**
+**INSTRUCTIONS:**
 
-1. **Identify the question** — Quote or summarize what Question ${questionNumber} is actually asking, including all the options (A, B, C, D) and their content from the paper.
+Your job is to explain WHY **${correctAnswer}** is the correct answer. The answer key comes from Cambridge's official mark scheme — it is 100% correct and cannot be questioned.
 
-2. **Why ${correctAnswer} is correct** — Explain the underlying concept or principle clearly. If it involves a calculation, show the full working step by step using plain text math (e.g., "Revenue = Price × Quantity = $5 × 200 = $1,000"). Connect to real economic theory where relevant.
+Please structure your response as follows:
 
-3. **Why each wrong option is incorrect** — For each of the other options (A, B, C, D excluding ${correctAnswer}), briefly explain the specific flaw in reasoning or the misconception it represents. Highlight the student's choice (${userAnswer}) with a bit more detail.
+**1. The Question**
+Find Question ${questionNumber} in the paper text above. Quote the question and list all four options (A, B, C, D) with their content. If you cannot find the exact text, say so but still explain based on the correct answer.
 
-4. **Key takeaway** — One sentence summarizing the core concept the student should remember.
+**2. Why ${correctAnswer} is Correct**
+Explain the economic concept/principle that makes ${correctAnswer} the right answer. If it's a calculation, show full step-by-step working using plain text (e.g., "PED = %ΔQd ÷ %ΔP = 20% ÷ 10% = 2"). Connect to real A-Level economic theory.
 
-**Formatting rules:**
-- Use **bold** for key economic terms, option letters, and important values.
-- Use bullet points or numbered lists for clarity.
-- For math/calculations, write them as readable inline text with Unicode symbols (×, ÷, →, =, ≈, ≠). Do NOT use LaTeX syntax.
-- Be educational, clear, and encouraging — help the student truly understand.
+**3. Why the Other Options Are Wrong**
+For each wrong option, briefly explain the specific error or misconception.${userAnswer !== correctAnswer ? ` Give extra detail on **${userAnswer}** (the student's choice) — explain exactly why it's wrong and what common misconception leads students to pick it.` : ''}
+
+**4. Key Takeaway**
+One clear sentence summarizing the core concept.
+
+**FORMAT RULES:**
+- Use **bold** for key terms, option letters, and important values
+- Use bullet points for clarity
+- For math: use Unicode (×, ÷, →, =, ≈) — NO LaTeX
+- Be clear, educational, and accurate
 `;
         } else {
             prompt = `
-You are an expert A-Level Economics tutor with deep subject knowledge.
+You are explaining Question ${questionNumber} from a Cambridge A-Level Economics MCQ paper.
 
-**Question ${questionNumber}**: ${questionContext}
-- The student chose: **${userAnswer}**
+- The student selected: **${userAnswer}**
 - No official answer key is available for this paper.
+${questionText ? `\nThe question text is: "${questionText}"` : ''}
 
-Here is the full paper text for reference:
+**EXTRACTED PAPER TEXT** (use this to find Question ${questionNumber} and its options A, B, C, D):
 \`\`\`
 ${pdfText.substring(0, 80000)}
 \`\`\`
 ${ragSection}
 
-**Your task — determine the correct answer and provide a thorough explanation:**
+**INSTRUCTIONS:**
 
-1. **Identify the question** — Quote or summarize what Question ${questionNumber} is actually asking, including all the options (A, B, C, D) and their content from the paper.
+Find Question ${questionNumber} in the paper text above. Determine the correct answer using your economics knowledge and the textbook material, then explain it.
 
-2. **Determine the correct answer** — State which option (A, B, C, or D) is correct and explain your reasoning thoroughly. If it involves a calculation, show the full working step by step using plain text math (e.g., "Revenue = Price × Quantity = $5 × 200 = $1,000"). Connect to real economic theory.
+**1. The Question**
+Quote the question and list all four options (A, B, C, D) with their content.
 
-3. **Why each wrong option is incorrect** — For each of the other three options, briefly explain the specific flaw or misconception. If the student's choice (${userAnswer}) differs from the correct answer, give extra detail on why it's wrong.
+**2. The Correct Answer**
+State which option you believe is correct and explain the economic reasoning thoroughly. Show any calculations step by step using plain text.
 
-4. **Key takeaway** — One sentence summarizing the core concept the student should remember.
+**3. Why the Other Options Are Wrong**
+For each wrong option, explain the specific error or misconception.
 
-**Formatting rules:**
-- Use **bold** for key economic terms, option letters, and important values.
-- Use bullet points or numbered lists for clarity.
-- For math/calculations, write them as readable inline text with Unicode symbols (×, ÷, →, =, ≈, ≠). Do NOT use LaTeX syntax.
-- Be educational, clear, and encouraging — help the student truly understand.
+**4. Key Takeaway**
+One clear sentence summarizing the core concept.
+
+**FORMAT RULES:**
+- Use **bold** for key terms, option letters, and important values
+- Use bullet points for clarity
+- For math: use Unicode (×, ÷, →, =, ≈) — NO LaTeX
+- Be clear, educational, and accurate
 `;
         }
 
-        const systemPrompt = "You are a world-class A-Level Economics tutor. You provide clear, thorough, and insightful explanations that help students truly understand concepts — not just memorize answers. Always respond in clean, well-structured markdown. Never use LaTeX notation. When explaining, first identify the exact question being asked, then give a deep but accessible explanation with real economic reasoning.";
-        const feedback = await callLLM(prompt, null, 800, systemPrompt);
+        const systemPrompt = "You are a Cambridge A-Level Economics examiner and tutor. You explain MCQ answers with precision and deep subject knowledge. When an official correct answer is provided, you MUST accept it as correct — it comes from Cambridge's official mark scheme and is NEVER wrong. Your job is to explain WHY it is correct, not to verify it. Always respond in clean markdown. Never use LaTeX.";
+        const feedback = await callLLM(prompt, null, 1000, systemPrompt);
 
         return NextResponse.json({ feedback }, { status: 200 });
 
