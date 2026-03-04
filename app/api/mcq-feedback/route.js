@@ -93,13 +93,15 @@ Your job is to explain WHY **${correctAnswer}** is the correct answer. The answe
 Please structure your response as follows:
 
 **1. The Question**
-Find Question ${questionNumber} in the paper text above. Quote the question and list all four options (A, B, C, D) with their content. If you cannot find the exact text, say so but still explain based on the correct answer.
+Find Question ${questionNumber} in the paper text above. Quote the question and list all four options (A, B, C, D) with their content.
+🚨 **CRITICAL ANTI-HALLUCINATION RULE:** If you cannot find the clear, obvious text for Question ${questionNumber} immediately followed by 4 distinct options, it means the PDF extraction FAILED because the question contained a diagram or image. If this happens, **DO NOT** pick another question. **DO NOT** assume "moral hazard" or any other random text is the question. You MUST simply output: *"The specific text for Question ${questionNumber} could not be extracted (likely due to a diagram). However, based on the official mark scheme, we know the correct answer is ${correctAnswer}."*
 
 **2. Why ${correctAnswer} is Correct**
-Explain the economic concept/principle that makes ${correctAnswer} the right answer. If it's a calculation, show full step-by-step working using plain text (e.g., "PED = %ΔQd ÷ %ΔP = 20% ÷ 10% = 2"). Connect to real A-Level economic theory.
+If you found the question text, explain the economic concept that makes ${correctAnswer} the right answer. Show full step-by-step working.
+If the question text was missing/garbled, explain the general economic theory behind whatever concept is typically associated with Option ${correctAnswer} in A-Level Economics, or simply explain why the provided answer key is definitively correct.
 
 **3. Why the Other Options Are Wrong**
-For each wrong option, briefly explain the specific error or misconception.${userAnswer !== correctAnswer ? ` Give extra detail on **${userAnswer}** (the student's choice) — explain exactly why it's wrong and what common misconception leads students to pick it.` : ''}
+For each wrong option, briefly explain the specific error. ${userAnswer !== correctAnswer ? `Give extra detail on **${userAnswer}** (the student's choice).` : ''} If the question text was missing, you can skip this section or briefly state that without the exact options, specific errors can't be detailed.
 
 **4. Key Takeaway**
 One clear sentence summarizing the core concept.
@@ -132,12 +134,14 @@ Find Question ${questionNumber} in the paper text above. Determine the correct a
 
 **1. The Question**
 Quote the question and list all four options (A, B, C, D) with their content.
+🚨 **CRITICAL ANTI-HALLUCINATION RULE:** If you cannot find the clear, obvious text for Question ${questionNumber}, it means the PDF extraction FAILED (likely due to a diagram). **DO NOT** guess or use another question's text. Instead, state clearly: *"The specific text for this question could not be extracted from the PDF."*
 
 **2. The Correct Answer**
-State which option you believe is correct and explain the economic reasoning thoroughly. Show any calculations step by step using plain text.
+If you have the question text, state which option you believe is correct and explain the economic reasoning thoroughly. Show any calculations step by step using plain text.
+If the text is missing, state that you cannot determine the answer without the text.
 
 **3. Why the Other Options Are Wrong**
-For each wrong option, explain the specific error or misconception.
+For each wrong option, explain the specific error or misconception. If the text is missing, skip this.
 
 **4. Key Takeaway**
 One clear sentence summarizing the core concept.
