@@ -64,6 +64,8 @@ export default function AdminView() {
     const [modal, setModal] = useState({ open: false, type: 'alert', title: '', message: '', onConfirm: null });
     const [practiceModalOpen, setPracticeModalOpen] = useState(false);
     const [selectedUserLogs, setSelectedUserLogs] = useState(null);
+    const [scoreModalOpen, setScoreModalOpen] = useState(false);
+    const [selectedUserScores, setSelectedUserScores] = useState(null);
 
     const showAlert = useCallback((title, message) => {
         setModal({ open: true, type: 'alert', title, message, onConfirm: null });
@@ -242,13 +244,14 @@ export default function AdminView() {
 
     for (const s of relevantScores) {
         if (!scoresByUser[s.username]) {
-            scoresByUser[s.username] = { email: s.username, nickname: s.userNickname, name: s.userName, totalScore: 0, totalMax: 0, attempts: 0, subjects: new Set() };
+            scoresByUser[s.username] = { email: s.username, nickname: s.userNickname, name: s.userName, totalScore: 0, totalMax: 0, attempts: 0, subjects: new Set(), logs: [] };
         }
         const u = scoresByUser[s.username];
         u.totalScore += s.score;
         u.totalMax += s.maxMarks;
         u.attempts += 1;
         u.subjects.add(s.subject);
+        u.logs.push(s);
     }
     let scoreAggregated = Object.values(scoresByUser).map(u => ({
         ...u,
@@ -621,15 +624,25 @@ export default function AdminView() {
                                             </div>
                                         </td>
                                         <td style={styles.td}>
-                                            <button
-                                                style={{ ...styles.dangerBtn, opacity: actionLoading === entry.email ? 0.5 : 1 }}
-                                                disabled={actionLoading === entry.email}
-                                                onClick={() => resetScores(entry.email)}
-                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
-                                            >
-                                                {actionLoading === entry.email ? 'Resetting...' : 'Reset Scores'}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#3b82f6', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                    onClick={() => { setSelectedUserScores(entry); setScoreModalOpen(true); }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                                                >
+                                                    View Logs
+                                                </button>
+                                                <button
+                                                    style={{ ...styles.dangerBtn, opacity: actionLoading === entry.email ? 0.5 : 1 }}
+                                                    disabled={actionLoading === entry.email}
+                                                    onClick={() => resetScores(entry.email)}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
+                                                >
+                                                    {actionLoading === entry.email ? 'Resetting...' : 'Reset Scores'}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -1085,6 +1098,60 @@ export default function AdminView() {
                                     {savingReport ? 'Saving...' : 'Save & Send Reply'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Score Drill-down Modal (PYP / Vocab) */}
+            {scoreModalOpen && selectedUserScores && (
+                <div style={styles.modalOverlay} onClick={() => setScoreModalOpen(false)}>
+                    <div style={{ ...styles.modalContent, maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <div>
+                                <h3 style={styles.modalTitle}>Score History: {selectedUserScores.name || selectedUserScores.email}</h3>
+                                <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0 0 0' }}>{selectedUserScores.attempts} total attempts</p>
+                            </div>
+                            <button style={styles.modalClose} onClick={() => setScoreModalOpen(false)}>✕</button>
+                        </div>
+                        <div style={{ padding: '0', overflowY: 'auto', flex: 1, background: '#f8fafc' }}>
+                            <table style={{ ...styles.table, borderRadius: 0, boxShadow: 'none' }}>
+                                <thead style={{ position: 'sticky', top: 0, background: '#fafbfc', zIndex: 10 }}>
+                                    <tr>
+                                        <th style={styles.th}>Date</th>
+                                        <th style={styles.th}>Subject</th>
+                                        <th style={styles.th}>Paper / Identifier</th>
+                                        <th style={styles.th}>Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedUserScores.logs.map(log => (
+                                        <tr key={log.id}>
+                                            <td style={{ ...styles.td, fontSize: '0.8rem', color: '#64748b' }}>
+                                                {new Date(log.submittedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}<br />
+                                                {new Date(log.submittedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td style={styles.td}>
+                                                <div style={{ fontWeight: 600, color: '#334155', textTransform: 'capitalize' }}>{log.subject?.replace('-', ' ')}</div>
+                                            </td>
+                                            <td style={{ ...styles.td, maxWidth: '250px' }}>
+                                                <div style={{ fontWeight: 500, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {log.paperTitle || log.paperId}
+                                                </div>
+                                                {log.questionNumber && log.questionNumber !== 'all' && (
+                                                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                                                        Question: {log.questionNumber}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td style={styles.td}>
+                                                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>{log.score}</span>
+                                                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}> / {log.maxMarks}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
