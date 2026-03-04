@@ -5,6 +5,7 @@ import PaperUpload from '@/components/admin/PaperUpload';
 
 export default function AdminView() {
     const [tab, setTab] = useState('users');
+    const [scoreTab, setScoreTab] = useState('pyp'); // 'pyp' or 'vocab'
     const [users, setUsers] = useState([]);
     const [scores, setScores] = useState([]);
     const [practiceLogs, setPracticeLogs] = useState([]);
@@ -218,9 +219,14 @@ export default function AdminView() {
         (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Aggregate scores by user
+    // Aggregate scores by user based on sub-tab
     const scoresByUser = {};
-    for (const s of scores) {
+    const relevantScores = scores.filter(s => {
+        const isVocab = s.subject === 'vocab' || s.subject === 'idioms' || (s.paper_id && s.paper_id.startsWith('vocab_idioms'));
+        return scoreTab === 'vocab' ? isVocab : !isVocab;
+    });
+
+    for (const s of relevantScores) {
         if (!scoresByUser[s.username]) {
             scoresByUser[s.username] = { email: s.username, nickname: s.userNickname, name: s.userName, totalScore: 0, totalMax: 0, attempts: 0, subjects: new Set() };
         }
@@ -417,6 +423,46 @@ export default function AdminView() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
+
+            {/* Score Sub-tabs */}
+            {tab === 'scores' && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                    <button
+                        onClick={() => setScoreTab('pyp')}
+                        style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: scoreTab === 'pyp' ? '#1e293b' : '#f1f5f9',
+                            color: scoreTab === 'pyp' ? 'white' : '#64748b',
+                            boxShadow: scoreTab === 'pyp' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                    >
+                        📚 PYP
+                    </button>
+                    <button
+                        onClick={() => setScoreTab('vocab')}
+                        style={{
+                            padding: '8px 20px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            background: scoreTab === 'vocab' ? '#1e293b' : '#f1f5f9',
+                            color: scoreTab === 'vocab' ? 'white' : '#64748b',
+                            boxShadow: scoreTab === 'vocab' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                    >
+                        🗣️ Vocab & Idioms
+                    </button>
+                </div>
+            )}
 
             {tab === 'upload' ? (
                 <PaperUpload />
