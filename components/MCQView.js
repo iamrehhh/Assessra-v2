@@ -54,7 +54,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
             .finally(() => setLoadingAttempt(false));
     }, [paperId, sessionStatus]);
 
-    const getFeedback = async (qIdx, correctAnswer, userAnswer) => {
+    const getFeedback = async (qIdx, correctAnswer, userAnswer, questionNumber, questionText) => {
         if (loadingFeedbacks[qIdx] || feedbacks[qIdx]) return;
         setLoadingFeedbacks(prev => ({ ...prev, [qIdx]: true }));
         try {
@@ -63,9 +63,10 @@ export default function MCQView({ paperId, paperData, onBack }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     pdfPath: paper.pdf,
-                    questionNumber: qIdx + 1,
+                    questionNumber: questionNumber,
                     userAnswer: userAnswer || 'None left blank',
-                    correctAnswer: correctAnswer || null
+                    correctAnswer: correctAnswer || null,
+                    questionText: questionText || null
                 })
             });
             const data = await res.json();
@@ -240,7 +241,7 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                             </div>
                                             {submitted && (
                                                 <button
-                                                    onClick={() => getFeedback(i, correctAns, userAns)}
+                                                    onClick={() => getFeedback(i, correctAns, userAns, qItem.n || i + 1, qItem.t || null)}
                                                     className="ml-3 px-3 py-1.5 text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-lg transition-colors hover:bg-purple-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 whitespace-nowrap"
                                                     disabled={loadingFeedbacks[i]}
                                                 >
