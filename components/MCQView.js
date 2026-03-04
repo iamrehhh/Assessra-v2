@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useConfirm } from '@/components/ConfirmContext';
 import { useSession } from 'next-auth/react';
+import ReactMarkdown from 'react-markdown';
 
 const ANSWERS_KEY = (id) => `mcq_answers_${id}`;
 
@@ -253,7 +254,9 @@ export default function MCQView({ paperId, paperData, onBack }) {
                                                     <span className="material-symbols-outlined text-[16px] text-purple-400">auto_awesome</span>
                                                     AI Feedback
                                                 </div>
-                                                {feedbacks[i]}
+                                                <div className="ai-feedback-content">
+                                                    <ReactMarkdown>{feedbacks[i]}</ReactMarkdown>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

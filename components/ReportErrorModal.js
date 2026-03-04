@@ -47,6 +47,10 @@ export default function ReportErrorModal({ currentView }) {
             setPage(currentView || 'home');
             setSubmitted(false);
             fetchMyReports();
+            // Auto-switch to history tab if there are unread replies
+            if (hasUnreadReply) {
+                setTab('history');
+            }
         }
     }, [open, currentView]);
 
@@ -80,6 +84,8 @@ export default function ReportErrorModal({ currentView }) {
                 const newSeen = [...new Set([...seen, ...(data.reports || []).filter(r => r.admin_reply).map(r => r.id)])];
                 localStorage.setItem('assessra_seen_replies', JSON.stringify(newSeen));
                 setHasUnreadReply(false);
+                // Notify TopHeader that replies have been read
+                window.dispatchEvent(new CustomEvent('report-replies-read'));
             }
         } catch (e) { console.error('Failed to fetch reports', e); }
         setLoadingHistory(false);
@@ -157,6 +163,12 @@ export default function ReportErrorModal({ currentView }) {
                         {myReports.length > 0 && (
                             <span className="bg-white/10 text-slate-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{myReports.length}</span>
                         )}
+                        {hasUnreadReply && (
+                            <span className="relative flex h-2.5 w-2.5 ml-1">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                            </span>
+                        )}
                     </button>
                 </div>
 
@@ -194,8 +206,8 @@ export default function ReportErrorModal({ currentView }) {
                                                 key={cat.value}
                                                 onClick={() => setCategory(cat.value)}
                                                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border ${category === cat.value
-                                                        ? 'bg-primary/15 border-primary/30 text-primary'
-                                                        : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
+                                                    ? 'bg-primary/15 border-primary/30 text-primary'
+                                                    : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-300'
                                                     }`}
                                             >
                                                 <span className="material-symbols-outlined text-sm">{cat.icon}</span>
@@ -234,8 +246,8 @@ export default function ReportErrorModal({ currentView }) {
                                     onClick={handleSubmit}
                                     disabled={submitting || !description.trim()}
                                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${submitting || !description.trim()
-                                            ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
-                                            : 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
+                                        ? 'bg-white/5 text-slate-500 cursor-not-allowed border border-white/5'
+                                        : 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
                                         }`}
                                 >
                                     {submitting ? (
@@ -264,8 +276,10 @@ export default function ReportErrorModal({ currentView }) {
                             <div className="space-y-3">
                                 {myReports.map(report => {
                                     const st = STATUS_COLORS[report.status] || STATUS_COLORS.open;
+                                    const seen = JSON.parse(localStorage.getItem('assessra_seen_replies') || '[]');
+                                    const isNewReply = report.admin_reply && !seen.includes(report.id);
                                     return (
-                                        <div key={report.id} className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 space-y-3">
+                                        <div key={report.id} className={`bg-white/[0.03] border rounded-2xl p-4 space-y-3 transition-all ${isNewReply ? 'border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.15)]' : 'border-white/5'}`}>
                                             {/* Header row */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
@@ -274,9 +288,16 @@ export default function ReportErrorModal({ currentView }) {
                                                     </span>
                                                     <span className="text-[10px] text-slate-500 uppercase font-bold">{report.category?.replace('_', ' ')}</span>
                                                 </div>
-                                                <span className="text-[10px] text-slate-600">
-                                                    {new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    {isNewReply && (
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
+                                                            NEW REPLY
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[10px] text-slate-600">
+                                                        {new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             {/* Description */}
@@ -284,7 +305,7 @@ export default function ReportErrorModal({ currentView }) {
 
                                             {/* Admin Reply */}
                                             {report.admin_reply && (
-                                                <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-1">
+                                                <div className={`border rounded-xl p-3 space-y-1 ${isNewReply ? 'bg-primary/10 border-primary/20' : 'bg-primary/5 border-primary/10'}`}>
                                                     <p className="text-[10px] text-primary font-bold uppercase tracking-wider flex items-center gap-1">
                                                         <span className="material-symbols-outlined text-xs">support_agent</span>
                                                         Admin Reply

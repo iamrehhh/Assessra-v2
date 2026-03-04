@@ -22,6 +22,7 @@ export default function AdminView() {
     const [reportStatus, setReportStatus] = useState('open');
     const [savingReport, setSavingReport] = useState(false);
     const [deletingReport, setDeletingReport] = useState(false);
+    const [reportSubTab, setReportSubTab] = useState('open'); // 'open' | 'in_progress' | 'resolved'
 
     // Notification State
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -738,85 +739,138 @@ export default function AdminView() {
                 )
             ) : tab === 'reports' ? (
                 /* Reports Table */
-                reports.length === 0 ? (
-                    <div style={styles.emptyState}>
-                        <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🚨</p>
-                        <p style={{ fontWeight: 600 }}>No reports yet</p>
+                <>
+                    {/* Report Sub-tabs */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                        {[
+                            { key: 'open', label: '🔴 Open', color: '#ef4444' },
+                            { key: 'in_progress', label: '🟡 In Progress', color: '#f59e0b' },
+                            { key: 'resolved', label: '🟢 Resolved', color: '#22c55e' },
+                        ].map(st => {
+                            const count = reports.filter(r => (r.status || 'open') === st.key).length;
+                            return (
+                                <button
+                                    key={st.key}
+                                    onClick={() => setReportSubTab(st.key)}
+                                    style={{
+                                        padding: '8px 20px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        fontWeight: 700,
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        background: reportSubTab === st.key ? '#1e293b' : '#f1f5f9',
+                                        color: reportSubTab === st.key ? 'white' : '#64748b',
+                                        boxShadow: reportSubTab === st.key ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                    }}
+                                >
+                                    {st.label}
+                                    {count > 0 && (
+                                        <span style={{
+                                            background: reportSubTab === st.key ? 'rgba(255,255,255,0.2)' : st.color + '15',
+                                            color: reportSubTab === st.key ? 'white' : st.color,
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                        }}>
+                                            {count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
-                ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={styles.th}>User</th>
-                                    <th style={styles.th}>Category</th>
-                                    <th style={styles.th}>Page</th>
-                                    <th style={styles.th}>Description</th>
-                                    <th style={styles.th}>Status</th>
-                                    <th style={styles.th}>Date</th>
-                                    <th style={styles.th}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reports.filter(r =>
-                                    (r.user_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (r.user_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (r.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-                                ).map(report => (
-                                    <tr key={report.id} style={{ transition: 'background 0.15s' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
-                                        <td style={styles.td}>
-                                            <div>
-                                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{report.user_name || 'Unknown'}</div>
-                                                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{report.user_email}</div>
-                                            </div>
-                                        </td>
-                                        <td style={styles.td}>
-                                            <span style={styles.pill(report.category === 'bug' ? 'orange' : 'gray')}>
-                                                {(report.category || 'other').replace('_', ' ')}
-                                            </span>
-                                        </td>
-                                        <td style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>{report.page || '—'}</td>
-                                        <td style={{ ...styles.td, maxWidth: '250px' }}>
-                                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155' }}>
-                                                {report.description}
-                                            </div>
-                                        </td>
-                                        <td style={styles.td}>
-                                            <span style={{
-                                                ...styles.pill(
-                                                    report.status === 'resolved' ? 'green' :
-                                                        report.status === 'in_progress' ? 'orange' : 'gray'
-                                                ),
-                                                textTransform: 'capitalize'
-                                            }}>
-                                                {(report.status || 'open').replace('_', ' ')}
-                                            </span>
-                                        </td>
-                                        <td style={{ ...styles.td, fontSize: '0.82rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                                            {report.created_at ? new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                                        </td>
-                                        <td style={styles.td}>
-                                            <button
-                                                style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#3b82f6', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                onClick={() => {
-                                                    setSelectedReport(report);
-                                                    setReportReply(report.admin_reply || '');
-                                                    setReportStatus(report.status || 'open');
-                                                }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
-                                            >
-                                                {report.admin_reply ? 'View / Edit' : 'Reply'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )
+
+                    {(() => {
+                        const filteredByStatus = reports.filter(r =>
+                            (r.status || 'open') === reportSubTab &&
+                            ((r.user_email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                (r.user_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                (r.description || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                        );
+
+                        return filteredByStatus.length === 0 ? (
+                            <div style={styles.emptyState}>
+                                <p style={{ fontSize: '2rem', marginBottom: '8px' }}>🚨</p>
+                                <p style={{ fontWeight: 600 }}>No {reportSubTab.replace('_', ' ')} reports</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th style={styles.th}>User</th>
+                                            <th style={styles.th}>Category</th>
+                                            <th style={styles.th}>Page</th>
+                                            <th style={styles.th}>Description</th>
+                                            <th style={styles.th}>Status</th>
+                                            <th style={styles.th}>Date</th>
+                                            <th style={styles.th}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredByStatus.map(report => (
+                                            <tr key={report.id} style={{ transition: 'background 0.15s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                                <td style={styles.td}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{report.user_name || 'Unknown'}</div>
+                                                        <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{report.user_email}</div>
+                                                    </div>
+                                                </td>
+                                                <td style={styles.td}>
+                                                    <span style={styles.pill(report.category === 'bug' ? 'orange' : 'gray')}>
+                                                        {(report.category || 'other').replace('_', ' ')}
+                                                    </span>
+                                                </td>
+                                                <td style={{ ...styles.td, fontSize: '0.85rem', color: '#64748b' }}>{report.page || '—'}</td>
+                                                <td style={{ ...styles.td, maxWidth: '250px' }}>
+                                                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#334155' }}>
+                                                        {report.description}
+                                                    </div>
+                                                </td>
+                                                <td style={styles.td}>
+                                                    <span style={{
+                                                        ...styles.pill(
+                                                            report.status === 'resolved' ? 'green' :
+                                                                report.status === 'in_progress' ? 'orange' : 'gray'
+                                                        ),
+                                                        textTransform: 'capitalize'
+                                                    }}>
+                                                        {(report.status || 'open').replace('_', ' ')}
+                                                    </span>
+                                                </td>
+                                                <td style={{ ...styles.td, fontSize: '0.82rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                                                    {report.created_at ? new Date(report.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                                </td>
+                                                <td style={styles.td}>
+                                                    <button
+                                                        style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f1f5f9', color: '#3b82f6', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onClick={() => {
+                                                            setSelectedReport(report);
+                                                            setReportReply(report.admin_reply || '');
+                                                            setReportStatus(report.status || 'open');
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                                                    >
+                                                        {report.admin_reply ? 'View / Edit' : 'Reply'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })()}
+                </>
             ) : null}
 
             {/* Book Completions Tab */}

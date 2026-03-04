@@ -48,11 +48,18 @@ ${pdfText.substring(0, 80000)}
 
 Task:
 Find Question ${questionNumber} in the text above.
-Provide strictly targeted feedback. Briefly explain:
-1. Why ${correctAnswer} is the correct option.
-2. Why the other options (including the student's choice, if different) are incorrect.
+Provide strictly targeted feedback in clean, well-structured markdown. Briefly explain:
 
-Do NOT provide a full model answer for the paper. Be concise, direct, and encouraging.
+1. **Why ${correctAnswer} is correct** — explain the reasoning clearly.
+2. **Why the other options are incorrect** — briefly address each wrong option.
+
+Formatting rules:
+- Use **bold** for key terms and option letters.
+- Use bullet points or numbered lists for clarity.
+- For any math or calculations, write them as readable inline text using Unicode symbols (×, ÷, →, =, ≈, ≠). Example: "5,000 ÷ 2.5 = 2,000" instead of LaTeX.
+- Do NOT use LaTeX syntax like \\frac, \\text, \\[, \\], or $$ at all.
+- Keep it concise, direct, and encouraging.
+- Do NOT provide a full model answer for the paper.
 `;
         } else {
             prompt = `
@@ -67,17 +74,24 @@ ${pdfText.substring(0, 80000)}
 
 Task:
 Find Question ${questionNumber} in the text above.
-First, determine the correct option (A, B, C, or D) for Question ${questionNumber} based on the text.
-Then, provide strictly targeted feedback explaining:
-1. Which option is correct and why it is correct.
-2. Why the other options, including the student's choice (${userAnswer}), are incorrect.
+First, determine the correct option (A, B, C, or D) for Question ${questionNumber}.
+Then, provide strictly targeted feedback in clean, well-structured markdown:
 
-Do NOT provide a full model answer for the paper. Be concise, direct, and clear.
+1. **Which option is correct** and why.
+2. **Why the other options are incorrect** — briefly address each, including the student's choice (${userAnswer}).
+
+Formatting rules:
+- Use **bold** for key terms and option letters.
+- Use bullet points or numbered lists for clarity.
+- For any math or calculations, write them as readable inline text using Unicode symbols (×, ÷, →, =, ≈, ≠). Example: "5,000 ÷ 2.5 = 2,000" instead of LaTeX.
+- Do NOT use LaTeX syntax like \\frac, \\text, \\[, \\], or $$ at all.
+- Keep it concise, direct, and clear.
+- Do NOT provide a full model answer for the paper.
 `;
         }
 
-        const systemPrompt = "You are a helpful and concise tutor providing specific explanations and solutions for multiple choice questions.";
-        const feedback = await callLLM(prompt, null, 350, systemPrompt);
+        const systemPrompt = "You are a helpful and concise tutor providing specific explanations for multiple choice questions. Always respond in clean, well-structured markdown. Never use LaTeX notation — use Unicode math symbols and plain text for calculations.";
+        const feedback = await callLLM(prompt, null, 500, systemPrompt);
 
         return NextResponse.json({ feedback }, { status: 200 });
 

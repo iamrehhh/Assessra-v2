@@ -11,6 +11,32 @@ export default function TopHeader({ setView, userProfile, setIsMobileOpen }) {
     const [showPanel, setShowPanel] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const panelRef = useRef(null);
+    const [hasUnreadReport, setHasUnreadReport] = useState(false);
+
+    // Check for unread report replies periodically
+    useEffect(() => {
+        const checkReportReplies = async () => {
+            try {
+                const res = await fetch('/api/reports?mine=true');
+                if (res.ok) {
+                    const data = await res.json();
+                    const seen = JSON.parse(localStorage.getItem('assessra_seen_replies') || '[]');
+                    const hasNew = (data.reports || []).some(r => r.admin_reply && !seen.includes(r.id));
+                    setHasUnreadReport(hasNew);
+                }
+            } catch { /* silent */ }
+        };
+        checkReportReplies();
+        const interval = setInterval(checkReportReplies, 60000);
+        return () => clearInterval(interval);
+    }, [session]);
+
+    // Listen for report modal close to clear unread state
+    useEffect(() => {
+        const handleReportRead = () => setHasUnreadReport(false);
+        window.addEventListener('report-replies-read', handleReportRead);
+        return () => window.removeEventListener('report-replies-read', handleReportRead);
+    }, []);
 
     useEffect(() => {
         const fetchNotification = async () => {
@@ -79,6 +105,12 @@ export default function TopHeader({ setView, userProfile, setIsMobileOpen }) {
                 >
                     <span className="material-symbols-outlined text-red-400 group-hover:text-red-500 text-lg">bug_report</span>
                     <span className="text-sm font-bold text-text-muted group-hover:text-text-main transition-colors hidden sm:inline">Report Error</span>
+                    {hasUnreadReport && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center text-[8px] text-white font-bold">!</span>
+                        </span>
+                    )}
                 </button>
 
                 {/* Notification Bell + Dropdown */}

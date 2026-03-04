@@ -689,45 +689,58 @@ function BookReaderModal({
                     </div>
 
                     {/* Word Definition Popup */}
-                    {wordPopup && (
-                        <div
-                            className="absolute z-50 w-72 bg-bg-card dark:bg-slate-800 border border-border-main rounded-2xl shadow-2xl p-4 animate-fade-in"
-                            style={{
-                                left: Math.min(Math.max(wordPopup.x - 136, 8), 280),
-                                top: Math.max(wordPopup.y - 10, 8),
-                                transform: 'translateY(-100%)',
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-black text-text-main text-base capitalize">{wordPopup.word}</h4>
-                                <button onClick={() => setWordPopup(null)} className="text-text-muted hover:text-text-main">
-                                    <span className="material-symbols-outlined text-sm">close</span>
-                                </button>
-                            </div>
-                            {wordPopup.loading ? (
-                                <div className="flex items-center gap-2 py-2">
-                                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                    <span className="text-xs text-text-muted">Looking up definition...</span>
+                    {wordPopup && (() => {
+                        const popupWidth = 288; // w-72 = 18rem = 288px
+                        const containerWidth = readerRef.current?.clientWidth || 600;
+                        const padding = 16; // px padding of reading body
+                        const maxLeft = containerWidth - popupWidth - padding;
+                        const popupLeft = Math.min(Math.max(wordPopup.x - popupWidth / 2, padding), maxLeft);
+                        // Arrow position: where the word is relative to popup left
+                        const arrowLeft = Math.min(Math.max(wordPopup.x - popupLeft, 16), popupWidth - 16);
+
+                        return (
+                            <div
+                                className="absolute z-50 w-72 bg-bg-card dark:bg-slate-800 border border-border-main rounded-2xl shadow-2xl p-4 animate-fade-in"
+                                style={{
+                                    left: popupLeft,
+                                    top: Math.max(wordPopup.y - 10, 8),
+                                    transform: 'translateY(-100%)',
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-black text-text-main text-base capitalize">{wordPopup.word}</h4>
+                                    <button onClick={() => setWordPopup(null)} className="text-text-muted hover:text-text-main">
+                                        <span className="material-symbols-outlined text-sm">close</span>
+                                    </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-2.5">
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">Definition</p>
-                                        <p className="text-sm text-text-muted leading-relaxed">{wordPopup.definition}</p>
+                                {wordPopup.loading ? (
+                                    <div className="flex items-center gap-2 py-2">
+                                        <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-xs text-text-muted">Looking up definition...</span>
                                     </div>
-                                    {wordPopup.contextMeaning && (
+                                ) : (
+                                    <div className="space-y-2.5">
                                         <div>
-                                            <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">In this context</p>
-                                            <p className="text-sm text-text-muted leading-relaxed italic">{wordPopup.contextMeaning}</p>
+                                            <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">Definition</p>
+                                            <p className="text-sm text-text-muted leading-relaxed">{wordPopup.definition}</p>
                                         </div>
-                                    )}
-                                </div>
-                            )}
-                            {/* Arrow pointing down */}
-                            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-bg-card dark:bg-slate-800 border-r border-b border-border-main rotate-45"></div>
-                        </div>
-                    )}
+                                        {wordPopup.contextMeaning && (
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-0.5">In this context</p>
+                                                <p className="text-sm text-text-muted leading-relaxed italic">{wordPopup.contextMeaning}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {/* Arrow pointing down — dynamically positioned to point at the clicked word */}
+                                <div
+                                    className="absolute -bottom-1.5 w-3 h-3 bg-bg-card dark:bg-slate-800 border-r border-b border-border-main rotate-45"
+                                    style={{ left: arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }}
+                                ></div>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Footer: Pagination + Complete */}
