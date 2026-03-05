@@ -1,117 +1,143 @@
 import { NextResponse } from 'next/server';
-import supabase from '@/lib/supabase';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const getToneInstruction = (tone) => {
-    switch (tone) {
-        case 'friend':
-            return 'You are a supportive, casual, and friendly peer who happens to be great at this subject. Use accessible language, an encouraging tone, and be relatable. Always aim for clarity over jargon.';
-        case 'girlfriend':
-            return "You are the user's smart, playful, and affectionately teasing girlfriend who is helping them study. You want them to succeed and be proud of them, but you also joke around, use sweet terms of endearment casually, and keep the vibe fun, romantic, and engaging while remaining academically sound.";
-        case 'boyfriend':
-            return "You are the user's smart, caring, and supportive boyfriend who is helping them study. You are affectionate, occasionally protective and romantic, making sure they understand the material well while keeping the mood lighthearted and charming, while remaining academically sound.";
-        case 'professional':
-        default:
-            return 'You are an elite, professional, and rigorous academic professor. You provide highly accurate, comprehensive, and theoretically sound explanations. You demand high standards but are patient and crystal clear in your didactic approach.';
-    }
+const SUBJECT_KNOWLEDGE = {
+    maths: "Focus on Cambridge 0580/9709 standards. Show full logical working steps. Use LaTeX for math. Mention Method Marks when applicable. Structure: Identify → Show Steps → State Answer.",
+    physics: "Standard gravity g=9.81 m/s². Use SI units. Define context, state equation, substitute, then calculate. Stress precision and unit consistency.",
+    chemistry: "Follow IUPAC nomenclature. Focus on mole calculations, redox, and organic reaction mechanisms. Explain step-by-step with balanced equations.",
+    biology: "Use precise Cambridge mark scheme terminology. Use Point-Evidence-Explain (PEE) structure. Focus on biological processes and keyword-heavy definitions.",
+    economics: "Focus on definitions, diagrams (describe them), and evaluative points (Pros/Cons). Use terms like 'Ceteris Paribus'.",
+    business: "Analyze based on business objectives and stakeholders. Use 'Application' to specific scenarios. Focus on evaluation and chain of reasoning.",
+    history: "Focus on source analysis, causation, and significance. Structure with clear chronological or thematic arguments.",
+    english: "Focus on PEE structure, literary devices, and authorial intent. Use academic and analytical vocabulary."
 };
 
-async function getAdminReferenceContext(query, subject, level) {
-    try {
-        const embeddingRes = await openai.embeddings.create({
-            model: 'text-embedding-ada-002',
-            input: query,
-        });
-        const queryEmbedding = embeddingRes.data[0].embedding;
+function getSystemPrompt(subject, level, tone, uploadText, ragContext = '') {
+    const toneInstructions = {
+        professional: "Academic, rigorous, and formal. Act as a senior Cambridge examiner.",
+        friend: "Casual, encouraging, and clear. Use relatable examples.",
+        girlfriend: "Playful, endearing, smart, and highly supportive. Use affectionate but respectful language.",
+        boyfriend: "Caring, supportive, clever, and protective of their academic success."
+    }[tone] || "A helpful academic tutor.";
 
-        // Level needs string match like 'alevel' or 'igcse' internally
-        const sysLevel = level.toLowerCase() === 'a level' || level.toLowerCase() === 'as & a level' ? 'alevel' : 'igcse';
-        const sysSubject = subject.toLowerCase().replace(' ', '_');
+    const basePrompt = `You are a world-class AI Tutor for the Cambridge Assessment International Education (CAIE) syllabus.
+Subject: ${subject}
+Level: ${level}
+Personality/Tone: ${toneInstructions}
 
-        const { data: chunks, error } = await supabase.rpc('match_tutor_reference', {
-            query_embedding: queryEmbedding,
-            match_count: 5,
-            filter_subject: sysSubject,
-            filter_level: sysLevel
-        });
+CORE RULES:
+1. Ground every answer in the official Cambridge syllabus (${level} standards).
+2. ${SUBJECT_KNOWLEDGE[subject.toLowerCase()] || "Explain clearly using academic terminology."}
+3. If the user asks a tricky question, include a section: 📝 Exam Tip: [Advice on how to get marks or common pitfalls].
+4. If a question feels like a typical exam problem, flag it with: 📋 Past Paper Style Question.
+5. Injected Reference Context (Trusted Source): ${ragContext}
+6. User Uploaded Material: ${uploadText ? uploadText.substring(0, 10000) : 'None provided.'}
 
-        if (error || !chunks || chunks.length === 0) return '';
+MANDATORY RESPONSE FORMAT:
+- Use clean Markdown.
+- Keep the tone consistent throughout.
+- ALWAYS end your response with exactly 3 short follow-up suggestions in this format: 
+SUGGESTIONS: [Question 1] | [Question 2] | [Question 3]`;
 
-        return chunks.map(c => c.content).join('\n\n');
-    } catch (err) {
-        console.error('Error fetching admin RAG context:', err);
-        return '';
-    }
+    return basePrompt;
 }
 
 export async function POST(request) {
     try {
-        const body = await request.json();
-        const { email, conversationId, messages, subject, level, tone, uploadText } = body;
+        const { email, conversationId, messages, subject, level, tone, uploadText } = await request.json();
 
         if (!email || !messages || !subject || !level) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Save the user's message to the DB if we have a conversationId
-        const lastUserMessage = messages[messages.length - 1];
-        if (conversationId && lastUserMessage.role === 'user') {
-            await supabase.from('ai_tutor_messages').insert({
-                conversation_id: conversationId,
-                role: 'user',
-                content: lastUserMessage.content
-            });
-            // Update conversation updated_at
-            await supabase.from('ai_tutor_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
-        }
-
-        // System prompt context
-        const subjectContext = `You are an AI Tutor for students studying ${subject.toUpperCase()} at the ${level.toUpperCase()} level. `;
-        const toneContext = getToneInstruction(tone || 'professional');
-
+        // 1. Fetch RAG Context from Admin Textbooks
         let ragContext = '';
-        if (uploadText) {
-            ragContext = `\n\nThe user has uploaded a relevant text snippet for context. Please use it to inform your answer if relevant:\n"""\n${uploadText.substring(0, 8000)}\n"""`;
-        } else if (lastUserMessage) {
-            // Attempt to fetch Admin Textbook RAG context
-            const adminText = await getAdminReferenceContext(lastUserMessage.content, subject, level);
-            if (adminText) {
-                ragContext = `\n\nHere is some exact textbook reference context related to the user's latest message. Use this strictly as factual grounding:\n"""\n${adminText}\n"""`;
+        try {
+            const userMsg = messages[messages.length - 1].content;
+            const embedRes = await openai.embeddings.create({
+                model: "text-embedding-ada-002",
+                input: userMsg,
+            });
+            const embedding = embedRes.data[0].embedding;
+
+            const { data: chunks } = await supabase.rpc('match_tutor_reference', {
+                query_embedding: embedding,
+                match_count: 5,
+                filter_subject: subject,
+                filter_level: level
+            });
+
+            if (chunks) {
+                ragContext = chunks.map(c => c.content).join('\n---\n');
             }
+        } catch (e) {
+            console.error('RAG Error:', e);
         }
 
         const systemMessage = {
             role: 'system',
-            content: subjectContext + toneContext + ragContext + '\n\nFormat your answers beautifully using Markdown. Include headers, bullet points, or bold text where it aids readability.'
+            content: getSystemPrompt(subject, level, tone, uploadText, ragContext)
         };
 
-        const apiMessages = [systemMessage, ...messages.map(m => ({ role: m.role, content: m.content }))];
-
-        const chatCompletion = await openai.chat.completions.create({
+        const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
-            messages: apiMessages,
-            temperature: tone === 'professional' ? 0.3 : 0.7,
-            max_tokens: 1500,
+            messages: [systemMessage, ...messages],
+            stream: true,
         });
 
-        const assistantMessageContent = chatCompletion.choices[0].message.content;
+        // 2. Setup Stream
+        let fullContent = '';
+        const stream = new ReadableStream({
+            async start(controller) {
+                const encoder = new TextEncoder();
+                for await (const chunk of response) {
+                    const content = chunk.choices[0]?.delta?.content || '';
+                    if (content) {
+                        fullContent += content;
+                        controller.enqueue(encoder.encode(content));
+                    }
+                }
 
-        // Save assistant message to DB
-        if (conversationId) {
-            await supabase.from('ai_tutor_messages').insert({
-                conversation_id: conversationId,
-                role: 'assistant',
-                content: assistantMessageContent
-            });
-        }
+                // 3. Save to database after full stream completion
+                try {
+                    // Save User Message
+                    const lastUserMsg = messages[messages.length - 1];
+                    await supabase.from('ai_tutor_messages').insert({
+                        conversation_id: conversationId,
+                        role: 'user',
+                        content: lastUserMsg.content
+                    });
 
-        return NextResponse.json({ message: assistantMessageContent });
+                    // Save Assistant Message
+                    await supabase.from('ai_tutor_messages').insert({
+                        conversation_id: conversationId,
+                        role: 'assistant',
+                        content: fullContent
+                    });
+
+                    // Update conversation timestamp
+                    await supabase.from('ai_tutor_conversations').update({ updated_at: new Date() }).eq('id', conversationId);
+                } catch (dbErr) {
+                    console.error('DB Save Error:', dbErr);
+                }
+
+                controller.close();
+            },
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-cache',
+            },
+        });
+
     } catch (error) {
-        console.error('Error in AI Tutor Chat API:', error);
-        return NextResponse.json({ error: 'An error occurred during chat completion.' }, { status: 500 });
+        console.error('AI Chat Error:', error);
+        return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
     }
 }

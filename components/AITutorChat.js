@@ -44,6 +44,7 @@ export default function AITutorChat({ subject, level, onBack }) {
 
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
     const [selectedTone, setSelectedTone] = useState('professional');
     const [showToneDropdown, setShowToneDropdown] = useState(false);
 
@@ -53,15 +54,17 @@ export default function AITutorChat({ subject, level, onBack }) {
 
     const [generatingFlashcard, setGeneratingFlashcard] = useState(false);
     const [flashcardToast, setFlashcardToast] = useState('');
+    const [copiedId, setCopiedId] = useState(null);
 
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
+    const abortControllerRef = useRef(null);
 
     const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
-    useEffect(() => { scrollToBottom(); }, [messages, isLoading]);
+    useEffect(() => { scrollToBottom(); }, [messages, isLoading, isStreaming]);
 
     // Load conversations on mount
     useEffect(() => {
@@ -106,12 +109,14 @@ export default function AITutorChat({ subject, level, onBack }) {
 
     const loadMessages = async (convId) => {
         if (convId === currentConversationId) return;
+        if (isStreaming) handleStopStream();
         setMessages([]);
         setCurrentConversationId(convId);
         await fetchMessages(convId);
     };
 
     const startNewChat = () => {
+        if (isStreaming) handleStopStream();
         setCurrentConversationId(null);
         setMessages([defaultGreeting]);
         setInput('');
@@ -128,19 +133,26 @@ export default function AITutorChat({ subject, level, onBack }) {
         }
     };
 
-    const handleSubmit = async (e) => {
-        if (e) e.preventDefault();
-        if (!input.trim() || isLoading || !email) return;
+    const handleStopStream = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            setIsStreaming(false);
+            setIsLoading(false);
+        }
+    };
 
-        const userMsgContent = input.trim();
+    const handleSubmit = async (e, overrideInput) => {
+        if (e) e.preventDefault();
+        const textToSubmit = overrideInput || input;
+        if (!textToSubmit.trim() || isLoading || isStreaming || !email) return;
+
         setInput('');
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
         let convId = currentConversationId;
-
         if (!convId) {
             try {
-                const title = userMsgContent.length > 40 ? userMsgContent.substring(0, 40) + '…' : userMsgContent;
+                const title = textToSubmit.length > 40 ? textToSubmit.substring(0, 40) + '…' : textToSubmit;
                 const crRes = await fetch('/api/ai-tutor/history', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -155,37 +167,89 @@ export default function AITutorChat({ subject, level, onBack }) {
             } catch { }
         }
 
-        const newMessages = [...messages, { role: 'user', content: userMsgContent }];
-        setMessages(newMessages);
+        const newMessages = [...messages, { role: 'user', content: textToSubmit.trim() }];
+        setMessages([...newMessages, { role: 'assistant', content: '' }]);
         setIsLoading(true);
+        setIsStreaming(true);
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         try {
             const res = await fetch('/api/ai-tutor/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, conversationId: convId, messages: newMessages, subject, level, tone: selectedTone, uploadText })
+                body: JSON.stringify({ email, conversationId: convId, messages: newMessages, subject, level, tone: selectedTone, uploadText }),
+                signal: controller.signal
             });
-            if (res.ok) {
-                const data = await res.json();
-                setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-            } else {
-                setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
+
+            if (!res.ok) throw new Error('Failed to fetch');
+
+            const reader = res.body.getReader();
+            const decoder = new TextEncoder();
+            let accumulatedContent = '';
+
+            // Turn off thinking indicator once first chunk arrives
+            setIsLoading(false);
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = new TextDecoder().decode(value);
+                accumulatedContent += chunk;
+
+                setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1].content = accumulatedContent;
+                    return updated;
+                });
             }
-        } catch {
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Please check your network.' }]);
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('Stream aborted');
+            } else {
+                setMessages(prev => {
+                    const updated = [...prev];
+                    updated[updated.length - 1].content = 'Sorry, something went wrong. Please check your connection.';
+                    return updated;
+                });
+            }
         } finally {
             setIsLoading(false);
+            setIsStreaming(false);
+            abortControllerRef.current = null;
         }
+    };
+
+    const handleRegenerate = () => {
+        if (messages.length < 2 || isStreaming) return;
+        const lastUserMsg = messages[messages.length - 2].content;
+        setMessages(prev => prev.slice(0, -2));
+        handleSubmit(null, lastUserMsg);
+    };
+
+    const handleCopy = (text, id) => {
+        navigator.clipboard.writeText(text);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const parseSuggestions = (content) => {
+        const parts = content.split('SUGGESTIONS:');
+        const mainContent = parts[0].trim();
+        const suggestionStr = parts[1] || '';
+        const suggestions = suggestionStr.split('|').map(s => s.trim()).filter(Boolean);
+        return { mainContent, suggestions };
     };
 
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file || !email) return;
 
-        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+        const MAX_SIZE = 5 * 1024 * 1024;
         if (file.size > MAX_SIZE) {
-            setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ **File too large.** Please upload a PDF under **5 MB** to keep token usage efficient. For large textbooks, ask your admin to upload them via the Admin Panel instead.' }]);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+            setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ **File too large.** Please upload a PDF under **5 MB**.' }]);
             return;
         }
 
@@ -197,7 +261,7 @@ export default function AITutorChat({ subject, level, onBack }) {
             if (res.ok) {
                 const data = await res.json();
                 setUploadText(data.text);
-                setMessages(prev => [...prev, { role: 'assistant', content: `📚 **"${file.name}" uploaded!** I'll use this as reference for our session. What would you like to explore?` }]);
+                setMessages(prev => [...prev, { role: 'assistant', content: `📚 **"${file.name}" uploaded!** I'll use this as reference.` }]);
             }
         } catch { }
         finally {
@@ -234,8 +298,6 @@ export default function AITutorChat({ subject, level, onBack }) {
             {/* ─── Sidebar ─── */}
             <div className={`flex-shrink-0 flex flex-col border-r border-border-main bg-bg-card/60 transition-[width] duration-200 ease-in-out ${sidebarOpen ? 'w-60' : 'w-0 overflow-hidden'}`}>
                 <div className="w-60 flex flex-col h-full min-w-0">
-
-                    {/* Sidebar Top */}
                     <div className="p-3 border-b border-border-main shrink-0">
                         <div className="flex items-center gap-2 px-1 mb-3">
                             <span className="material-symbols-outlined text-primary text-lg">smart_toy</span>
@@ -244,16 +306,10 @@ export default function AITutorChat({ subject, level, onBack }) {
                                 <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{level}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={startNewChat}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-semibold hover:bg-primary/20 active:scale-95 transition-all"
-                        >
-                            <span className="material-symbols-outlined text-base">add</span>
-                            New Chat
+                        <button onClick={startNewChat} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-semibold hover:bg-primary/20 transition-all">
+                            <span className="material-symbols-outlined text-base">add</span> New Chat
                         </button>
                     </div>
-
-                    {/* Conversation List */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar py-1">
                         {conversations.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-32 text-center px-4">
@@ -266,11 +322,7 @@ export default function AITutorChat({ subject, level, onBack }) {
                                     <div key={group} className="px-2 mt-2">
                                         <p className="text-[9px] uppercase font-bold tracking-widest text-text-muted px-2 py-1.5">{group}</p>
                                         {convs.map(conv => (
-                                            <button
-                                                key={conv.id}
-                                                onClick={() => loadMessages(conv.id)}
-                                                className={`w-full text-left px-2 py-2 rounded-lg text-xs truncate transition-all flex items-center gap-2 ${currentConversationId === conv.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-muted hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-main'}`}
-                                            >
+                                            <button key={conv.id} onClick={() => loadMessages(conv.id)} className={`w-full text-left px-2 py-2 rounded-lg text-xs truncate transition-all flex items-center gap-2 ${currentConversationId === conv.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-muted hover:bg-black/5 dark:hover:bg-white/5 hover:text-text-main'}`}>
                                                 <span className="material-symbols-outlined text-xs shrink-0 opacity-60">chat_bubble</span>
                                                 <span className="truncate">{conv.title}</span>
                                             </button>
@@ -280,12 +332,9 @@ export default function AITutorChat({ subject, level, onBack }) {
                             )
                         )}
                     </div>
-
-                    {/* Change Subject */}
                     <div className="p-2 border-t border-border-main shrink-0">
                         <button onClick={onBack} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                            <span className="material-symbols-outlined text-sm">arrow_back</span>
-                            Change Subject
+                            <span className="material-symbols-outlined text-sm">arrow_back</span> Change Subject
                         </button>
                     </div>
                 </div>
@@ -293,71 +342,37 @@ export default function AITutorChat({ subject, level, onBack }) {
 
             {/* ─── Main Chat ─── */}
             <div className="flex-1 flex flex-col overflow-hidden relative">
-
                 {/* Top Bar */}
                 <div className="h-12 border-b border-border-main bg-bg-card/70 backdrop-blur-sm px-3 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setSidebarOpen(p => !p)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-text-muted hover:text-text-main transition-colors"
-                        >
-                            <span className="material-symbols-outlined text-xl">menu</span>
+                        <button onClick={() => setSidebarOpen(p => !p)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-text-muted hover:text-text-main transition-colors text-xl">
+                            <span className="material-symbols-outlined">menu</span>
                         </button>
                         <div className="h-4 w-px bg-border-main mx-1" />
-
-                        {/* Flashcard pill */}
-                        <button
-                            onClick={handleCreateFlashcard}
-                            disabled={generatingFlashcard || messages.length < 2}
-                            title="Save a flashcard from this conversation"
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold hover:bg-amber-400/20 disabled:opacity-40 transition-all"
-                        >
-                            <span className={`material-symbols-outlined text-sm ${generatingFlashcard ? 'animate-spin' : ''}`}>
-                                {generatingFlashcard ? 'sync' : 'style'}
-                            </span>
+                        <button onClick={handleCreateFlashcard} disabled={generatingFlashcard || messages.length < 2 || isStreaming} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold hover:bg-amber-400/20 disabled:opacity-40 transition-all">
+                            <span className={`material-symbols-outlined text-sm ${generatingFlashcard ? 'animate-spin' : ''}`}>{generatingFlashcard ? 'sync' : 'style'}</span>
                             <span className="hidden sm:inline">{generatingFlashcard ? 'Saving…' : 'Flashcard'}</span>
                         </button>
-
-                        {/* Upload Book pill */}
                         <input type="file" accept="application/pdf" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingBook}
-                            title={uploadText ? 'Book loaded — click to replace' : 'Upload a PDF for context'}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all disabled:opacity-40 ${uploadText
-                                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-600 dark:text-emerald-400'
-                                : 'border-border-main text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'
-                                }`}
-                        >
-                            <span className={`material-symbols-outlined text-sm ${uploadingBook ? 'animate-spin' : ''}`}>
-                                {uploadingBook ? 'sync' : uploadText ? 'check_circle' : 'upload_file'}
-                            </span>
-                            <span className="hidden sm:inline">{uploadingBook ? 'Reading…' : uploadText ? 'Book Loaded' : 'Upload Book'}</span>
+                        <button onClick={() => fileInputRef.current?.click()} disabled={uploadingBook || isStreaming} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all disabled:opacity-40 ${uploadText ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-600 dark:text-emerald-400' : 'border-border-main text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                            <span className={`material-symbols-outlined text-sm ${uploadingBook ? 'animate-spin' : ''}`}>{uploadingBook ? 'sync' : uploadText ? 'check_circle' : 'upload_file'}</span>
+                            <span className="hidden sm:inline text-xs font-bold">{uploadingBook ? 'Reading…' : uploadText ? 'Book Loaded' : 'Upload Book'}</span>
                         </button>
                     </div>
 
-                    {/* Tone Selector */}
                     <div className="relative">
-                        <button
-                            onClick={() => setShowToneDropdown(p => !p)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all"
-                        >
+                        <button onClick={() => setShowToneDropdown(p => !p)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all">
                             <span className="material-symbols-outlined text-sm">{currentTone?.icon}</span>
-                            <span className="hidden sm:inline">{currentTone?.label}</span>
+                            <span className="hidden sm:inline text-xs font-bold">{currentTone?.label}</span>
                             <span className="material-symbols-outlined text-xs">expand_more</span>
                         </button>
-
                         {showToneDropdown && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setShowToneDropdown(false)} />
                                 <div className="absolute right-0 top-full mt-2 w-48 bg-bg-card border border-border-main rounded-xl shadow-xl overflow-hidden z-20">
-                                    <p className="text-[9px] uppercase font-bold tracking-widest text-text-muted px-3 pt-2.5 pb-1">Personality</p>
+                                    <p className="text-[9px] uppercase font-bold tracking-widest text-text-muted px-3 pt-2.5 pb-1 font-bold">Personality</p>
                                     {TONES.map(tone => (
-                                        <button
-                                            key={tone.id}
-                                            onClick={() => { setSelectedTone(tone.id); setShowToneDropdown(false); }}
-                                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${selectedTone === tone.id ? 'bg-primary/10' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                        >
+                                        <button key={tone.id} onClick={() => { setSelectedTone(tone.id); setShowToneDropdown(false); }} className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${selectedTone === tone.id ? 'bg-primary/10' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
                                             <span className={`material-symbols-outlined text-base ${selectedTone === tone.id ? 'text-primary' : 'text-text-muted'}`}>{tone.icon}</span>
                                             <div className="flex-1">
                                                 <p className={`text-xs font-bold ${selectedTone === tone.id ? 'text-primary' : 'text-text-main'}`}>{tone.label}</p>
@@ -375,44 +390,72 @@ export default function AITutorChat({ subject, level, onBack }) {
                 {/* ─── Messages ─── */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {loadingMessages ? (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="flex flex-col items-center gap-3 text-text-muted">
-                                <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                                <span className="text-sm">Loading…</span>
-                            </div>
+                        <div className="flex items-center justify-center h-full flex flex-col items-center gap-3 text-text-muted">
+                            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            <span className="text-sm">Loading…</span>
                         </div>
                     ) : (
                         <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-                            {messages.map((msg, idx) => (
-                                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-fade-in`}>
-                                    {msg.role === 'assistant' && (
-                                        <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '14px' }}>smart_toy</span>
-                                        </div>
-                                    )}
-                                    <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${msg.role === 'user'
-                                        ? 'bg-primary text-white rounded-tr-sm'
-                                        : 'bg-bg-card border border-border-main text-text-main rounded-tl-sm shadow-sm'
-                                        }`}>
-                                        <div className={`prose prose-sm max-w-none text-[14px] leading-relaxed ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'}`}>
-                                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                            {messages.map((msg, idx) => {
+                                const { mainContent, suggestions } = parseSuggestions(msg.content);
+                                const isStreamingLastMsg = isStreaming && idx === messages.length - 1;
+                                const isLastAssistantMsg = !isStreaming && idx === messages.length - 1 && msg.role === 'assistant';
 
-                            {/* Thinking indicator */}
+                                return (
+                                    <div key={idx} className={`flex flex-col gap-1 w-full group animate-fade-in`}>
+                                        <div className={`flex gap-3 w-full ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                            {msg.role === 'assistant' && (
+                                                <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '14px' }}>smart_toy</span>
+                                                </div>
+                                            )}
+                                            <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-sm' : 'bg-bg-card border border-border-main text-text-main rounded-tl-sm shadow-sm'}`}>
+                                                <div className={`prose prose-sm max-w-none text-[14px] leading-relaxed ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'}`}>
+                                                    <ReactMarkdown>{mainContent}</ReactMarkdown>
+                                                    {isStreamingLastMsg && (
+                                                        <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
+                                                    )}
+                                                </div>
+
+                                                {/* Assistant Actions (Copy/Regen) */}
+                                                {msg.role === 'assistant' && msg.content && !isStreamingLastMsg && (
+                                                    <div className="absolute -right-12 top-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => handleCopy(msg.content, idx)} title="Copy" className="w-7 h-7 flex items-center justify-center rounded-lg bg-bg-card border border-border-main text-text-muted hover:text-primary transition-colors">
+                                                            <span className="material-symbols-outlined text-sm">{copiedId === idx ? 'check' : 'content_copy'}</span>
+                                                        </button>
+                                                        {isLastAssistantMsg && (
+                                                            <button onClick={handleRegenerate} title="Regenerate" className="w-7 h-7 flex items-center justify-center rounded-lg bg-bg-card border border-border-main text-text-muted hover:text-primary transition-colors">
+                                                                <span className="material-symbols-outlined text-sm">refresh</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Suggestion Chips */}
+                                        {msg.role === 'assistant' && suggestions.length > 0 && !isStreaming && (
+                                            <div className="flex flex-wrap gap-2 ml-10 mt-1">
+                                                {suggestions.map((q, i) => (
+                                                    <button key={i} onClick={() => handleSubmit(null, q)} className="px-3 py-1.5 rounded-full border border-border-main bg-bg-card text-[11px] font-semibold text-text-muted hover:border-primary/40 hover:text-primary transition-all active:scale-95">
+                                                        {q}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
                             {isLoading && (
                                 <div className="flex gap-3 flex-row animate-fade-in">
-                                    <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mt-0.5">
                                         <span className="material-symbols-outlined text-primary animate-pulse" style={{ fontSize: '14px' }}>smart_toy</span>
                                     </div>
-                                    <div className="bg-bg-card border border-border-main rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-                                        <div className="flex gap-1 items-center">
-                                            <span className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                            <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                            <span className="w-1.5 h-1.5 bg-primary/90 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                        </div>
+                                    <div className="bg-bg-card border border-border-main rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex gap-1 items-center h-10">
+                                        <span className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                        <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                        <span className="w-1.5 h-1.5 bg-primary/90 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                     </div>
                                 </div>
                             )}
@@ -421,46 +464,40 @@ export default function AITutorChat({ subject, level, onBack }) {
                     )}
                 </div>
 
-                {/* Flashcard Toast */}
-                {flashcardToast && (
-                    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl animate-fade-in z-30 whitespace-nowrap">
-                        {flashcardToast}
-                    </div>
-                )}
+                {flashcardToast && <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl animate-fade-in z-30">{flashcardToast}</div>}
 
                 {/* ─── Input Area ─── */}
                 <div className="shrink-0 bg-bg-base px-4 py-3">
-                    <div className="max-w-2xl mx-auto">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="flex items-end gap-2 bg-bg-card border border-border-main rounded-xl px-3 py-2 shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/15 transition-all"
-                        >
+                    <div className="max-w-2xl mx-auto flex flex-col gap-1.5">
+                        <form onSubmit={handleSubmit} className="flex items-end gap-2 bg-bg-card border border-border-main rounded-xl px-3 py-2 shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/15 transition-all">
                             <textarea
                                 ref={textareaRef}
                                 value={input}
                                 onChange={handleInputChange}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSubmit();
-                                    }
-                                }}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                                 placeholder={`Ask about ${subjectLabel}…`}
                                 rows={1}
                                 style={{ height: 'auto', minHeight: '24px' }}
-                                className="flex-1 bg-transparent outline-none resize-none text-text-main placeholder-text-muted/50 text-sm leading-6 custom-scrollbar py-0.5 max-h-36"
+                                className="flex-1 bg-transparent outline-none resize-none text-text-main placeholder-text-muted/50 text-sm leading-6 py-0.5 max-h-36 custom-scrollbar"
                             />
-                            <button
-                                type="submit"
-                                disabled={!input.trim() || isLoading}
-                                className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 mb-0.5"
-                            >
-                                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_upward</span>
-                            </button>
+                            {isStreaming ? (
+                                <button type="button" onClick={handleStopStream} className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all mb-0.5 animate-pulse">
+                                    <span className="material-symbols-outlined text-base">stop</span>
+                                </button>
+                            ) : (
+                                <button type="submit" disabled={!input.trim() || isLoading} className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center hover:bg-primary/90 disabled:opacity-40 transition-all mb-0.5">
+                                    <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_upward</span>
+                                </button>
+                            )}
                         </form>
-                        <p className="text-center text-[9px] text-text-muted mt-1.5 uppercase font-bold tracking-wider">
-                            AI may make mistakes — verify important details
-                        </p>
+                        <div className="flex justify-between items-center px-1">
+                            <p className="text-[9px] text-text-muted uppercase font-bold tracking-wider">AI Tutor - {selectedTone}</p>
+                            {input.length > 900 && (
+                                <span className={`text-[9px] font-bold ${input.length > 1500 ? 'text-red-500' : 'text-text-muted'}`}>
+                                    {input.length} / 2000
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
