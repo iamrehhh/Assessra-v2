@@ -30,7 +30,7 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
 
     const navItems = [
         { id: 'home', icon: 'grid_view', label: 'Overview' },
-        { id: 'papers', icon: 'book', label: 'Subjects' },
+        { id: 'ai-tutor', icon: 'smart_toy', label: 'AI Tutor' },
         { id: 'practice', icon: 'auto_awesome', label: 'AI Practice' },
         { id: 'pastpapers', icon: 'auto_stories', label: 'Past Papers' },
         { id: 'vocab-idioms', icon: 'menu_book', label: 'Vocab & Idioms' },

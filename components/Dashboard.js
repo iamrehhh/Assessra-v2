@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import HomeView from './views/HomeView';
-import PapersView from './views/PapersView';
+import AITutorView from './views/AITutorView';
 import LeaderboardView from './views/LeaderboardView';
 import FormulaeView from './views/FormulaeView';
 import DefinitionsView from './views/DefinitionsView';
@@ -20,7 +20,7 @@ import PastPapersView from './views/PastPapersView';
 import VocabIdiomsView from './views/VocabIdiomsView';
 import ReportErrorModal from './ReportErrorModal';
 
-const VALID_VIEWS = ['home', 'papers', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'tips', 'profile', 'admin'];
+const VALID_VIEWS = ['home', 'ai-tutor', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'tips', 'profile', 'admin'];
 
 function parseHash() {
     if (typeof window === 'undefined') return { view: 'home', params: [] };
@@ -159,8 +159,8 @@ export default function Dashboard() {
         switch (view) {
             case 'home':
                 return <HomeView setView={setView} setSelectedSubject={setSelectedSubject} />;
-            case 'papers':
-                return <PapersView subject={selectedSubject} setView={setView} />;
+            case 'ai-tutor':
+                return <AITutorView subject={selectedSubject} setView={setView} />;
             case 'leaderboard':
                 return <LeaderboardView />;
             case 'formulae':
