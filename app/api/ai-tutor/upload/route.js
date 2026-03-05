@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import pdfParse from 'pdf-parse';
 
-// Use Edge / Node environment config if needed, but standard NextResponse logic handles formData
 export async function POST(request) {
     try {
         const formData = await request.formData();
@@ -14,7 +12,8 @@ export async function POST(request) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Extract text from the PDF
+        // Dynamic require to avoid Turbopack ESM/CJS conflict
+        const pdfParse = (await import('pdf-parse')).default;
         const pdfData = await pdfParse(buffer);
         const text = pdfData.text;
 
