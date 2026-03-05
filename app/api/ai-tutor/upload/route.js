@@ -9,6 +9,12 @@ export async function POST(request) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
+        // Enforce 5 MB max to prevent token explosion
+        const MAX_SIZE = 5 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            return NextResponse.json({ error: 'File too large. Maximum size is 5 MB.' }, { status: 413 });
+        }
+
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 

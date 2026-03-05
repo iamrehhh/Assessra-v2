@@ -181,6 +181,14 @@ export default function AITutorChat({ subject, level, onBack }) {
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file || !email) return;
+
+        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+        if (file.size > MAX_SIZE) {
+            setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ **File too large.** Please upload a PDF under **5 MB** to keep token usage efficient. For large textbooks, ask your admin to upload them via the Admin Panel instead.' }]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setUploadingBook(true);
         const formData = new FormData();
         formData.append('file', file);
