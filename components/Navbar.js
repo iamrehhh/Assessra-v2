@@ -1,6 +1,6 @@
 import { signOut } from 'next-auth/react';
 
-const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 export default function Navbar({ setView, userProfile, userEmail }) {
     // Get initials fallback

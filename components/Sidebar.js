@@ -1,6 +1,6 @@
 'use client';
 
-const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 import { useState, useEffect } from 'react';
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import supabase from '@/lib/supabase';
 
-const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 // GET — fetch reports (admin: all, user: own)
 export async function GET(req) {

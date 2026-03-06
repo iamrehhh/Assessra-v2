@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import supabase from '@/lib/supabase';
 
-const ADMIN_EMAILS = ['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'];
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 export async function POST(req) {
     try {

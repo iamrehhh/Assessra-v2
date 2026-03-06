@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import PaperUpload from '@/components/admin/PaperUpload';
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 export default function AdminView() {
     const [tab, setTab] = useState('users');
@@ -592,7 +593,7 @@ export default function AdminView() {
                                             {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                                         </td>
                                         <td style={styles.td}>
-                                            {!['abdulrehanoffical@gmail.com', 'willdexter98@gmail.com'].includes(user.email) ? (
+                                            {!ADMIN_EMAILS.includes(user.email) ? (
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
                                                         style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#fef3c7', color: '#d97706', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
