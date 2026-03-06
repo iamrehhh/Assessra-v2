@@ -70,6 +70,7 @@ export default function AdminView() {
 
     const [editUserModal, setEditUserModal] = useState({ open: false, userId: null, nickname: '' });
     const [messageUserModal, setMessageUserModal] = useState({ open: false, userId: null, name: '', message: '' });
+    const [resetPasswordModal, setResetPasswordModal] = useState({ open: false, userId: null, email: '', password: '' });
 
     const showAlert = useCallback((title, message) => {
         setModal({ open: true, type: 'alert', title, message, onConfirm: null });
@@ -213,6 +214,26 @@ export default function AdminView() {
                 setMessageUserModal({ open: false, userId: null, name: '', message: '' });
             } else {
                 showAlert('Error', 'Failed to send message.');
+            }
+        } catch { showAlert('Error', 'Network error.'); }
+        setSavingReport(false);
+    };
+
+    const handleResetPassword = async () => {
+        if (!resetPasswordModal.userId || !resetPasswordModal.password) return;
+        setSavingReport(true);
+        try {
+            const res = await fetch('/api/admin/users/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: resetPasswordModal.userId, newPassword: resetPasswordModal.password })
+            });
+            if (res.ok) {
+                showAlert('Success', 'User password reset successfully!');
+                setResetPasswordModal({ open: false, userId: null, email: '', password: '' });
+            } else {
+                const data = await res.json();
+                showAlert('Error', data.error || 'Failed to reset password.');
             }
         } catch { showAlert('Error', 'Network error.'); }
         setSavingReport(false);
@@ -602,6 +623,14 @@ export default function AdminView() {
                                                         onMouseLeave={(e) => { e.currentTarget.style.background = '#fef3c7'; }}
                                                     >
                                                         Edit Nickname
+                                                    </button>
+                                                    <button
+                                                        style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#fee2e2', color: '#991b1b', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                                                        onClick={() => setResetPasswordModal({ open: true, userId: user.id, email: user.email, password: '' })}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fecaca'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                                                    >
+                                                        Reset Pass
                                                     </button>
                                                     <button
                                                         style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: '#f3e8ff', color: '#9333ea', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -1340,6 +1369,45 @@ export default function AdminView() {
                                 disabled={savingReport}
                             >
                                 {savingReport ? 'Sending...' : 'Send Message'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Password Modal */}
+            {resetPasswordModal.open && (
+                <div style={styles.modalOverlay} onClick={() => setResetPasswordModal({ open: false, userId: null, email: '', password: '' })}>
+                    <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <h3 style={styles.modalTitle}>Reset Password: {resetPasswordModal.email}</h3>
+                            <button style={styles.modalClose} onClick={() => setResetPasswordModal({ open: false, userId: null, email: '', password: '' })}>✕</button>
+                        </div>
+                        <div style={styles.modalBody}>
+                            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '8px' }}>New Password</label>
+                            <input
+                                type="text"
+                                value={resetPasswordModal.password}
+                                onChange={(e) => setResetPasswordModal(prev => ({ ...prev, password: e.target.value }))}
+                                placeholder="Enter a new password..."
+                                style={{
+                                    width: '100%', padding: '12px 14px', borderRadius: '10px',
+                                    border: '2px solid #e2e8f0', fontSize: '0.95rem',
+                                    color: '#1e293b', background: 'white', outline: 'none'
+                                }}
+                            />
+                            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '8px' }}>
+                                This will overwrite their current password. They will need to log in with this new password immediately.
+                            </p>
+                        </div>
+                        <div style={{ ...styles.modalFooter, justifyContent: 'flex-end' }}>
+                            <button style={styles.modalCancel} onClick={() => setResetPasswordModal({ open: false, userId: null, email: '', password: '' })}>Cancel</button>
+                            <button
+                                style={{ ...styles.modalDanger, opacity: savingReport ? 0.6 : 1 }}
+                                onClick={handleResetPassword}
+                                disabled={savingReport}
+                            >
+                                {savingReport ? 'Resetting...' : 'Confirm Reset'}
                             </button>
                         </div>
                     </div>
