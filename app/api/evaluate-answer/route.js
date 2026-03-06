@@ -61,23 +61,21 @@ ${studentAnswer}
 ${isFinalOnly ? 'NOTE: The student has submitted their final answer only, not their working. Evaluate the final answer for correctness and provide a complete worked solution.\n' : ''}
 ---
 
-Evaluate the student's answer and respond in this exact structure:
+Evaluate the student's answer and respond in this EXACT structure (do not change the ALL CAPS headers below so the system can parse your answer):
 
 MARKS AWARDED: X / ${marksInt}
 
 MARK BREAKDOWN:
-- Point by point explanation of what was credited and what was not
+(Write this section as "What you did well". Speak directly to the student. Identify specific knowledge, application, or phrasing they used correctly. Be warm and encouraging. E.g., "You nailed the definition here...")
 
 FEEDBACK:
-- What the student did well
-- What was missing or incorrect
-- How to improve
+(Write this section as "What was missing". Be honest and highly specific. Diagnose their misconception. Explain exactly *why* they lost marks based on the mark scheme. Use Cambridge phrasing like "chain of reasoning" or "evaluative point".)
 
 MODEL ANSWER:
-- A perfect candidate response for this question
+(Construct a perfect candidate response that would obtain full marks. Add a brief 1-line note at the end explaining *why* it scores full marks.)
 
 EXAMINER TIP:
-- One specific actionable tip for this student`;
+(One sharp, actionable tip for this student on how to avoid this pitfall next time.)`;
 
         // ─── Dynamic Model Routing for Economics Calculations ────────────────
         let modelToUse = null;

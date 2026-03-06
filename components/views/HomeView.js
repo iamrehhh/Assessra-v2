@@ -380,6 +380,7 @@ export default function HomeView({ setView, setSelectedSubject }) {
             {/* Book Reader Modal */}
             {bookModalOpen && !bookLoading && (
                 <BookReaderModal
+                    key={bookChapterIndex}
                     bookData={bookData}
                     chapterIndex={bookChapterIndex}
                     currentPage={currentPage}
@@ -413,6 +414,9 @@ export default function HomeView({ setView, setSelectedSubject }) {
                                     setBookChapterIndex(data.newChapterIndex);
                                     setCurrentPage(0);
                                 }
+                                // Close modal so user returns to homepage with updated chapter card
+                                setBookModalOpen(false);
+                                setWordPopup(null);
                             }
                         } catch (err) {
                             console.error('Failed to complete chapter:', err);
@@ -567,6 +571,87 @@ function BookReaderModal({
     const isLastPage = currentPage >= totalPages - 1;
     const pageText = pages[currentPage] || '';
 
+    // ── Phase management: reading → quiz → essay → done ──
+    const [phase, setPhase] = useState('reading');
+
+    // Quiz state
+    const [quizQuestions, setQuizQuestions] = useState([]);
+    const [quizAnswers, setQuizAnswers] = useState({});
+    const [quizSubmitted, setQuizSubmitted] = useState(false);
+    const [quizScore, setQuizScore] = useState(null);
+    const [quizLoading, setQuizLoading] = useState(false);
+    const [quizError, setQuizError] = useState(null);
+
+    // Essay state
+    const [essayText, setEssayText] = useState('');
+    const [essayFeedback, setEssayFeedback] = useState(null);
+    const [essayLoading, setEssayLoading] = useState(false);
+    const WORD_LIMIT = 150;
+
+    const wordCount = essayText.trim() ? essayText.trim().split(/\s+/).length : 0;
+
+    // ── Fetch quiz when entering quiz phase ──
+    const startQuiz = async () => {
+        setPhase('quiz');
+        setQuizLoading(true);
+        setQuizError(null);
+        try {
+            const res = await fetch('/api/book-quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chapterTitle: chapter.title,
+                    chapterContent: chapter.content,
+                }),
+            });
+            const data = await res.json();
+            if (data.questions && data.questions.length > 0) {
+                setQuizQuestions(data.questions);
+            } else {
+                setQuizError(data.error || 'Failed to generate quiz.');
+            }
+        } catch (err) {
+            console.error('Quiz fetch error:', err);
+            setQuizError('Connection error. Please try again.');
+        } finally {
+            setQuizLoading(false);
+        }
+    };
+
+    const handleQuizSubmit = () => {
+        let correct = 0;
+        quizQuestions.forEach((q, i) => {
+            if (quizAnswers[i] === q.correctAnswer) correct++;
+        });
+        setQuizScore(correct);
+        setQuizSubmitted(true);
+    };
+
+    const handleEssaySubmit = async () => {
+        setEssayLoading(true);
+        try {
+            const res = await fetch('/api/book-essay-feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chapterTitle: chapter.title,
+                    chapterContent: chapter.content,
+                    essayText: essayText.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (data.feedback) {
+                setEssayFeedback(data.feedback);
+            } else {
+                setEssayFeedback('⚠️ ' + (data.error || 'Could not evaluate essay.'));
+            }
+        } catch {
+            setEssayFeedback('⚠️ Connection error. Please try again.');
+        } finally {
+            setEssayLoading(false);
+        }
+    };
+
     // Handle word click
     const handleWordClick = async (word, e) => {
         const cleanWord = word.replace(/[^a-zA-Z'-]/g, '');
@@ -628,6 +713,292 @@ function BookReaderModal({
         ));
     };
 
+    // ═══════════════════════════════════════════════════════════════
+    //  QUIZ PHASE
+    // ═══════════════════════════════════════════════════════════════
+    if (phase === 'quiz') {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="relative max-w-3xl w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col">
+                    {/* Header */}
+                    <div className="p-6 md:p-8 pb-4 shrink-0">
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <div className="px-3 py-1.5 rounded-full border border-border-main flex items-center gap-2 bg-amber-500/10">
+                                <span className="material-symbols-outlined text-sm text-amber-400">quiz</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">Chapter Quiz</span>
+                            </div>
+                            {!quizSubmitted && quizQuestions.length > 0 && (
+                                <div className="px-3 py-1.5 rounded-full border border-border-main bg-black/5 dark:bg-white/5">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                                        {Object.keys(quizAnswers).length} / {quizQuestions.length} Answered
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        <h2 className="text-xl lg:text-2xl font-black text-text-main dark:text-white leading-tight mb-1">
+                            {chapter.title} — Comprehension Quiz
+                        </h2>
+                        <p className="text-text-muted text-sm">Test your understanding of this chapter with 10 questions.</p>
+                        <div className="h-px w-full bg-black/5 dark:bg-white/5 mt-4"></div>
+                    </div>
+
+                    {/* Quiz Body */}
+                    <div className="p-6 md:p-8 pt-2 overflow-y-auto flex-1 custom-scrollbar">
+                        {quizLoading && (
+                            <div className="flex flex-col items-center justify-center py-16 gap-4">
+                                <div className="w-10 h-10 border-4 border-border-main border-t-amber-400 rounded-full animate-spin"></div>
+                                <p className="text-text-muted text-sm font-medium">Generating your chapter quiz…</p>
+                                <p className="text-text-muted/60 text-xs">This may take a few seconds</p>
+                            </div>
+                        )}
+
+                        {quizError && (
+                            <div className="text-center py-12">
+                                <p className="text-red-400 mb-4">{quizError}</p>
+                                <button onClick={startQuiz} className="px-5 py-2.5 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors cursor-pointer">
+                                    Retry
+                                </button>
+                            </div>
+                        )}
+
+                        {!quizLoading && !quizError && quizQuestions.length > 0 && (
+                            <div className="flex flex-col gap-5">
+                                {quizQuestions.map((q, i) => {
+                                    const userAns = quizAnswers[i];
+                                    const isCorrect = quizSubmitted && userAns === q.correctAnswer;
+                                    const isWrong = quizSubmitted && userAns && userAns !== q.correctAnswer;
+                                    return (
+                                        <div key={i} className={`p-4 rounded-xl border transition-all ${quizSubmitted
+                                            ? isCorrect ? 'border-green-500/40 bg-green-500/5' : isWrong ? 'border-red-500/40 bg-red-500/5' : 'border-border-main bg-black/5 dark:bg-white/5'
+                                            : 'border-border-main bg-black/5 dark:bg-white/5'
+                                            }`}>
+                                            <p className="font-bold text-text-main text-sm mb-3">
+                                                <span className="text-amber-400 mr-2">Q{i + 1}.</span>
+                                                {q.question}
+                                            </p>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {q.options.map((opt, oi) => {
+                                                    const letter = opt.charAt(0);
+                                                    let btnCls = 'border-border-main bg-black/5 dark:bg-white/5 text-text-muted hover:border-amber-500/50 hover:bg-amber-500/5 cursor-pointer';
+                                                    if (!quizSubmitted && userAns === letter) btnCls = 'border-amber-500 bg-amber-500/15 text-amber-300 cursor-pointer';
+                                                    if (quizSubmitted && letter === q.correctAnswer) btnCls = 'border-green-500 bg-green-500/15 text-green-300';
+                                                    if (quizSubmitted && userAns === letter && letter !== q.correctAnswer) btnCls = 'border-red-500 bg-red-500/15 text-red-300';
+                                                    return (
+                                                        <button
+                                                            key={oi}
+                                                            onClick={() => { if (!quizSubmitted) setQuizAnswers(prev => ({ ...prev, [i]: letter })); }}
+                                                            className={`text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${btnCls} ${quizSubmitted ? 'cursor-default' : ''}`}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Score Banner */}
+                        {quizSubmitted && quizScore !== null && (
+                            <div className="mt-6 text-center p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                <div className="text-4xl font-black text-emerald-400 mb-1">
+                                    {Math.round((quizScore / quizQuestions.length) * 100)}%
+                                </div>
+                                <div className="text-lg text-text-muted font-bold">Score: {quizScore} / {quizQuestions.length}</div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 md:p-6 pt-0 shrink-0">
+                        <div className="h-px bg-black/5 dark:bg-white/5 mb-4"></div>
+                        <div className="flex justify-end gap-3">
+                            {!quizSubmitted ? (
+                                <button
+                                    onClick={handleQuizSubmit}
+                                    disabled={Object.keys(quizAnswers).length < quizQuestions.length || quizLoading}
+                                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-base">grading</span>
+                                    Submit Quiz ({Object.keys(quizAnswers).length}/{quizQuestions.length})
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setPhase('essay')}
+                                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-base">arrow_forward</span>
+                                    Continue
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  ESSAY PHASE
+    // ═══════════════════════════════════════════════════════════════
+    if (phase === 'essay') {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="relative max-w-3xl w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] flex flex-col">
+                    {/* Header */}
+                    <div className="p-6 md:p-8 pb-4 shrink-0">
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <div className="px-3 py-1.5 rounded-full border border-border-main flex items-center gap-2 bg-purple-500/10">
+                                <span className="material-symbols-outlined text-sm text-purple-400">edit_note</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">Chapter Reflection</span>
+                            </div>
+                            <div className="px-3 py-1.5 rounded-full border border-border-main bg-black/5 dark:bg-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Optional</span>
+                            </div>
+                        </div>
+                        <h2 className="text-xl lg:text-2xl font-black text-text-main dark:text-white leading-tight mb-1">
+                            Reflect on: {chapter.title}
+                        </h2>
+                        <p className="text-text-muted text-sm">Write a short reflection (~150 words) about what you learned in this chapter. This is optional — feel free to skip.</p>
+                        <div className="h-px w-full bg-black/5 dark:bg-white/5 mt-4"></div>
+                    </div>
+
+                    {/* Essay Body */}
+                    <div className="p-6 md:p-8 pt-2 overflow-y-auto flex-1 custom-scrollbar">
+                        {!essayFeedback ? (
+                            <div className="space-y-4">
+                                <textarea
+                                    value={essayText}
+                                    onChange={(e) => setEssayText(e.target.value)}
+                                    placeholder="Write your reflection here... What were the key ideas? What did you find most interesting or surprising?"
+                                    className="w-full h-48 p-4 bg-black/5 dark:bg-white/5 border border-border-main rounded-2xl text-text-main text-sm leading-relaxed resize-none focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all placeholder:text-text-muted/50"
+                                    style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+                                    disabled={essayLoading}
+                                />
+                                <div className="flex items-center justify-between">
+                                    <div className={`text-xs font-bold ${wordCount > WORD_LIMIT ? 'text-red-400' : wordCount > WORD_LIMIT * 0.8 ? 'text-amber-400' : 'text-text-muted'}`}>
+                                        <span className="material-symbols-outlined text-sm align-middle mr-1">text_fields</span>
+                                        {wordCount} / {WORD_LIMIT} words
+                                        {wordCount > WORD_LIMIT && <span className="ml-2 text-red-400">— Please keep to ~{WORD_LIMIT} words</span>}
+                                    </div>
+                                    {essayLoading && (
+                                        <div className="flex items-center gap-2 text-purple-400 text-xs font-bold">
+                                            <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                                            Evaluating…
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {/* Student's essay */}
+                                <div className="p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-border-main">
+                                    <p className="text-[10px] uppercase font-bold tracking-widest text-purple-400 mb-2">Your Reflection</p>
+                                    <p className="text-text-muted text-sm leading-relaxed italic" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                                        "{essayText}"
+                                    </p>
+                                </div>
+                                {/* AI feedback */}
+                                <div className="p-5 bg-purple-500/5 border border-purple-500/20 rounded-2xl">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="material-symbols-outlined text-purple-400 text-base">auto_awesome</span>
+                                        <p className="text-[10px] uppercase font-bold tracking-widest text-purple-400">AI Feedback</p>
+                                    </div>
+                                    <div className="text-text-muted text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                                        {essayFeedback}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 md:p-6 pt-0 shrink-0">
+                        <div className="h-px bg-black/5 dark:bg-white/5 mb-4"></div>
+                        <div className="flex justify-between gap-3">
+                            {!essayFeedback ? (
+                                <>
+                                    <button
+                                        onClick={() => setPhase('done')}
+                                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold text-text-muted hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-base">skip_next</span>
+                                        Skip
+                                    </button>
+                                    <button
+                                        onClick={handleEssaySubmit}
+                                        disabled={wordCount < 10 || wordCount > WORD_LIMIT + 20 || essayLoading}
+                                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-purple-500 text-white hover:bg-purple-600 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-base">send</span>
+                                        Submit Reflection
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="flex justify-end w-full">
+                                    <button
+                                        onClick={() => setPhase('done')}
+                                        className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-base">arrow_forward</span>
+                                        Continue
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  DONE PHASE — Summary before advancing
+    // ═══════════════════════════════════════════════════════════════
+    if (phase === 'done') {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                <div className="relative max-w-lg w-full bg-bg-card dark:bg-slate-900 border border-border-main rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)] flex flex-col">
+                    <div className="p-8 text-center space-y-5">
+                        <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-3xl text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        </div>
+                        <h2 className="text-2xl font-black text-text-main dark:text-white">Chapter Complete!</h2>
+                        <p className="text-text-muted text-sm max-w-sm mx-auto">
+                            You've finished <span className="font-bold text-text-main">"{chapter.title}"</span>.
+                            {quizScore !== null && (
+                                <span> Quiz score: <span className="font-bold text-emerald-400">{quizScore}/{quizQuestions.length}</span>.</span>
+                            )}
+                            {essayFeedback && <span> Reflection submitted ✓</span>}
+                        </p>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onCompleteChapter(); }}
+                            disabled={completingChapter}
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 disabled:opacity-50 cursor-pointer"
+                        >
+                            {completingChapter ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Saving…
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>arrow_forward</span>
+                                    {chapterIndex < bookData.totalChapters - 1 ? 'Continue to Next Chapter' : 'Finish Book'}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  READING PHASE (original)
+    // ═══════════════════════════════════════════════════════════════
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bg-base/95 backdrop-blur-xl animate-fade-in"
@@ -768,21 +1139,11 @@ function BookReaderModal({
                         {/* Next or Complete */}
                         {isLastPage ? (
                             <button
-                                onClick={(e) => { e.stopPropagation(); onCompleteChapter(); }}
-                                disabled={completingChapter}
-                                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+                                onClick={(e) => { e.stopPropagation(); startQuiz(); }}
+                                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25"
                             >
-                                {completingChapter ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                                        {chapterIndex < bookData.totalChapters - 1 ? 'Complete & Next Chapter' : 'Finish Book'}
-                                    </>
-                                )}
+                                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                Complete Chapter
                             </button>
                         ) : (
                             <button

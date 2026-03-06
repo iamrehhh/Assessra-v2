@@ -1,14 +1,111 @@
+// app/api/mcq-feedback/route.js
+//
+// Strategy: render the PDF page(s) containing the question as PNG images,
+// send them to GPT-4o vision. No text extraction — it doesn't work for
+// Cambridge papers which are image-based with diagrams and tables.
+//
+// Requires: npm install pdf2pic sharp
+// pdf2pic uses GraphicsMagick/ImageMagick under the hood.
+// On Vercel: add `imagemagick` to your system dependencies or use the
+// approach below which uses pdftoppm via child_process if available,
+// falling back to a pure-JS approach.
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { callLLM } from '@/lib/llm';
+import OpenAI from 'openai';
 import { retrieveRelevantContent } from '@/lib/rag';
 import fs from 'fs';
 import path from 'path';
-import { extractText, getDocumentProxy } from 'unpdf';
+import { execSync } from 'child_process';
+import os from 'os';
 
 export const maxDuration = 60;
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// ─── Render a PDF page to base64 PNG ─────────────────────────────────────────
+// Tries multiple approaches in order of reliability
+async function renderPageToBase64(pdfPath, pageNumber) {
+
+    // Approach 1: pdftoppm (available on Linux/Vercel, most reliable)
+    try {
+        const tmpDir = os.tmpdir();
+        const outPrefix = path.join(tmpDir, `mcq_page_${Date.now()}`);
+        // pdftoppm is 1-indexed
+        execSync(
+            `pdftoppm -png -r 150 -f ${pageNumber} -l ${pageNumber} "${pdfPath}" "${outPrefix}"`,
+            { timeout: 15000, stdio: 'pipe' }
+        );
+        // pdftoppm outputs outPrefix-000001.png (zero-padded)
+        const files = fs.readdirSync(tmpDir)
+            .filter(f => f.startsWith(path.basename(outPrefix)) && f.endsWith('.png'))
+            .sort();
+        if (files.length > 0) {
+            const imgPath = path.join(tmpDir, files[0]);
+            const base64 = fs.readFileSync(imgPath).toString('base64');
+            // cleanup
+            files.forEach(f => { try { fs.unlinkSync(path.join(tmpDir, f)); } catch { } });
+            console.log('[MCQ] Page rendered via pdftoppm');
+            return base64;
+        }
+    } catch (e) {
+        console.warn('[MCQ] pdftoppm failed:', e.message);
+    }
+
+    // Approach 2: pdf2pic (npm package, uses GraphicsMagick)
+    try {
+        const { fromPath } = await import('pdf2pic');
+        const tmpDir = os.tmpdir();
+        const convert = fromPath(pdfPath, {
+            density: 150,
+            saveFilename: `mcq_${Date.now()}`,
+            savePath: tmpDir,
+            format: 'png',
+            width: 1400,
+            height: 2000,
+        });
+        const result = await convert(pageNumber);
+        if (result?.path && fs.existsSync(result.path)) {
+            const base64 = fs.readFileSync(result.path).toString('base64');
+            try { fs.unlinkSync(result.path); } catch { }
+            console.log('[MCQ] Page rendered via pdf2pic');
+            return base64;
+        }
+    } catch (e) {
+        console.warn('[MCQ] pdf2pic failed:', e.message);
+    }
+
+    // Approach 3: pdfjs-dist + canvas (pure JS, slowest but no system deps)
+    try {
+        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
+        const { createCanvas } = await import('canvas');
+        const data = new Uint8Array(fs.readFileSync(pdfPath));
+        const doc = await pdfjs.getDocument({ data }).promise;
+        const page = await doc.getPage(Math.min(pageNumber, doc.numPages));
+        const viewport = page.getViewport({ scale: 1.8 });
+        const canvas = createCanvas(viewport.width, viewport.height);
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        const base64 = canvas.toBuffer('image/png').toString('base64');
+        console.log('[MCQ] Page rendered via pdfjs+canvas');
+        return base64;
+    } catch (e) {
+        console.warn('[MCQ] pdfjs+canvas failed:', e.message);
+    }
+
+    return null; // All approaches failed
+}
+
+// ─── Figure out which PDF page a question is on ───────────────────────────────
+// Cambridge MCQ papers typically have 4 questions per page after the cover.
+// Adjust QUESTIONS_PER_PAGE if your papers are different.
+function estimatePageNumber(questionNumber) {
+    const QUESTIONS_PER_PAGE = 4;
+    const COVER_PAGES = 1; // pages before questions start
+    return COVER_PAGES + Math.ceil(questionNumber / QUESTIONS_PER_PAGE);
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
@@ -16,151 +113,131 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { pdfPath, questionNumber, userAnswer, correctAnswer, questionText, allAnswers, allQuestions } = body;
+        const {
+            pdfPath,
+            questionNumber,
+            userAnswer,
+            correctAnswer,
+            questionText,   // from paper.questions[i].t if you have it
+            options,        // from paper.questions[i].options if you have it
+        } = await req.json();
 
         if (!pdfPath || questionNumber === undefined || !userAnswer) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const decodedPdfPath = decodeURIComponent(pdfPath);
-        const safePath = path.join(process.cwd(), 'public', decodedPdfPath);
+        const decodedPath = decodeURIComponent(pdfPath);
+        const safePath = path.join(process.cwd(), 'public', decodedPath);
         if (!fs.existsSync(safePath)) {
-            console.error('PDF not found at path:', safePath);
-            return NextResponse.json({ error: `PDF not found at path: ${decodedPdfPath}` }, { status: 404 });
+            return NextResponse.json({ error: `PDF not found: ${decodedPath}` }, { status: 404 });
         }
 
-        // Extract PDF text for question context
-        const dataBuffer = new Uint8Array(fs.readFileSync(safePath));
-        const pdf = await getDocumentProxy(dataBuffer);
-        const { text } = await extractText(pdf);
-        const pdfText = String(text);
+        // 1. Render the PDF page containing this question as an image
+        const pageNum = estimatePageNumber(questionNumber);
+        const pageBase64 = await renderPageToBase64(safePath, pageNum);
 
-        // Build full answer key string for additional context
-        let answerKeyStr = '';
-        if (allAnswers && Array.isArray(allAnswers)) {
-            answerKeyStr = allAnswers.map((a, idx) => `Q${idx + 1}: ${a}`).join(', ');
+        // Also render the next page in case question spans two pages
+        // (e.g. question is at bottom of page N, options on page N+1)
+        let nextPageBase64 = null;
+        if (pageBase64) {
+            nextPageBase64 = await renderPageToBase64(safePath, pageNum + 1);
         }
 
-        // Build a clean questions context string if available
-        let questionsContextStr = '';
-        if (allQuestions && Array.isArray(allQuestions)) {
-            const validQ = allQuestions.filter(q => q && typeof q === 'object' && q.t);
-            if (validQ.length > 0) {
-                questionsContextStr = validQ.map(q => `Q${q.n}: ${q.t}`).join('\n\n');
+        // 2. RAG — only if we have question text to query with
+        let ragContext = '';
+        if (questionText) {
+            try {
+                ragContext = await retrieveRelevantContent(
+                    `Cambridge A-Level Economics: ${questionText.substring(0, 200)}`,
+                    'economics', 'alevel', 2
+                );
+            } catch (e) {
+                console.warn('[MCQ] RAG failed (non-fatal):', e.message);
             }
         }
 
-        // RAG: Retrieve relevant economics context from textbooks/notes
-        let ragContext = '';
-        try {
-            const ragQuery = questionText
-                ? `Economics A-Level: ${questionText}`
-                : `Economics A-Level MCQ Question ${questionNumber} concepts`;
-            ragContext = await retrieveRelevantContent(ragQuery, 'economics', 'alevel', 4);
-        } catch (ragErr) {
-            console.warn('[MCQ Feedback] RAG retrieval failed (non-fatal):', ragErr.message);
+        // 3. Build vision message content
+        const imageBlocks = [];
+        if (pageBase64) {
+            imageBlocks.push({
+                type: 'image_url',
+                image_url: { url: `data:image/png;base64,${pageBase64}`, detail: 'high' }
+            });
+        }
+        if (nextPageBase64) {
+            imageBlocks.push({
+                type: 'image_url',
+                image_url: { url: `data:image/png;base64,${nextPageBase64}`, detail: 'high' }
+            });
         }
 
-        const ragSection = ragContext
-            ? `\n\n**REFERENCE MATERIAL FROM ECONOMICS TEXTBOOKS:**\n\`\`\`\n${ragContext.substring(0, 6000)}\n\`\`\`\nUse this textbook material to ground your explanation in accurate economic theory.`
-            : '';
+        const isWrong = correctAnswer && userAnswer !== correctAnswer;
 
-        let prompt = '';
-        if (correctAnswer) {
-            prompt = `
-You are explaining Question ${questionNumber} from a Cambridge A-Level Economics MCQ paper.
-
-**CRITICAL FACTS (these are DEFINITIVE — do NOT contradict them):**
-- The OFFICIAL correct answer to Question ${questionNumber} is: **${correctAnswer}**
-- The student selected: **${userAnswer}**
-- The student was ${userAnswer === correctAnswer ? 'CORRECT ✓' : 'INCORRECT ✗'}
-${answerKeyStr ? `\nFull answer key for this paper: ${answerKeyStr}` : ''}
-${questionText ? `\nThe SPECIFIC text for Question ${questionNumber} is: "${questionText}". Rely on THIS text primarily. If it refers to a diagram, try to infer the context, but know the extraction might fail on the image.` : ''}
-
-${questionsContextStr ? `**CLEAN QUESTION TEXTS** (Use this instead of the PDF text to read the exact wording of the questions!):\n\`\`\`\n${questionsContextStr}\n\`\`\`\n` : ''}
-
-**EXTRACTED PAPER TEXT (FALLBACK)** (use this to find the options A, B, C, D if they are not clear, but be aware diagrams and tables extract as garbled text):
-\`\`\`
-${pdfText.substring(0, 80000)}
-\`\`\`
-${ragSection}
-
-**INSTRUCTIONS:**
-
-Your job is to explain WHY **${correctAnswer}** is the correct answer. The answer key comes from Cambridge's official mark scheme — it is 100% correct and cannot be questioned.
-
-Please structure your response as follows:
-
-**1. The Question**
-Find Question ${questionNumber} in the paper text above. Quote the question and list all four options (A, B, C, D) with their content.
-🚨 **CRITICAL ANTI-HALLUCINATION RULE:** If you cannot find the clear, obvious text for Question ${questionNumber} immediately followed by 4 distinct options, it means the PDF extraction FAILED because the question contained a diagram or image. If this happens, **DO NOT** pick another question. **DO NOT** assume "moral hazard" or any other random text is the question. You MUST simply output: *"The specific text for Question ${questionNumber} could not be extracted (likely due to a diagram). However, based on the official mark scheme, we know the correct answer is ${correctAnswer}."*
-
-**2. Why ${correctAnswer} is Correct**
-If you found the question text, explain the economic concept that makes ${correctAnswer} the right answer. Show full step-by-step working.
-If the question text was missing/garbled, explain the general economic theory behind whatever concept is typically associated with Option ${correctAnswer} in A-Level Economics, or simply explain why the provided answer key is definitively correct.
-
-**3. Why the Other Options Are Wrong**
-For each wrong option, briefly explain the specific error. ${userAnswer !== correctAnswer ? `Give extra detail on **${userAnswer}** (the student's choice).` : ''} If the question text was missing, you can skip this section or briefly state that without the exact options, specific errors can't be detailed.
-
-**4. Key Takeaway**
-One clear sentence summarizing the core concept.
-
-**FORMAT RULES:**
-- Use **bold** for key terms, option letters, and important values
-- Use bullet points for clarity
-- For math: use Unicode (×, ÷, →, =, ≈) — NO LaTeX
-- Be clear, educational, and accurate
-`;
-        } else {
-            prompt = `
-You are explaining Question ${questionNumber} from a Cambridge A-Level Economics MCQ paper.
-
-- The student selected: **${userAnswer}**
-- No official answer key is available for this paper.
-${questionText ? `\nThe SPECIFIC text for Question ${questionNumber} is: "${questionText}". Rely on THIS text primarily.` : ''}
-
-${questionsContextStr ? `**CLEAN QUESTION TEXTS** (Use this instead of the PDF text to read the exact wording of the questions!):\n\`\`\`\n${questionsContextStr}\n\`\`\`\n` : ''}
-
-**EXTRACTED PAPER TEXT (FALLBACK)** (use this to find the options A, B, C, D if they are not clear):
-\`\`\`
-${pdfText.substring(0, 80000)}
-\`\`\`
-${ragSection}
-
-**INSTRUCTIONS:**
-
-Find Question ${questionNumber} in the paper text above. Determine the correct answer using your economics knowledge and the textbook material, then explain it.
-
-**1. The Question**
-Quote the question and list all four options (A, B, C, D) with their content.
-🚨 **CRITICAL ANTI-HALLUCINATION RULE:** If you cannot find the clear, obvious text for Question ${questionNumber}, it means the PDF extraction FAILED (likely due to a diagram). **DO NOT** guess or use another question's text. Instead, state clearly: *"The specific text for this question could not be extracted from the PDF."*
-
-**2. The Correct Answer**
-If you have the question text, state which option you believe is correct and explain the economic reasoning thoroughly. Show any calculations step by step using plain text.
-If the text is missing, state that you cannot determine the answer without the text.
-
-**3. Why the Other Options Are Wrong**
-For each wrong option, explain the specific error or misconception. If the text is missing, skip this.
-
-**4. Key Takeaway**
-One clear sentence summarizing the core concept.
-
-**FORMAT RULES:**
-- Use **bold** for key terms, option letters, and important values
-- Use bullet points for clarity
-- For math: use Unicode (×, ÷, →, =, ≈) — NO LaTeX
-- Be clear, educational, and accurate
-`;
+        // 4. Build the text prompt — clean and specific
+        let optionsStr = '';
+        if (options?.length) {
+            optionsStr = `\nOptions:\n${options.map((o, i) => `${String.fromCharCode(65 + i)}: ${o}`).join('\n')}`;
         }
 
-        const systemPrompt = "You are a Cambridge A-Level Economics examiner and tutor. You explain MCQ answers with precision and deep subject knowledge. When an official correct answer is provided, you MUST accept it as correct — it comes from Cambridge's official mark scheme and is NEVER wrong. Your job is to explain WHY it is correct, not to verify it. Always respond in clean markdown. Never use LaTeX.";
-        const feedback = await callLLM(prompt, null, 1000, systemPrompt);
+        const textPrompt = `
+You are a highly capable Cambridge peer/tutor debriefing a student on Question ${questionNumber} from an Economics MCQ paper.
 
-        return NextResponse.json({ feedback }, { status: 200 });
+${imageBlocks.length > 0
+                ? `The image(s) above show the PDF page(s) containing Question ${questionNumber}. Find it carefully — it is labelled with the number ${questionNumber}.`
+                : 'No image could be rendered for this question.'
+            }
+
+${questionText ? `Question text (if visible in image): "${questionText}"` : ''}
+${optionsStr}
+
+OFFICIAL CORRECT ANSWER: **${correctAnswer}**
+STUDENT ANSWERED: **${userAnswer}** — ${isWrong ? '✗ Wrong' : '✓ Correct'}
+
+${ragContext ? `Relevant textbook context:\n${ragContext.substring(0, 1500)}\n` : ''}
+
+YOUR TASK:
+1. Look at the image and find Question ${questionNumber} specifically. Read its text and all 4 options carefully.
+2. If it has a diagram (like a cost/revenue graph), describe what it shows and use it in your explanation.
+3. Keep your explanation UNDER 150 WORDS. Be punchy, conversational, and direct. Like a smart friend explaining it after the exam.
+4. NO HOLLOW OPENERS like "Great question!" or "Certainly!".
+5. First: Acknowledge what they chose (${userAnswer}). If they were wrong (${isWrong}), explain *why* it's a common misconception or a tempting trap (e.g., "You went with B, which is super common because people confuse X with Y..."). If they were right, validate the tricky part they got past.
+6. Second: Explain clearly why **${correctAnswer}** is the actual correct answer using precise economics logic.
+7. Third: End with one **📝 Exam Tip** for this type of question.
+
+RULES:
+- Be specific to Question ${questionNumber} only — do not explain other questions
+- If you cannot find Question ${questionNumber} in the image, say so clearly — do NOT explain a different question
+- Use markdown formatting
+- No LaTeX, use plain text for math
+`.trim();
+
+        // 5. Call GPT-4o (not mini — we need strong vision for diagrams)
+        const messageContent = imageBlocks.length > 0
+            ? [...imageBlocks, { type: 'text', text: textPrompt }]
+            : textPrompt;
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o',  // Must be gpt-4o for reliable vision, not gpt-4o-mini
+            max_tokens: 500,
+            messages: [
+                {
+                    role: 'system',
+                    content: `You are a Cambridge A-Level Economics examiner. 
+The official correct answer provided is ALWAYS right — it comes from Cambridge's mark scheme. 
+Your job is only to explain WHY it is correct, never to question it.
+Always look at the image carefully before responding. Be specific to the exact question asked.`
+                },
+                { role: 'user', content: messageContent }
+            ]
+        });
+
+        const feedback = response.choices[0]?.message?.content;
+        if (!feedback) throw new Error('Empty response');
+
+        return NextResponse.json({ feedback });
 
     } catch (e) {
         console.error('MCQ Feedback Error:', e);
-        return NextResponse.json({ error: 'Failed to generate feedback' }, { status: 500 });
+        return NextResponse.json({ error: e.message || 'Failed to generate feedback' }, { status: 500 });
     }
 }

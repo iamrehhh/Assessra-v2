@@ -51,8 +51,8 @@ export async function POST(req) {
             }, { onConflict: 'user_email' });
 
         if (upsertErr) {
-            console.error('book_progress upsert error:', upsertErr);
-            return NextResponse.json({ error: 'Failed to update progress' }, { status: 500 });
+            console.error('book_progress upsert error:', JSON.stringify(upsertErr, null, 2));
+            return NextResponse.json({ error: 'Failed to update progress', details: upsertErr.message }, { status: 500 });
         }
 
         // If book is complete, record in completions

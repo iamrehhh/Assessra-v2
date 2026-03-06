@@ -73,12 +73,19 @@ ${markSchemeContext ? markSchemeContext : "No specific mark scheme found for thi
 Student's Answer:
 ${studentAnswer}
 
-Instructions:
-1. Provide a realistic mark score. ${totalMarks > 0 ? `It must be out of ${totalMarks} (e.g., "3/${totalMarks} Marks").` : `(e.g. "3/4 Marks"). Estimate total marks based on the context or question depth if not explicitly stated.`} Be strict as per Cambridge standards.
-2. Provide a breakdown of what they got right, referencing specific points in the mark scheme.
-3. Provide constructive examiner feedback on what was missing or poorly explained.
-4. Construct a perfect Model Answer that would obtain full marks. CRITICAL: Use clear paragraph breaks (\\n\\n) for readability instead of a single wall of text.
-5. FOR CALCULATIONS: If the topic involves math or calculations, you MUST evaluate step-by-step. Award partial marks for correct workings (Own Figure Rule) even if the final answer is wrong. In your Model Answer, show the detailed step-by-step working clearly.
+Instructions for your feedback tone:
+- You are writing directly to the student. Speak like a teacher who has marked hundreds of these and genuinely wants the student to improve. 
+- NEVER start with generic praise like "Great effort!" or "Good try!". Be conversational but precise.
+- Use explicit Cambridge language ("evaluative point", "chain of analysis", etc.).
+
+Format your output into the following logical sections (populate the JSON keys accordingly):
+
+1. **"score"**: A realistic mark score. ${totalMarks > 0 ? `Must be out of ${totalMarks} (e.g., "3/${totalMarks} Marks").` : `(e.g. "3/4 Marks").`} Be strictly accurate to Cambridge standards.
+2. **"breakdown"** (What you did well): Speak directly to them. Identify exact things they did right ("You nailed the definition of X here..." or "Your first point about Y was excellent because..."). 
+3. **"feedback"** (What was missing): Be honest, kind, and highly specific to their answer. Diagnose the misconception. Explain exactly *why* they lost marks based on the mark scheme ("The bit that tripped you up was...").
+4. **"modelAnswer"** (Model Answer): Construct a perfect candidate response that would obtain full marks. CRITICAL: Use paragraph breaks (\\n\\n). At the very end of the model answer, add one brief note explaining exactly *what* makes this specific answer score full marks.
+
+5. FOR CALCULATIONS: If the topic involves math, evaluate step-by-step. Award partial marks for workings (Own Figure Rule). Show detailed step-by-step working clearly in the Model Answer.
 
 Return the result STRICTLY as a JSON object with these exact keys:
 - "score" (string, e.g. "3/4 Marks")

@@ -196,20 +196,24 @@ export default function Dashboard() {
     return (
         <div className="flex h-screen overflow-hidden bg-bg-base text-text-main font-display transition-colors duration-300">
             <Sidebar view={view} setView={setView} userEmail={session?.user?.email} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-            <main className="flex-1 flex flex-col w-full h-full overflow-y-auto">
-                <TopHeader setView={setView} userProfile={userProfile} setIsMobileOpen={setIsMobileOpen} />
-                <div className="flex-1 p-4 md:p-8 space-y-8 pb-10">
+            <main className={`flex-1 flex flex-col w-full h-full overflow-y-auto ${view === 'ai-tutor' ? 'overflow-hidden' : ''}`}>
+                {view !== 'ai-tutor' && (
+                    <TopHeader setView={setView} userProfile={userProfile} setIsMobileOpen={setIsMobileOpen} />
+                )}
+                <div className={`flex-1 ${view === 'ai-tutor' ? 'p-0 pb-0' : 'p-4 md:p-8 space-y-8 pb-10'}`}>
                     {renderContent()}
                 </div>
 
                 {/* Footer */}
-                <footer className="w-full py-6 mt-auto border-t border-border-main flex flex-col items-center justify-center">
-                    <p className="text-xs text-text-muted font-medium flex items-center gap-2">
-                        © {new Date().getFullYear()} Abdul Rehan <span className="text-text-muted/50">|</span>
-                        <a href="mailto:abdulrehanoffical@gmail.com" className="hover:text-primary transition-colors">abdulrehanoffical@gmail.com</a> <span className="text-text-muted/50">|</span>
-                        <a href="https://github.com/iamrehhh/Assessra-v2" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">GitHub</a>
-                    </p>
-                </footer>
+                {view !== 'ai-tutor' && (
+                    <footer className="w-full py-6 mt-auto border-t border-border-main flex flex-col items-center justify-center shrink-0">
+                        <p className="text-xs text-text-muted font-medium flex items-center gap-2">
+                            © {new Date().getFullYear()} Abdul Rehan <span className="text-text-muted/50">|</span>
+                            <a href="mailto:abdulrehanoffical@gmail.com" className="hover:text-primary transition-colors">abdulrehanoffical@gmail.com</a> <span className="text-text-muted/50">|</span>
+                            <a href="https://github.com/iamrehhh/Assessra-v2" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">GitHub</a>
+                        </p>
+                    </footer>
+                )}
             </main>
             <ReportErrorModal currentView={view} />
         </div>
