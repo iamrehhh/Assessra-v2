@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import ScorecardView from './ScorecardView';
 
 export default function PastPapersView({ initialLevel, initialSubject, initialScorecard, setView }) {
     const router = useRouter();
+    const { data: session } = useSession();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({ levels: [], subjectsByLevel: {}, documents: [] });
     const [error, setError] = useState('');
+    const [solvedPaperIds, setSolvedPaperIds] = useState(new Set());
 
     // Selection State — initialize from URL hash params
     const [selectedLevel, setSelectedLevel] = useState(initialLevel || null);
@@ -31,6 +34,21 @@ export default function PastPapersView({ initialLevel, initialSubject, initialSc
         };
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (session?.user?.email) {
+            fetch(`/api/scores/user?username=${encodeURIComponent(session?.user?.email)}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.attempts) {
+                        const solvedIds = new Set(d.attempts.map(a => a.paperId));
+                        setSolvedPaperIds(solvedIds);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch user scores", err));
+        }
+    }, [session?.user?.email]);
+
 
     // Sync internal state when props change (browser back/forward)
     useEffect(() => {
@@ -299,31 +317,40 @@ export default function PastPapersView({ initialLevel, initialSubject, initialSc
                                                             </h5>
 
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                {seasonsObj[season].sort((a, b) => a.filename.localeCompare(b.filename)).map((paper, idx) => (
-                                                                    <button
-                                                                        key={idx}
-                                                                        onClick={() => handlePaperClick(paper.originalId)}
-                                                                        className="glass p-5 rounded-2xl border border-border-main hover:border-primary/50 hover:bg-black/5 dark:bg-white/5 text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex items-start gap-4 group"
-                                                                    >
-                                                                        <div className="w-12 h-12 rounded-xl bg-black/5 dark:bg-white/5 border border-border-main flex items-center justify-center shrink-0 group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:text-primary transition-all">
-                                                                            <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
-                                                                        </div>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <h4 className="text-base font-bold text-text-main truncate mb-1 group-hover:text-primary transition-colors">
-                                                                                {paper.filename.replace('.pdf', '')}
-                                                                            </h4>
-                                                                            <div className="flex items-center gap-3">
-                                                                                <span className="flex items-center gap-1.5 text-xs font-bold text-text-muted uppercase tracking-wider">
-                                                                                    <span className="material-symbols-outlined text-[14px]">history_edu</span>
-                                                                                    {formatLabel(selectedSubject)}
-                                                                                </span>
+                                                                {seasonsObj[season].sort((a, b) => a.filename.localeCompare(b.filename)).map((paper, idx) => {
+                                                                    const isSolved = solvedPaperIds.has(paper.originalId);
+                                                                    return (
+                                                                        <button
+                                                                            key={idx}
+                                                                            onClick={() => handlePaperClick(paper.originalId)}
+                                                                            className={`glass p-5 rounded-2xl border ${isSolved ? 'border-primary/40 hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/10' : 'border-border-main hover:border-primary/50 hover:bg-black/5 dark:bg-white/5'} text-left transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 flex items-start gap-4 group relative overflow-hidden`}
+                                                                        >
+                                                                            {isSolved && (
+                                                                                <div className="absolute top-0 right-0 bg-primary/20 text-primary px-3 py-1 rounded-bl-xl font-bold text-xs flex items-center gap-1 backdrop-blur-md border-b border-l border-primary/20">
+                                                                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                                    Solved
+                                                                                </div>
+                                                                            )}
+                                                                            <div className={`w-12 h-12 rounded-xl bg-black/5 dark:bg-white/5 border ${isSolved ? 'border-primary/30 text-primary group-hover:bg-primary/20 group-hover:border-primary/50' : 'border-border-main group-hover:bg-primary/20 group-hover:border-primary/30 group-hover:text-primary'} flex items-center justify-center shrink-0 transition-all`}>
+                                                                                <span className="material-symbols-outlined text-2xl">picture_as_pdf</span>
                                                                             </div>
-                                                                        </div>
-                                                                        <div className="shrink-0 flex items-center h-12">
-                                                                            <span className="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">arrow_forward</span>
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <h4 className="text-base font-bold text-text-main truncate mb-1 group-hover:text-primary transition-colors">
+                                                                                    {paper.filename.replace('.pdf', '')}
+                                                                                </h4>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className="flex items-center gap-1.5 text-xs font-bold text-text-muted uppercase tracking-wider">
+                                                                                        <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                                                                                        {formatLabel(selectedSubject)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="shrink-0 flex items-center h-12">
+                                                                                <span className="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">arrow_forward</span>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     ))}
