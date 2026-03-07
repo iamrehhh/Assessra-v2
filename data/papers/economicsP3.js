@@ -13,7 +13,7 @@ export const economicsP3Data = {
     'econ_2024_on_32': { pdf: "past_papers/A Level/Economics/Paper 3/9708_w24_qp_32.pdf", answers: ['D', 'B', 'D', 'A', 'D', 'D', 'C', 'A', 'C', 'C', 'B', 'D', 'B', 'C', 'B', 'C', 'C', 'A', 'A', 'A', 'B', 'D', 'A', 'C', 'B', 'B', 'B', 'D', 'B', 'D'] },
     'econ_2024_on_33': { pdf: "past_papers/A Level/Economics/Paper 3/9708_w24_qp_33.pdf", answers: ['C', 'B', 'A', 'C', 'D', 'A', 'B', 'D', 'A', 'A', 'C', 'A', 'B', 'D', 'A', 'D', 'D', 'A', 'C', 'A', 'C', 'D', 'B', 'C', 'A', 'D', 'A', 'A', 'A', 'A'] },
     'econ_2024_mj_31': { pdf: "past_papers/A Level/Economics/Paper 3/9708_s24_qp_31.pdf", answers: ['B', 'C', 'A', 'B', 'C', 'C', 'B', 'A', 'C', 'B', 'B', 'A', 'D', 'B', 'C', 'C', 'B', 'D', 'A', 'A', 'D', 'C', 'D', 'A', 'B', 'B', 'C', 'A', 'C', 'A'] },
-    'econ_2024_fm_32': { pdf: "past_papers/A Level/Economics/Paper 3/9708_m24_qp_32.pdf", answers: ['B', 'B', 'B', 'C', 'B', 'C', 'D', 'B', 'A', 'D', 'C', 'D', 'A', 'C', 'C', 'B', 'C', 'A', 'A', 'D', 'C', 'C', 'C', 'C', 'B', 'A', 'D', 'C', 'D', 'B'] },
+    'econ_2024_fm_32': { pdf: "past_papers/A Level/Economics/Paper 3/9708_m24_qp_32.pdf", answers: ['B', 'B', 'B', 'C', 'B', 'C', 'D', 'B', 'A', 'D', 'C', 'D', 'D', 'C', 'C', 'B', 'C', 'A', 'A', 'D', 'C', 'C', 'C', 'C', 'C', 'A', 'D', 'C', 'A', 'B'] },
     'econ_2024_mj_32': {
         pdf: "past_papers/A Level/Economics/Paper 3/9708_s24_qp_32.pdf",
         answers: ['C', 'C', 'A', 'A', 'D', 'C', 'A', 'C', 'A', 'A', 'B', 'D', 'C', 'C', 'D', 'A', 'C', 'B', 'A', 'C', 'C', 'A', 'D', 'D', 'A', 'B', 'A', 'C', 'A', 'D'],
