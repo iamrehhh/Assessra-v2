@@ -34,6 +34,9 @@ export default function Sidebar({ view, setView, userEmail, isMobileOpen, setIsM
         { id: 'practice', icon: 'auto_awesome', label: 'AI Practice' },
         { id: 'pastpapers', icon: 'auto_stories', label: 'Past Papers' },
         { id: 'vocab-idioms', icon: 'menu_book', label: 'Vocab & Idioms' },
+        { id: 'prepositions', icon: 'text_select_move_forward_word', label: 'Prepositions' },
+        { id: 'grammar-errors', icon: 'spellcheck', label: 'Grammar' },
+        { id: 'tenses', icon: 'schedule', label: 'Tenses' },
         { id: 'leaderboard', icon: 'leaderboard', label: 'Leaderboard' },
     ];
 

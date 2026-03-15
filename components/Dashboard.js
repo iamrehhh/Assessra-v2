@@ -18,9 +18,12 @@ import AdminView from './views/AdminView';
 import PracticeView from './views/PracticeView';
 import PastPapersView from './views/PastPapersView';
 import VocabIdiomsView from './views/VocabIdiomsView';
+import PrepositionsView from './views/PrepositionsView';
+import GrammarErrorView from './views/GrammarErrorView';
+import TensesView from './views/TensesView';
 import ReportErrorModal from './ReportErrorModal';
 
-const VALID_VIEWS = ['home', 'ai-tutor', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'tips', 'profile', 'admin'];
+const VALID_VIEWS = ['home', 'ai-tutor', 'practice', 'pastpapers', 'scorecard', 'leaderboard', 'formulae', 'definitions', 'vocab', 'vocab-idioms', 'prepositions', 'grammar-errors', 'tenses', 'tips', 'profile', 'admin'];
 
 function parseHash() {
     if (typeof window === 'undefined') return { view: 'home', params: [] };
@@ -182,6 +185,12 @@ export default function Dashboard() {
                 return <VocabView />;
             case 'vocab-idioms':
                 return <VocabIdiomsView />;
+            case 'prepositions':
+                return <PrepositionsView />;
+            case 'grammar-errors':
+                return <GrammarErrorView />;
+            case 'tenses':
+                return <TensesView />;
             case 'tips':
                 return <TipsView />;
             case 'profile':
