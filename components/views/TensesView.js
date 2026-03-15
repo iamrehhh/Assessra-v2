@@ -394,7 +394,7 @@ export default function TensesView() {
                                 </div>
                                 <h2 className="text-2xl font-bold text-text-main mb-3">Tenses Practice</h2>
                                 <ul className="text-text-muted max-w-lg mx-auto mb-8 leading-relaxed list-disc text-left pl-10 space-y-2">
-                                    <li>5 questions per session from 100 tense-based MCQs.</li>
+                                    <li>5 questions per session from a bank of <strong>115 tense-based questions</strong>.</li>
                                     <li>13 formats: Match-List, Fill-in-Blank, Error Detection, Rearrange, Cloze Passage, Assertion-Reason, and more.</li>
                                     <li>AI generates rich, rule-based explanations instantly after each answer.</li>
                                 </ul>

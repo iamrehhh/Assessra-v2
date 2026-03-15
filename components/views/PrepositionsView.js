@@ -360,7 +360,7 @@ export default function PrepositionsView() {
                                     Prepositions Practice
                                 </h2>
                                 <ul className="text-text-muted max-w-lg mx-auto mb-8 leading-relaxed list-disc text-left pl-10 space-y-2">
-                                    <li>5 Multiple Choice Questions from a bank of 100.</li>
+                                    <li>5 Multiple Choice Questions from a bank of <strong>200 questions</strong>.</li>
                                     <li>AI generates a grammar explanation for every question.</li>
                                     <li>Questions drawn from 26+ preposition categories.</li>
                                 </ul>
